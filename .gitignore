@@ -1,0 +1,10 @@
+# Archives
+# Note: Keep indianagri-quiz-engine.zip if distributing release bundle, or uncomment below to exclude:
+# *.zip
+
+# OS & Temp
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
