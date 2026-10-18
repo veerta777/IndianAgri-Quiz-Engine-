@@ -630,4 +630,43 @@ class IAQ_Question_Bank {
 
 		return (int) $wpdb->query( $prepared ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 	}
+
+	/**
+	 * Find existing question by normalized question text and optional subject ID.
+	 *
+	 * @param string $question_text Question stem text.
+	 * @param int    $subject_id    Optional subject ID to narrow lookup.
+	 * @return int|null Existing question ID or null.
+	 */
+	public static function find_duplicate_question( $question_text, $subject_id = 0 ) {
+		global $wpdb;
+
+		$table      = IAQ_Database::get_table_name( 'questions' );
+		$clean_text = trim( wp_strip_all_tags( (string) $question_text ) );
+
+		if ( empty( $clean_text ) ) {
+			return null;
+		}
+
+		if ( $subject_id > 0 ) {
+			$sql = $wpdb->prepare(
+				"SELECT id FROM {$table} WHERE subject_id = %d AND question_text = %s LIMIT 1",
+				absint( $subject_id ),
+				$clean_text
+			);
+			$found = $wpdb->get_var( $sql );
+			if ( $found ) {
+				return (int) $found;
+			}
+		}
+
+		$sql = $wpdb->prepare(
+			"SELECT id FROM {$table} WHERE question_text = %s LIMIT 1",
+			$clean_text
+		);
+		$found = $wpdb->get_var( $sql );
+
+		return $found ? (int) $found : null;
+	}
 }
+

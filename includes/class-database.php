@@ -213,6 +213,7 @@ CREATE TABLE {$table_quiz_questions} (
 
 CREATE TABLE {$table_quiz_attempts} (
   id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  attempt_token varchar(64) DEFAULT NULL,
   quiz_id bigint(20) unsigned NOT NULL,
   user_id bigint(20) unsigned NOT NULL,
   attempt_number int(11) NOT NULL DEFAULT 1,
@@ -235,7 +236,8 @@ CREATE TABLE {$table_quiz_attempts} (
   PRIMARY KEY  (id),
   KEY idx_quiz_user (quiz_id,user_id),
   KEY idx_status (status),
-  KEY idx_user_id (user_id)
+  KEY idx_user_id (user_id),
+  UNIQUE KEY uq_attempt_token (attempt_token)
 ) {$charset_collate};
 
 CREATE TABLE {$table_attempt_answers} (
@@ -643,7 +645,7 @@ CREATE TABLE {$table_mock_test_relations} (
 				'access_type'    => 'all_access',
 				'is_featured'    => 0,
 				'display_order'  => 1,
-				'features'       => "Unlimited Mock Test Attempts\nComplete Question Explanations in Hindi & English\nSubject & Topic Mastery Diagnostics\nPrintable Performance Scorecards",
+				'features'       => "Unlimited Mock Test Attempts\nComplete Scientific Question Explanations\nSubject & Topic Mastery Diagnostics\nPrintable Performance Scorecards",
 			),
 			array(
 				'name'           => 'Quarterly All Access',
@@ -655,7 +657,7 @@ CREATE TABLE {$table_mock_test_relations} (
 				'access_type'    => 'all_access',
 				'is_featured'    => 0,
 				'display_order'  => 2,
-				'features'       => "3 Months Unlimited Access\nFull Question Bank Explanations\nSubject Mastery Analytics\nPrevious Year Question Papers (PYQs)",
+				'features'       => "3 Months Unlimited Access\nFull Question Bank Explanations\nSubject Mastery Analytics\nFull Mock Tests & Practice Sets",
 			),
 			array(
 				'name'           => 'Six-Month All Access',
@@ -947,10 +949,15 @@ CREATE TABLE {$table_mock_test_relations} (
 		$table_vacancies = self::get_table_name( 'mock_vacancies' );
 		$existing_vac    = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_vacancies}" );
 		if ( 0 === $existing_vac ) {
+			$state_psc_id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table_examinations} WHERE code = %s LIMIT 1", 'STATE-PSC' ) );
+			if ( ! $state_psc_id ) {
+				$state_psc_id = (int) $wpdb->get_var( "SELECT id FROM {$table_examinations} ORDER BY id ASC LIMIT 1" );
+			}
+			$default_exam_id = $state_psc_id ? $state_psc_id : 1;
 			$default_vacancies = array(
-				array( 'exam_id' => 1, 'title' => 'Technical Assistant (AGTA)', 'slug' => 'technical-assistant', 'order' => 1 ),
-				array( 'exam_id' => 1, 'title' => 'Sugarcane Officer (Ganna Paryavekshak)', 'slug' => 'sugarcane-officer', 'order' => 2 ),
-				array( 'exam_id' => 1, 'title' => 'Other Vacancies', 'slug' => 'other-vacancies', 'order' => 3 ),
+				array( 'exam_id' => $default_exam_id, 'title' => 'Technical Assistant (AGTA)', 'slug' => 'technical-assistant', 'order' => 1 ),
+				array( 'exam_id' => $default_exam_id, 'title' => 'Sugarcane Officer (Ganna Paryavekshak)', 'slug' => 'sugarcane-officer', 'order' => 2 ),
+				array( 'exam_id' => $default_exam_id, 'title' => 'Other Vacancies', 'slug' => 'other-vacancies', 'order' => 3 ),
 			);
 			foreach ( $default_vacancies as $vac ) {
 				$wpdb->insert(

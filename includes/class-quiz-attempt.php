@@ -151,6 +151,79 @@ class IAQ_Quiz_Attempt {
 	}
 
 	/**
+	 * Self-healing: Guarantee attempts and attempt answers tables exist with all required columns.
+	 * Critical for environments updated via zip upload or Git pull (which bypass activation hooks).
+	 */
+	public static function ensure_attempt_tables_exist() {
+		global $wpdb;
+
+		$table_attempts  = $wpdb->prefix . 'iaq_quiz_attempts';
+		$table_answers   = $wpdb->prefix . 'iaq_attempt_answers';
+		$charset_collate = method_exists( $wpdb, 'get_charset_collate' ) ? $wpdb->get_charset_collate() : '';
+
+		// 1. Direct DDL execution (works across all MySQL / MariaDB installations without dbDelta dependencies).
+		$sql_attempts = "CREATE TABLE IF NOT EXISTS {$table_attempts} (
+		  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		  attempt_token varchar(64) DEFAULT NULL,
+		  quiz_id bigint(20) unsigned NOT NULL,
+		  user_id bigint(20) unsigned NOT NULL,
+		  attempt_number int(11) NOT NULL DEFAULT 1,
+		  status enum('in_progress','completed','abandoned','timed_out') NOT NULL DEFAULT 'in_progress',
+		  start_time datetime NOT NULL,
+		  end_time datetime DEFAULT NULL,
+		  time_spent_seconds int(11) NOT NULL DEFAULT 0,
+		  total_questions int(11) NOT NULL DEFAULT 0,
+		  attempted_questions int(11) NOT NULL DEFAULT 0,
+		  correct_answers int(11) NOT NULL DEFAULT 0,
+		  incorrect_answers int(11) NOT NULL DEFAULT 0,
+		  unattempted_questions int(11) NOT NULL DEFAULT 0,
+		  score decimal(7,2) NOT NULL DEFAULT 0.00,
+		  total_marks decimal(7,2) NOT NULL DEFAULT 0.00,
+		  percentage decimal(5,2) NOT NULL DEFAULT 0.00,
+		  passed tinyint(1) NOT NULL DEFAULT 0,
+		  ip_address varchar(45) DEFAULT NULL,
+		  user_agent varchar(255) DEFAULT NULL,
+		  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		  PRIMARY KEY  (id),
+		  KEY idx_quiz_user (quiz_id,user_id),
+		  KEY idx_status (status),
+		  KEY idx_user_id (user_id),
+		  UNIQUE KEY uq_attempt_token (attempt_token)
+		) {$charset_collate};";
+
+		$sql_answers = "CREATE TABLE IF NOT EXISTS {$table_answers} (
+		  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		  attempt_id bigint(20) unsigned NOT NULL,
+		  question_id bigint(20) unsigned NOT NULL,
+		  selected_option char(1) DEFAULT NULL,
+		  is_correct tinyint(1) DEFAULT NULL,
+		  marks_awarded decimal(5,2) NOT NULL DEFAULT 0.00,
+		  is_marked_for_review tinyint(1) NOT NULL DEFAULT 0,
+		  answered_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+		  PRIMARY KEY  (id),
+		  UNIQUE KEY uq_attempt_question (attempt_id,question_id),
+		  KEY idx_attempt_id (attempt_id),
+		  KEY idx_question_id (question_id)
+		) {$charset_collate};";
+
+		$wpdb->query( $sql_attempts );
+		$wpdb->query( $sql_answers );
+
+		// 2. Self-healing check for attempt_token column & duplicate empty strings
+		$col_check = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM {$table_attempts} LIKE %s", 'attempt_token' ) );
+		if ( empty( $col_check ) ) {
+			$wpdb->query( "ALTER TABLE {$table_attempts} ADD COLUMN attempt_token varchar(64) DEFAULT NULL" );
+		}
+		// Fix any existing records where attempt_token is empty string '' or null to prevent Duplicate Entry '' violations
+		$wpdb->query( "UPDATE {$table_attempts} SET attempt_token = CONCAT('att_', id, '_', SUBSTRING(MD5(CONCAT(id, NOW(), RAND())), 1, 16)) WHERE attempt_token = '' OR attempt_token IS NULL" );
+
+		// 3. Also run dbDelta migration if IAQ_Database is present
+		if ( class_exists( 'IAQ_Database' ) ) {
+			IAQ_Database::create_tables();
+		}
+	}
+
+	/**
 	 * Core Logic: Start a new attempt or resume an existing in-progress session.
 	 *
 	 * @param int $quiz_id Quiz ID.
@@ -176,6 +249,9 @@ class IAQ_Quiz_Attempt {
 
 		$table_attempts = $wpdb->prefix . 'iaq_quiz_attempts';
 		$table_answers  = $wpdb->prefix . 'iaq_attempt_answers';
+
+		// Self-healing: Ensure attempts and answers tables exist (for zip uploads/git pulls without reactivation).
+		self::ensure_attempt_tables_exist();
 
 		// Check for an existing in-progress attempt.
 		$active_attempt = $wpdb->get_row(
@@ -228,23 +304,35 @@ class IAQ_Quiz_Attempt {
 				return new WP_Error( 'no_questions', __( 'This examination has no questions assigned yet. Please contact the administrator.', 'indianagri-quiz-engine' ) );
 			}
 
-			$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
-			$ua = isset( $_SERVER['HTTP_USER_AGENT'] ) ? substr( sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ), 0, 255 ) : '';
+			$ip = ! empty( $_SERVER['REMOTE_ADDR'] ) ? substr( sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ), 0, 45 ) : '127.0.0.1';
+			$ua = ! empty( $_SERVER['HTTP_USER_AGENT'] ) ? substr( sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ), 0, 255 ) : 'browser';
+
+			$total_marks = 0.00;
+			if ( isset( $quiz->total_marks ) && '' !== $quiz->total_marks && null !== $quiz->total_marks && floatval( $quiz->total_marks ) > 0 ) {
+				$total_marks = round( floatval( $quiz->total_marks ), 2 );
+			} elseif ( ! empty( $total_questions ) ) {
+				$c_marks = ( ! empty( $quiz->correct_marks ) && floatval( $quiz->correct_marks ) > 0 ) ? floatval( $quiz->correct_marks ) : 1.00;
+				$total_marks = round( floatval( $total_questions * $c_marks ), 2 );
+			}
+
+			// Generate a strictly unique attempt token to prevent duplicate key errors on 'attempt_token' unique indexes
+			$attempt_token = 'att_' . wp_generate_password( 24, false, false ) . '_' . time() . '_' . mt_rand( 1000, 9999 );
 
 			$attempt_data = array(
-				'quiz_id'               => $quiz_id,
-				'user_id'               => $user_id,
-				'attempt_number'        => $attempt_number,
+				'attempt_token'         => $attempt_token,
+				'quiz_id'               => (int) $quiz_id,
+				'user_id'               => (int) $user_id,
+				'attempt_number'        => max( 1, (int) $attempt_number ),
 				'status'                => 'in_progress',
 				'start_time'            => current_time( 'mysql' ),
 				'time_spent_seconds'    => 0,
-				'total_questions'       => $total_questions,
+				'total_questions'       => max( 0, (int) $total_questions ),
 				'attempted_questions'   => 0,
 				'correct_answers'       => 0,
 				'incorrect_answers'     => 0,
-				'unattempted_questions' => $total_questions,
+				'unattempted_questions' => max( 0, (int) $total_questions ),
 				'score'                 => 0.00,
-				'total_marks'           => $quiz->total_marks,
+				'total_marks'           => (float) $total_marks,
 				'percentage'            => 0.00,
 				'passed'                => 0,
 				'ip_address'            => $ip,
@@ -252,13 +340,110 @@ class IAQ_Quiz_Attempt {
 				'created_at'            => current_time( 'mysql' ),
 			);
 
-			$inserted = $wpdb->insert( $table_attempts, $attempt_data );
+			$formats = array(
+				'%s', // attempt_token
+				'%d', // quiz_id
+				'%d', // user_id
+				'%d', // attempt_number
+				'%s', // status
+				'%s', // start_time
+				'%d', // time_spent_seconds
+				'%d', // total_questions
+				'%d', // attempted_questions
+				'%d', // correct_answers
+				'%d', // incorrect_answers
+				'%d', // unattempted_questions
+				'%f', // score
+				'%f', // total_marks
+				'%f', // percentage
+				'%d', // passed
+				'%s', // ip_address
+				'%s', // user_agent
+				'%s', // created_at
+			);
+
+			// Insertion Attempt 1: Standard wpdb insert with attempt_token
+			$inserted = $wpdb->insert( $table_attempts, $attempt_data, $formats );
+
+			// Tier 1 Fallback: Run self-healing table & token cleanup and retry
 			if ( ! $inserted ) {
-				return new WP_Error( 'db_error', __( 'Failed to initialize examination session.', 'indianagri-quiz-engine' ) );
+				self::ensure_attempt_tables_exist();
+				$attempt_data['attempt_token'] = 'att_' . wp_generate_password( 24, false, false ) . '_' . time() . '_' . mt_rand( 10000, 99999 );
+				$inserted = $wpdb->insert( $table_attempts, $attempt_data, $formats );
 			}
 
-			$attempt_id = $wpdb->insert_id;
-			$attempt    = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table_attempts} WHERE id = %d", $attempt_id ) );
+			// Tier 2 Fallback: Direct prepared full SQL statement
+			if ( ! $inserted ) {
+				$sql = $wpdb->prepare(
+					"INSERT INTO {$table_attempts} 
+					(attempt_token, quiz_id, user_id, attempt_number, status, start_time, time_spent_seconds, total_questions, attempted_questions, correct_answers, incorrect_answers, unattempted_questions, score, total_marks, percentage, passed, ip_address, user_agent, created_at) 
+					VALUES (%s, %d, %d, %d, 'in_progress', %s, 0, %d, 0, 0, 0, %d, 0.00, %f, 0.00, 0, %s, %s, %s)",
+					$attempt_data['attempt_token'],
+					(int) $quiz_id,
+					(int) $user_id,
+					max( 1, (int) $attempt_number ),
+					current_time( 'mysql' ),
+					max( 0, (int) $total_questions ),
+					max( 0, (int) $total_questions ),
+					(float) $total_marks,
+					$ip,
+					$ua,
+					current_time( 'mysql' )
+				);
+				$inserted = $wpdb->query( $sql );
+			}
+
+			// Tier 3 Fallback: Insert without attempt_token (if column does not exist on legacy tables)
+			if ( ! $inserted ) {
+				$no_tok_data = $attempt_data;
+				unset( $no_tok_data['attempt_token'] );
+				$no_tok_formats = array_slice( $formats, 1 );
+				$inserted = $wpdb->insert( $table_attempts, $no_tok_data, $no_tok_formats );
+			}
+
+			// Tier 4 Fallback: Minimal columns insert for older existing table schemas
+			if ( ! $inserted ) {
+				$min_sql = $wpdb->prepare(
+					"INSERT INTO {$table_attempts} 
+					(quiz_id, user_id, attempt_number, status, start_time, total_questions, score, percentage, passed, created_at) 
+					VALUES (%d, %d, %d, 'in_progress', %s, %d, 0.00, 0.00, 0, %s)",
+					(int) $quiz_id,
+					(int) $user_id,
+					max( 1, (int) $attempt_number ),
+					current_time( 'mysql' ),
+					max( 0, (int) $total_questions ),
+					current_time( 'mysql' )
+				);
+				$inserted = $wpdb->query( $min_sql );
+			}
+
+			if ( ! $inserted ) {
+				$db_err = ! empty( $wpdb->last_error ) ? ' (' . $wpdb->last_error . ')' : '';
+				error_log( 'IAQ Quiz Attempt initialization failed: ' . $wpdb->last_error );
+				return new WP_Error( 'db_error', __( 'Failed to initialize examination session.', 'indianagri-quiz-engine' ) . ( current_user_can( 'manage_options' ) ? $db_err : '' ) );
+			}
+
+			$attempt_id = (int) $wpdb->insert_id;
+			if ( $attempt_id <= 0 ) {
+				$attempt_id = (int) $wpdb->get_var(
+					$wpdb->prepare(
+						"SELECT id FROM {$table_attempts} WHERE quiz_id = %d AND user_id = %d ORDER BY id DESC LIMIT 1",
+						$quiz_id,
+						$user_id
+					)
+				);
+			}
+
+			$attempt = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table_attempts} WHERE id = %d", $attempt_id ) );
+			if ( ! $attempt ) {
+				$attempt = (object) array_merge( array( 'id' => $attempt_id ), $attempt_data );
+			} else {
+				foreach ( $attempt_data as $k => $v ) {
+					if ( ! isset( $attempt->$k ) ) {
+						$attempt->$k = $v;
+					}
+				}
+			}
 		}
 
 		// Calculate remaining time.
@@ -286,7 +471,7 @@ class IAQ_Quiz_Attempt {
 		// Fetch saved answers for this attempt.
 		$saved_answers_rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT question_id, selected_option, is_marked_for_review FROM {$table_answers} WHERE attempt_id = %d",
+				"SELECT question_id, selected_option, is_correct, marks_awarded, is_marked_for_review FROM {$table_answers} WHERE attempt_id = %d",
 				$attempt->id
 			)
 		);
@@ -294,12 +479,19 @@ class IAQ_Quiz_Attempt {
 		$saved_answers = array();
 		foreach ( $saved_answers_rows as $row ) {
 			$saved_answers[ (int) $row->question_id ] = array(
-				'selected'  => $row->selected_option,
-				'is_marked' => (int) $row->is_marked_for_review,
+				'selected'      => $row->selected_option,
+				'is_correct'    => isset( $row->is_correct ) ? (int) $row->is_correct : null,
+				'marks_awarded' => isset( $row->marks_awarded ) ? (float) $row->marks_awarded : null,
+				'is_marked'     => (int) $row->is_marked_for_review,
 			);
 		}
 
+		// Immediate Feedback Mode is strictly permitted only for practice sets when configured.
+		// MOCK TESTS MUST NEVER ALLOW IMMEDIATE FEEDBACK ON THE SERVER.
+		$is_immediate_mode = ( 'mock' !== $quiz->quiz_type && 'immediate' === $quiz->show_answers_mode );
+
 		// SECURE SANITIZATION: Strip correct answer and explanation from questions delivered to candidate!
+		// In immediate feedback mode, reveal answers/explanations ONLY for questions the student ALREADY answered.
 		$safe_questions = array();
 		$index = 1;
 
@@ -319,20 +511,45 @@ class IAQ_Quiz_Attempt {
 			}
 
 			$qid = (int) $q->id;
-			$user_ans = isset( $saved_answers[ $qid ] ) ? $saved_answers[ $qid ] : array( 'selected' => null, 'is_marked' => 0 );
+			$user_ans = isset( $saved_answers[ $qid ] ) ? $saved_answers[ $qid ] : array( 'selected' => null, 'is_correct' => null, 'marks_awarded' => null, 'is_marked' => 0 );
 
-			$safe_questions[] = array(
+			$q_pos_marks = ! is_null( $q->custom_marks ) ? (float) $q->custom_marks : (float) $q->marks;
+			$q_neg_marks = ! is_null( $q->custom_negative_marks ) ? (float) $q->custom_negative_marks : (float) $q->negative_marks;
+
+			$q_data = array(
 				'index'          => $index++,
 				'id'             => $qid,
 				'question_text'  => $q->question_text,
 				'subject_name'   => isset( $q->subject_name ) ? $q->subject_name : '',
 				'topic_name'     => isset( $q->topic_name ) ? $q->topic_name : '',
-				'marks'          => ! is_null( $q->custom_marks ) ? (float) $q->custom_marks : (float) $q->marks,
-				'negative_marks' => ! is_null( $q->custom_negative_marks ) ? (float) $q->custom_negative_marks : (float) $q->negative_marks,
+				'marks'          => $q_pos_marks,
+				'negative_marks' => $q_neg_marks,
 				'options'        => $opts,
 				'selected'       => $user_ans['selected'],
 				'is_marked'      => $user_ans['is_marked'],
 			);
+
+			// If this question was already answered in immediate mode, deliver locked feedback state so page reload preserves feedback.
+			if ( $is_immediate_mode && ! empty( $user_ans['selected'] ) ) {
+				$correct_opt = strtoupper( trim( $q->correct_option ) );
+				$is_correct_val = ( $user_ans['selected'] === $correct_opt ) ? 1 : 0;
+				$marks_val = ( 1 === $is_correct_val ) ? $q_pos_marks : ( -1 * abs( $q_neg_marks ) );
+
+				$q_data['immediate_feedback'] = array(
+					'is_immediate'     => true,
+					'is_locked'        => true,
+					'selected'         => $user_ans['selected'],
+					'is_correct'       => (bool) ( 1 === $is_correct_val ),
+					'correct_option'   => $correct_opt,
+					'explanation'      => $q->explanation,
+					'marks_awarded'    => ! is_null( $user_ans['marks_awarded'] ) ? (float) $user_ans['marks_awarded'] : $marks_val,
+					'feedback_message' => ( 1 === $is_correct_val )
+						? __( 'Correct! Excellent work!', 'indianagri-quiz-engine' )
+						: __( 'Good try! Keep going. Review the explanation below to master this concept.', 'indianagri-quiz-engine' ),
+				);
+			}
+
+			$safe_questions[] = $q_data;
 		}
 
 		return array(
@@ -340,6 +557,8 @@ class IAQ_Quiz_Attempt {
 			'quiz_id'           => (int) $quiz->id,
 			'quiz_title'        => $quiz->title,
 			'quiz_type'         => $quiz->quiz_type,
+			'show_answers_mode' => $quiz->show_answers_mode,
+			'is_immediate'      => $is_immediate_mode,
 			'exam_category'     => $quiz->exam_category,
 			'duration_minutes'  => (int) $quiz->duration_minutes,
 			'remaining_seconds' => $remaining_seconds,
@@ -364,12 +583,17 @@ class IAQ_Quiz_Attempt {
 	public static function save_answer( $attempt_id, $user_id, $question_id, $selected_option, $is_marked = 0, $time_spent = 0 ) {
 		global $wpdb;
 
-		$table_attempts = $wpdb->prefix . 'iaq_quiz_attempts';
-		$table_answers  = $wpdb->prefix . 'iaq_attempt_answers';
+		$table_attempts  = $wpdb->prefix . 'iaq_quiz_attempts';
+		$table_answers   = $wpdb->prefix . 'iaq_attempt_answers';
+		$table_questions = $wpdb->prefix . 'iaq_questions';
+		$table_qq        = $wpdb->prefix . 'iaq_quiz_questions';
 
 		$attempt = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT a.*, q.duration_minutes FROM {$table_attempts} a JOIN {$wpdb->prefix}iaq_quizzes q ON a.quiz_id = q.id WHERE a.id = %d AND a.user_id = %d",
+				"SELECT a.*, q.quiz_type, q.duration_minutes, q.show_answers_mode, q.correct_marks as q_correct, q.negative_marks as q_negative
+				 FROM {$table_attempts} a
+				 JOIN {$wpdb->prefix}iaq_quizzes q ON a.quiz_id = q.id
+				 WHERE a.id = %d AND a.user_id = %d",
 				$attempt_id,
 				$user_id
 			)
@@ -396,8 +620,11 @@ class IAQ_Quiz_Attempt {
 
 		$is_marked = $is_marked ? 1 : 0;
 
+		// Check if immediate feedback is authorized. Mock tests MUST NEVER allow immediate answer keys!
+		$is_immediate = ( 'mock' !== $attempt->quiz_type && 'immediate' === $attempt->show_answers_mode );
+
 		// Check if record exists in wp_iaq_attempt_answers.
-		$existing_id = $wpdb->get_var(
+		$existing_id = (int) $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT id FROM {$table_answers} WHERE attempt_id = %d AND question_id = %d",
 				$attempt_id,
@@ -405,7 +632,172 @@ class IAQ_Quiz_Attempt {
 			)
 		);
 
-		if ( $existing_id ) {
+		$existing_answer = null;
+		if ( $existing_id > 0 ) {
+			$existing_answer = $wpdb->get_row(
+				$wpdb->prepare(
+					"SELECT * FROM {$table_answers} WHERE id = %d",
+					$existing_id
+				)
+			);
+		}
+
+		// Fetch question details for scoring and immediate feedback.
+		$question = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT q.id, q.correct_option, q.explanation, q.marks, q.negative_marks, qq.custom_marks, qq.custom_negative_marks
+				 FROM {$table_questions} q
+				 LEFT JOIN {$table_qq} qq ON qq.question_id = q.id AND qq.quiz_id = %d
+				 WHERE q.id = %d",
+				$attempt->quiz_id,
+				$question_id
+			)
+		);
+
+		$correct_opt        = ( $question && isset( $question->correct_option ) ) ? strtoupper( trim( $question->correct_option ) ) : '';
+		$marks_for_correct  = ( $question && isset( $question->custom_marks ) && ! is_null( $question->custom_marks ) ) ? (float) $question->custom_marks : ( ( $question && isset( $question->marks ) ) ? (float) $question->marks : (float) $attempt->q_correct );
+		$marks_for_neg      = ( $question && isset( $question->custom_negative_marks ) && ! is_null( $question->custom_negative_marks ) ) ? (float) $question->custom_negative_marks : ( ( $question && isset( $question->negative_marks ) ) ? (float) $question->negative_marks : (float) $attempt->q_negative );
+
+		// Immediate Feedback Mode: Enforce Single-Answer Lock & Calculate Feedback.
+		if ( $is_immediate ) {
+			// Anti-tamper: If question was already answered in this immediate attempt, freeze response.
+			if ( $existing_id > 0 && $existing_answer && ! empty( $existing_answer->selected_option ) ) {
+				if ( $time_spent > 0 ) {
+					$wpdb->update(
+						$table_attempts,
+						array( 'time_spent_seconds' => $time_spent ),
+						array( 'id' => $attempt_id )
+					);
+				}
+				if ( $is_marked !== (int) $existing_answer->is_marked_for_review ) {
+					$wpdb->update(
+						$table_answers,
+						array( 'is_marked_for_review' => $is_marked ),
+						array( 'id' => $existing_id )
+					);
+				}
+
+				$is_cor = ( 1 === (int) $existing_answer->is_correct );
+				$answered_count = (int) $wpdb->get_var(
+					$wpdb->prepare(
+						"SELECT COUNT(id) FROM {$table_answers} WHERE attempt_id = %d AND selected_option IS NOT NULL AND selected_option != ''",
+						$attempt_id
+					)
+				);
+				$marked_count = (int) $wpdb->get_var(
+					$wpdb->prepare(
+						"SELECT COUNT(id) FROM {$table_answers} WHERE attempt_id = %d AND is_marked_for_review = 1",
+						$attempt_id
+					)
+				);
+
+				return array(
+					'success'          => true,
+					'is_immediate'     => true,
+					'is_locked'        => true,
+					'question_id'      => $question_id,
+					'selected'         => $existing_answer->selected_option,
+					'is_correct'       => $is_cor,
+					'correct_option'   => $correct_opt,
+					'explanation'      => $question ? $question->explanation : '',
+					'marks_awarded'    => (float) $existing_answer->marks_awarded,
+					'feedback_message' => $is_cor
+						? __( 'Correct! Excellent work!', 'indianagri-quiz-engine' )
+						: __( 'Good try! Keep going. Review the explanation below to master this concept.', 'indianagri-quiz-engine' ),
+					'is_marked'        => $is_marked,
+					'answered_count'   => $answered_count,
+					'marked_count'     => $marked_count,
+				);
+			}
+
+			// First answer submission for this question in immediate mode.
+			$is_correct_val = null;
+			$marks_awarded  = 0.00;
+
+			if ( ! empty( $selected_option ) ) {
+				$is_correct_val = ( $selected_option === $correct_opt ) ? 1 : 0;
+				$marks_awarded  = ( 1 === $is_correct_val ) ? $marks_for_correct : ( -1 * abs( $marks_for_neg ) );
+			}
+
+			if ( $existing_id > 0 ) {
+				$wpdb->update(
+					$table_answers,
+					array(
+						'selected_option'      => $selected_option,
+						'is_correct'           => $is_correct_val,
+						'marks_awarded'        => $marks_awarded,
+						'is_marked_for_review' => $is_marked,
+						'answered_at'          => current_time( 'mysql' ),
+					),
+					array( 'id' => $existing_id )
+				);
+			} else {
+				$wpdb->insert(
+					$table_answers,
+					array(
+						'attempt_id'           => $attempt_id,
+						'question_id'          => $question_id,
+						'selected_option'      => $selected_option,
+						'is_correct'           => $is_correct_val,
+						'marks_awarded'        => $marks_awarded,
+						'is_marked_for_review' => $is_marked,
+						'answered_at'          => current_time( 'mysql' ),
+					)
+				);
+			}
+
+			// Update attempt time spent.
+			if ( $time_spent > 0 ) {
+				$wpdb->update(
+					$table_attempts,
+					array( 'time_spent_seconds' => $time_spent ),
+					array( 'id' => $attempt_id )
+				);
+			}
+
+			// Automatically register incorrect responses into the Wrong Answer Notebook for immediate review drills.
+			if ( 0 === $is_correct_val && class_exists( 'IAQ_Wrong_Notebook' ) ) {
+				IAQ_Wrong_Notebook::record_incorrect_answer( $user_id, $question_id, $attempt_id );
+			}
+
+			$answered_count = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(id) FROM {$table_answers} WHERE attempt_id = %d AND selected_option IS NOT NULL AND selected_option != ''",
+					$attempt_id
+				)
+			);
+
+			$marked_count = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(id) FROM {$table_answers} WHERE attempt_id = %d AND is_marked_for_review = 1",
+					$attempt_id
+				)
+			);
+
+			$is_cor = ( 1 === $is_correct_val );
+
+			return array(
+				'success'          => true,
+				'is_immediate'     => true,
+				'is_locked'        => true,
+				'question_id'      => $question_id,
+				'selected'         => $selected_option,
+				'is_correct'       => $is_cor,
+				'correct_option'   => $correct_opt,
+				'explanation'      => $question ? $question->explanation : '',
+				'marks_awarded'    => (float) $marks_awarded,
+				'feedback_message' => $is_cor
+					? __( 'Correct! Excellent work!', 'indianagri-quiz-engine' )
+					: __( 'Good try! Keep going. Review the explanation below to master this concept.', 'indianagri-quiz-engine' ),
+				'is_marked'        => $is_marked,
+				'answered_count'   => $answered_count,
+				'marked_count'     => $marked_count,
+			);
+		}
+
+		// Standard Mode (Mock Tests / After Submission Mode):
+		// SECURE: Under NO circumstances return is_correct, correct_option, or explanation here!
+		if ( $existing_id > 0 ) {
 			$wpdb->update(
 				$table_answers,
 				array(
@@ -455,6 +847,7 @@ class IAQ_Quiz_Attempt {
 
 		return array(
 			'success'        => true,
+			'is_immediate'   => false,
 			'question_id'    => $question_id,
 			'selected'       => $selected_option,
 			'is_marked'      => $is_marked,
@@ -669,6 +1062,43 @@ class IAQ_Quiz_Attempt {
 		$secs = $attempt->time_spent_seconds % 60;
 		$formatted_time = sprintf( '%02dm %02ds', $mins, $secs );
 
+		// Calculate total negative-marking deductions for the attempt.
+		$table_answers = $wpdb->prefix . 'iaq_attempt_answers';
+		$negative_deductions = (float) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT ABS(SUM(marks_awarded)) FROM {$table_answers} WHERE attempt_id = %d AND marks_awarded < 0",
+				$attempt_id
+			)
+		);
+
+		// Calculate cohort percentile only when a statistically valid comparison population exists (minimum 5 completed attempts).
+		$cohort_count = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$table_attempts} WHERE quiz_id = %d AND status = 'completed'",
+				$attempt->quiz_id
+			)
+		);
+
+		$percentile = null;
+		if ( $cohort_count >= 5 ) {
+			$strictly_lower = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(*) FROM {$table_attempts} WHERE quiz_id = %d AND status = 'completed' AND score < %f",
+					$attempt->quiz_id,
+					$attempt->score
+				)
+			);
+			$same_score = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(*) FROM {$table_attempts} WHERE quiz_id = %d AND status = 'completed' AND score = %f",
+					$attempt->quiz_id,
+					$attempt->score
+				)
+			);
+			// Standard percentile: (strictly_lower + 0.5 * same_score) / cohort_count * 100
+			$percentile = round( ( ( $strictly_lower + ( 0.5 * $same_score ) ) / $cohort_count ) * 100, 1 );
+		}
+
 		return array(
 			'attempt_id'            => (int) $attempt->id,
 			'quiz_id'               => (int) $attempt->quiz_id,
@@ -685,6 +1115,9 @@ class IAQ_Quiz_Attempt {
 			'correct_answers'       => (int) $attempt->correct_answers,
 			'incorrect_answers'     => (int) $attempt->incorrect_answers,
 			'unattempted_questions' => (int) $attempt->unattempted_questions,
+			'negative_deductions'   => round( $negative_deductions, 2 ),
+			'percentile'            => $percentile,
+			'cohort_count'          => $cohort_count,
 			'score'                 => (float) $attempt->score,
 			'total_marks'           => (float) $attempt->total_marks,
 			'percentage'            => (float) $attempt->percentage,
@@ -987,6 +1420,60 @@ class IAQ_Quiz_Attempt {
 		}
 
 		return $history;
+	}
+
+	/**
+	 * Retrieve chronological performance trend data points for candidate trend charts.
+	 * Returns up to $limit recent completed attempt scores ordered chronologically.
+	 *
+	 * @param int $user_id WordPress User ID.
+	 * @param int $limit Number of points to return (default 6).
+	 * @return array
+	 */
+	public static function get_user_performance_trend( $user_id, $limit = 6 ) {
+		global $wpdb;
+
+		if ( ! $user_id || $user_id <= 0 ) {
+			return array();
+		}
+
+		$table_attempts = $wpdb->prefix . 'iaq_quiz_attempts';
+		$table_quizzes  = $wpdb->prefix . 'iaq_quizzes';
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT a.id, a.percentage, a.score, a.total_marks, a.start_time, q.title as quiz_title
+				 FROM {$table_attempts} a
+				 JOIN {$table_quizzes} q ON a.quiz_id = q.id
+				 WHERE a.user_id = %d AND a.status = 'completed'
+				 ORDER BY a.id DESC LIMIT %d",
+				$user_id,
+				max( 2, absint( $limit ) )
+			)
+		);
+
+		if ( empty( $rows ) ) {
+			return array();
+		}
+
+		// Reverse so points are in chronological order (oldest to newest)
+		$rows = array_reverse( $rows );
+
+		$trend = array();
+		foreach ( $rows as $r ) {
+			$ts = strtotime( $r->start_time );
+			$trend[] = array(
+				'attempt_id' => (int) $r->id,
+				'percentage' => round( (float) $r->percentage, 1 ),
+				'score'      => (float) $r->score,
+				'max_score'  => (float) $r->total_marks,
+				'label'      => function_exists( 'date_i18n' ) ? date_i18n( 'M d', $ts ) : date( 'M d', $ts ),
+				'month'      => function_exists( 'date_i18n' ) ? date_i18n( 'M Y', $ts ) : date( 'M Y', $ts ),
+				'quiz_title' => $r->quiz_title,
+			);
+		}
+
+		return $trend;
 	}
 
 	/**

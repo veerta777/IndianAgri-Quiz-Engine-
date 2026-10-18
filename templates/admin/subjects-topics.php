@@ -45,19 +45,17 @@ if ( isset( $_GET['edit_topic'] ) ) {
 		<!-- LEFT COLUMN: SUBJECTS -->
 		<div class="iaq-col-panel">
 			<!-- Add/Edit Subject Form -->
-			<div class="iaq-card">
+			<div class="iaq-card" id="iaq-subject-form-card">
 				<div class="iaq-card-header">
-					<h2>
+					<h2 id="iaq-subject-form-title">
 						<span class="dashicons dashicons-category"></span> 
-						<?php echo $edit_subject ? esc_html__( 'Edit Subject', 'indianagri-quiz-engine' ) : esc_html__( 'Add New Subject', 'indianagri-quiz-engine' ); ?>
+						<span class="iaq-form-title-text"><?php echo $edit_subject ? esc_html__( 'Edit Subject', 'indianagri-quiz-engine' ) : esc_html__( 'Add New Subject', 'indianagri-quiz-engine' ); ?></span>
 					</h2>
 				</div>
 				<div class="iaq-card-body">
-					<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=iaq-subjects-topics' ) ); ?>">
+					<form method="post" id="iaq-subject-form" action="<?php echo esc_url( admin_url( 'admin.php?page=iaq-subjects-topics' ) ); ?>">
 						<?php wp_nonce_field( 'iaq_save_subject_nonce' ); ?>
-						<?php if ( $edit_subject ) : ?>
-							<input type="hidden" name="id" value="<?php echo esc_attr( $edit_subject->id ); ?>">
-						<?php endif; ?>
+						<input type="hidden" name="id" id="subj-id" value="<?php echo esc_attr( $edit_subject ? $edit_subject->id : '' ); ?>">
 
 						<div class="iaq-form-group">
 							<label for="subj-name"><?php esc_html_e( 'Subject Name', 'indianagri-quiz-engine' ); ?> <span class="iaq-required">*</span></label>
@@ -75,14 +73,12 @@ if ( isset( $_GET['edit_topic'] ) ) {
 						</div>
 
 						<div class="iaq-form-actions">
-							<button type="submit" name="iaq_save_subject" class="iaq-btn iaq-btn-primary">
-								<span class="dashicons dashicons-saved"></span> <?php echo $edit_subject ? esc_html__( 'Update Subject', 'indianagri-quiz-engine' ) : esc_html__( 'Create Subject', 'indianagri-quiz-engine' ); ?>
+							<button type="submit" name="iaq_save_subject" id="iaq-subject-submit-btn" class="iaq-btn iaq-btn-primary">
+								<span class="dashicons dashicons-saved"></span> <span class="iaq-btn-text"><?php echo $edit_subject ? esc_html__( 'Update Subject', 'indianagri-quiz-engine' ) : esc_html__( 'Create Subject', 'indianagri-quiz-engine' ); ?></span>
 							</button>
-							<?php if ( $edit_subject ) : ?>
-								<a href="<?php echo esc_url( admin_url( 'admin.php?page=iaq-subjects-topics' ) ); ?>" class="iaq-btn iaq-btn-outline">
-									<?php esc_html_e( 'Cancel', 'indianagri-quiz-engine' ); ?>
-								</a>
-							<?php endif; ?>
+							<a href="<?php echo esc_url( admin_url( 'admin.php?page=iaq-subjects-topics' ) ); ?>" id="iaq-subject-cancel-btn" class="iaq-btn iaq-btn-outline" style="<?php echo $edit_subject ? '' : 'display:none;'; ?>">
+								<?php esc_html_e( 'Cancel', 'indianagri-quiz-engine' ); ?>
+							</a>
 						</div>
 					</form>
 				</div>
@@ -128,7 +124,13 @@ if ( isset( $_GET['edit_topic'] ) ) {
 										</td>
 										<td>
 											<div class="iaq-row-action-btns">
-												<a href="<?php echo esc_url( $edit_url ); ?>" class="iaq-action-btn iaq-btn-edit" title="<?php esc_attr_e( 'Edit', 'indianagri-quiz-engine' ); ?>">
+												<a href="<?php echo esc_url( $edit_url ); ?>" 
+												   class="iaq-action-btn iaq-btn-edit iaq-edit-subject-btn" 
+												   data-id="<?php echo esc_attr( $s->id ); ?>" 
+												   data-name="<?php echo esc_attr( $s->name ); ?>" 
+												   data-slug="<?php echo esc_attr( $s->slug ); ?>" 
+												   data-desc="<?php echo esc_attr( $s->description ); ?>" 
+												   title="<?php esc_attr_e( 'Edit', 'indianagri-quiz-engine' ); ?>">
 													<span class="dashicons dashicons-edit"></span>
 												</a>
 												<a href="<?php echo esc_url( $del_url ); ?>" class="iaq-action-btn iaq-btn-delete iaq-confirm-delete" title="<?php esc_attr_e( 'Delete', 'indianagri-quiz-engine' ); ?>">
@@ -148,19 +150,17 @@ if ( isset( $_GET['edit_topic'] ) ) {
 		<!-- RIGHT COLUMN: TOPICS -->
 		<div class="iaq-col-panel">
 			<!-- Add/Edit Topic Form -->
-			<div class="iaq-card">
+			<div class="iaq-card" id="iaq-topic-form-card">
 				<div class="iaq-card-header">
-					<h2>
+					<h2 id="iaq-topic-form-title">
 						<span class="dashicons dashicons-tag"></span> 
-						<?php echo $edit_topic ? esc_html__( 'Edit Topic', 'indianagri-quiz-engine' ) : esc_html__( 'Add New Topic', 'indianagri-quiz-engine' ); ?>
+						<span class="iaq-form-title-text"><?php echo $edit_topic ? esc_html__( 'Edit Topic', 'indianagri-quiz-engine' ) : esc_html__( 'Add New Topic', 'indianagri-quiz-engine' ); ?></span>
 					</h2>
 				</div>
 				<div class="iaq-card-body">
-					<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=iaq-subjects-topics' ) ); ?>">
+					<form method="post" id="iaq-topic-form" action="<?php echo esc_url( admin_url( 'admin.php?page=iaq-subjects-topics' ) ); ?>">
 						<?php wp_nonce_field( 'iaq_save_topic_nonce' ); ?>
-						<?php if ( $edit_topic ) : ?>
-							<input type="hidden" name="id" value="<?php echo esc_attr( $edit_topic->id ); ?>">
-						<?php endif; ?>
+						<input type="hidden" name="id" id="topic-id" value="<?php echo esc_attr( $edit_topic ? $edit_topic->id : '' ); ?>">
 
 						<div class="iaq-form-group">
 							<label for="topic-subject"><?php esc_html_e( 'Parent Subject', 'indianagri-quiz-engine' ); ?> <span class="iaq-required">*</span></label>
@@ -188,14 +188,12 @@ if ( isset( $_GET['edit_topic'] ) ) {
 						</div>
 
 						<div class="iaq-form-actions">
-							<button type="submit" name="iaq_save_topic" class="iaq-btn iaq-btn-primary">
-								<span class="dashicons dashicons-saved"></span> <?php echo $edit_topic ? esc_html__( 'Update Topic', 'indianagri-quiz-engine' ) : esc_html__( 'Create Topic', 'indianagri-quiz-engine' ); ?>
+							<button type="submit" name="iaq_save_topic" id="iaq-topic-submit-btn" class="iaq-btn iaq-btn-primary">
+								<span class="dashicons dashicons-saved"></span> <span class="iaq-btn-text"><?php echo $edit_topic ? esc_html__( 'Update Topic', 'indianagri-quiz-engine' ) : esc_html__( 'Create Topic', 'indianagri-quiz-engine' ); ?></span>
 							</button>
-							<?php if ( $edit_topic ) : ?>
-								<a href="<?php echo esc_url( admin_url( 'admin.php?page=iaq-subjects-topics' ) ); ?>" class="iaq-btn iaq-btn-outline">
-									<?php esc_html_e( 'Cancel', 'indianagri-quiz-engine' ); ?>
-								</a>
-							<?php endif; ?>
+							<a href="<?php echo esc_url( admin_url( 'admin.php?page=iaq-subjects-topics' ) ); ?>" id="iaq-topic-cancel-btn" class="iaq-btn iaq-btn-outline" style="<?php echo $edit_topic ? '' : 'display:none;'; ?>">
+								<?php esc_html_e( 'Cancel', 'indianagri-quiz-engine' ); ?>
+							</a>
 						</div>
 					</form>
 				</div>
@@ -249,7 +247,13 @@ if ( isset( $_GET['edit_topic'] ) ) {
 											</td>
 											<td>
 												<div class="iaq-row-action-btns">
-													<a href="<?php echo esc_url( $edit_topic_url ); ?>" class="iaq-action-btn iaq-btn-edit" title="<?php esc_attr_e( 'Edit', 'indianagri-quiz-engine' ); ?>">
+													<a href="<?php echo esc_url( $edit_topic_url ); ?>" 
+													   class="iaq-action-btn iaq-btn-edit iaq-edit-topic-btn" 
+													   data-id="<?php echo esc_attr( $t->id ); ?>" 
+													   data-subject-id="<?php echo esc_attr( $t->subject_id ); ?>" 
+													   data-name="<?php echo esc_attr( $t->name ); ?>" 
+													   data-slug="<?php echo esc_attr( $t->slug ); ?>" 
+													   title="<?php esc_attr_e( 'Edit', 'indianagri-quiz-engine' ); ?>">
 														<span class="dashicons dashicons-edit"></span>
 													</a>
 													<a href="<?php echo esc_url( $del_topic_url ); ?>" class="iaq-action-btn iaq-btn-delete iaq-confirm-delete" title="<?php esc_attr_e( 'Delete', 'indianagri-quiz-engine' ); ?>">

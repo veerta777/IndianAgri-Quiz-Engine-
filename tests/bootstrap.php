@@ -167,9 +167,9 @@ function current_time( $type, $gmt = 0 ) {
 	if ( 'timestamp' === $type ) {
 		return time();
 	} elseif ( 'mysql' === $type ) {
-		return gmdate( 'Y-m-d H:i:s' );
+		return $gmt ? gmdate( 'Y-m-d H:i:s' ) : date( 'Y-m-d H:i:s' );
 	}
-	return gmdate( $type );
+	return $gmt ? gmdate( $type ) : date( $type );
 }
 // WooCommerce Mocks
 global $mock_wc_orders;
@@ -425,6 +425,10 @@ function wp_login_url( $redirect = '' ) {
 	return 'http://example.com/wp-login.php?redirect_to=' . urlencode( $redirect );
 }
 
+function wp_logout_url( $redirect = '' ) {
+	return 'http://example.com/wp-login.php?action=logout&redirect_to=' . urlencode( $redirect );
+}
+
 function add_query_arg( ...$args ) {
 	if ( is_array( $args[0] ) ) {
 		$params = $args[0];
@@ -456,15 +460,49 @@ function esc_attr_e( $text, $domain = 'default' ) {
 	echo esc_attr( $text );
 }
 
+function _n( $single, $plural, $number, $domain = 'default' ) {
+	return 1 === (int) $number ? $single : $plural;
+}
+
 function is_admin() {
 	return true;
 }
 
+global $mock_actions;
+$mock_actions = array();
+
 function add_action( $tag, $callback, $priority = 10, $accepted_args = 1 ) {
+	global $mock_actions;
+	if ( ! isset( $mock_actions[ $tag ] ) ) {
+		$mock_actions[ $tag ] = array();
+	}
+	$mock_actions[ $tag ][] = array(
+		'callback'      => $callback,
+		'priority'      => $priority,
+		'accepted_args' => $accepted_args,
+	);
+	return true;
+}
+
+function remove_action( $tag, $callback, $priority = 10 ) {
+	global $mock_actions;
+	if ( isset( $mock_actions[ $tag ] ) ) {
+		foreach ( $mock_actions[ $tag ] as $idx => $act ) {
+			if ( $act['callback'] === $callback ) {
+				unset( $mock_actions[ $tag ][ $idx ] );
+			}
+		}
+	}
 	return true;
 }
 
 function do_action( $tag, ...$args ) {
+	global $mock_actions;
+	if ( ! empty( $mock_actions[ $tag ] ) ) {
+		foreach ( $mock_actions[ $tag ] as $act ) {
+			call_user_func_array( $act['callback'], $args );
+		}
+	}
 	return true;
 }
 
@@ -501,6 +539,150 @@ class WP_Error {
 
 function is_wp_error( $thing ) {
 	return ( $thing instanceof WP_Error );
+}
+
+class WP_REST_Server {
+	const READABLE   = 'GET';
+	const CREATABLE  = 'POST';
+	const EDITABLE   = 'POST, PUT, PATCH';
+	const DELETABLE  = 'DELETE';
+	const ALLMETHODS = 'GET, POST, PUT, PATCH, DELETE';
+}
+
+class WP_REST_Request {
+	private $method;
+	private $route;
+	private $params = array();
+
+	public function __construct( $method = 'GET', $route = '' ) {
+		$this->method = strtoupper( $method );
+		$this->route  = $route;
+	}
+
+	public function get_method() {
+		return $this->method;
+	}
+
+	public function get_route() {
+		return $this->route;
+	}
+
+	public function set_param( $key, $value ) {
+		$this->params[ $key ] = $value;
+	}
+
+	public function get_param( $key ) {
+		return isset( $this->params[ $key ] ) ? $this->params[ $key ] : null;
+	}
+
+	public function get_params() {
+		return $this->params;
+	}
+
+	public function get_json_params() {
+		return $this->params;
+	}
+}
+
+class WP_REST_Response {
+	public $data;
+	public $status;
+	public $headers = array();
+
+	public function __construct( $data = null, $status = 200, $headers = array() ) {
+		$this->data    = $data;
+		$this->status  = $status;
+		$this->headers = $headers;
+	}
+
+	public function get_data() {
+		return $this->data;
+	}
+
+	public function get_status() {
+		return $this->status;
+	}
+}
+
+global $mock_rest_routes;
+$mock_rest_routes = array();
+
+function register_rest_route( $namespace, $route, $args = array() ) {
+	global $mock_rest_routes;
+	$full_route = '/' . trim( $namespace, '/' ) . '/' . ltrim( $route, '/' );
+	$mock_rest_routes[ $full_route ] = $args;
+	return true;
+}
+
+function rest_ensure_response( $response ) {
+	if ( $response instanceof WP_REST_Response ) {
+		return $response;
+	}
+	return new WP_REST_Response( $response );
+}
+
+function wp_set_current_user( $id ) {
+	global $current_user_id;
+	$current_user_id = (int) $id;
+	return wp_get_current_user();
+}
+
+function wp_generate_password( $length = 12, $special_chars = true, $extra_special_chars = false ) {
+	return bin2hex( random_bytes( (int) ceil( $length / 2 ) ) );
+}
+
+function wp_authenticate( $username, $password ) {
+	if ( 'invalid' === $password || 'wrong' === $password ) {
+		return new WP_Error( 'invalid_credentials', 'Invalid username or password' );
+	}
+	$user = new stdClass();
+	$user->ID = 1;
+	$user->user_login = $username;
+	$user->user_email = $username . '@indianagriexam.com';
+	$user->display_name = ucfirst( $username );
+	$user->first_name = ucfirst( $username );
+	$user->last_name = 'Student';
+	return $user;
+}
+
+function get_avatar_url( $id_or_email, $args = null ) {
+	return 'https://secure.gravatar.com/avatar/' . md5( (string) $id_or_email ) . '?s=128&d=mm&r=g';
+}
+
+function sanitize_user( $username, $strict = false ) {
+	return preg_replace( '/[^a-zA-Z0-9 _.\-@]/', '', (string) $username );
+}
+
+function sanitize_email( $email ) {
+	return filter_var( $email, FILTER_SANITIZE_EMAIL );
+}
+
+function is_email( $email ) {
+	return filter_var( $email, FILTER_VALIDATE_EMAIL );
+}
+
+function username_exists( $username ) {
+	return 'existing_user' === $username;
+}
+
+function email_exists( $email ) {
+	return 'existing@indianagriexam.com' === $email;
+}
+
+function wp_create_user( $username, $password, $email = '' ) {
+	return 42;
+}
+
+function wp_update_user( $userdata ) {
+	return isset( $userdata['ID'] ) ? $userdata['ID'] : 1;
+}
+
+function get_user_by( $field, $value ) {
+	$user = new stdClass();
+	$user->ID = 1;
+	$user->user_login = is_string( $value ) ? $value : 'student1';
+	$user->user_email = 'student1@indianagriexam.com';
+	return $user;
 }
 
 /**
@@ -709,7 +891,7 @@ class Mock_WPDB {
 
 		// Handle quiz counts query
 		if ( strpos( $query, $this->prefix . 'iaq_quizzes' ) !== false && strpos( $query, 'COUNT(id) as count_val' ) !== false ) {
-			$counts = array( 'practice' => 0, 'mock' => 0, 'previous_year' => 0 );
+			$counts = array( 'practice' => 0, 'mock' => 0 );
 			foreach ( $this->tables[ $this->prefix . 'iaq_quizzes' ] as $qz ) {
 				if ( 'published' === $qz->status && isset( $counts[ $qz->quiz_type ] ) ) {
 					$counts[ $qz->quiz_type ]++;
@@ -955,10 +1137,10 @@ class Mock_WPDB {
 				if ( $status_match && isset( $ex->status ) && $ex->status !== $status_match ) {
 					continue;
 				}
-				if ( $cat_filter > 0 && isset( $ex->category_id ) && (int) $ex->category_id !== $cat_filter ) {
+				if ( $cat_filter > 0 && ( ! isset( $ex->category_id ) || (int) $ex->category_id !== $cat_filter ) ) {
 					continue;
 				}
-				if ( null !== $parent_filter && isset( $ex->parent_id ) && (int) $ex->parent_id !== $parent_filter ) {
+				if ( null !== $parent_filter && ( ! isset( $ex->parent_id ) || (int) $ex->parent_id !== $parent_filter ) ) {
 					continue;
 				}
 				$clone = clone $ex;
@@ -1016,11 +1198,25 @@ class Mock_WPDB {
 			if ( preg_match( "/status = '([^']+)'/", $query, $m ) ) {
 				$status_match = $m[1];
 			}
+			$expiry_lt = null;
+			if ( preg_match( "/expiry_date < '([^']+)'/", $query, $m ) ) {
+				$expiry_lt = $m[1];
+			}
+			$expiry_gte = null;
+			if ( preg_match( "/expiry_date >= '([^']+)'/", $query, $m ) ) {
+				$expiry_gte = $m[1];
+			}
 			foreach ( $this->tables[ $this->prefix . 'iaq_user_subscriptions' ] as $us ) {
 				if ( $uid_match && (int) $us->user_id !== $uid_match ) {
 					continue;
 				}
 				if ( $status_match && $us->status !== $status_match ) {
+					continue;
+				}
+				if ( null !== $expiry_lt && isset( $us->expiry_date ) && $us->expiry_date >= $expiry_lt ) {
+					continue;
+				}
+				if ( null !== $expiry_gte && isset( $us->expiry_date ) && $us->expiry_date < $expiry_gte ) {
 					continue;
 				}
 				$results[] = clone $us;
@@ -1686,8 +1882,12 @@ class Mock_WPDB {
 			}
 			if ( preg_match( "/WHERE (?:a\.)?id = (\d+)/", $query, $m ) ) {
 				$id = (int) $m[1];
+				$req_uid = preg_match( "/(?:AND|and) (?:a\.)?user_id = (\d+)/", $query, $um ) ? (int) $um[1] : 0;
 				if ( isset( $this->tables[ $this->prefix . 'iaq_quiz_attempts' ][ $id ] ) ) {
 					$att = clone $this->tables[ $this->prefix . 'iaq_quiz_attempts' ][ $id ];
+					if ( $req_uid > 0 && (int) $att->user_id !== $req_uid ) {
+						return null;
+					}
 					if ( isset( $this->tables[ $this->prefix . 'iaq_quizzes' ][ $att->quiz_id ] ) ) {
 						$qz = $this->tables[ $this->prefix . 'iaq_quizzes' ][ $att->quiz_id ];
 						$att->duration_minutes  = isset( $qz->duration_minutes ) ? $qz->duration_minutes : 0;
@@ -1750,7 +1950,7 @@ class Mock_WPDB {
 			}
 		}
 
-		// Match single subject or topic
+		// Match single subject or topic or answer
 		if ( preg_match( "/WHERE id = (\d+)/", $query, $m ) ) {
 			$id = (int) $m[1];
 			if ( strpos( $query, $this->prefix . 'iaq_subjects' ) !== false ) {
@@ -1767,6 +1967,9 @@ class Mock_WPDB {
 			}
 			if ( strpos( $query, $this->prefix . 'iaq_user_subscriptions' ) !== false ) {
 				return isset( $this->tables[ $this->prefix . 'iaq_user_subscriptions' ][ $id ] ) ? clone $this->tables[ $this->prefix . 'iaq_user_subscriptions' ][ $id ] : null;
+			}
+			if ( strpos( $query, $this->prefix . 'iaq_attempt_answers' ) !== false ) {
+				return isset( $this->tables[ $this->prefix . 'iaq_attempt_answers' ][ $id ] ) ? clone $this->tables[ $this->prefix . 'iaq_attempt_answers' ][ $id ] : null;
 			}
 		}
 
@@ -1818,6 +2021,34 @@ class Mock_WPDB {
 	public function get_var( $query ) {
 		$this->queries[] = $query;
 
+		// SHOW TABLES LIKE query
+		if ( stripos( $query, 'SHOW TABLES LIKE' ) !== false ) {
+			if ( preg_match( "/SHOW TABLES LIKE ['\"]?%?([^'%\"\s]+)%?['\"]?/i", $query, $m ) ) {
+				$tbl = $m[1];
+				return isset( $this->tables[ $tbl ] ) ? $tbl : null;
+			}
+			return null;
+		}
+
+		// Questions duplicate lookup
+		if ( strpos( $query, $this->prefix . 'iaq_questions' ) !== false && strpos( $query, 'SELECT id FROM' ) !== false && strpos( $query, 'question_text =' ) !== false ) {
+			$subj_id = preg_match( "/subject_id\s*=\s*(\d+)/", $query, $sm ) ? (int) $sm[1] : 0;
+			if ( preg_match( "/question_text\s*=\s*'((?:[^'\\\\]|\\\\.)*)'/", $query, $qm ) ) {
+				$qtext = stripslashes( $qm[1] );
+				$clean_target = preg_replace( '/\s+/u', ' ', trim( wp_strip_all_tags( $qtext ) ) );
+				foreach ( $this->tables[ $this->prefix . 'iaq_questions' ] as $q ) {
+					if ( $subj_id > 0 && isset( $q->subject_id ) && (int) $q->subject_id !== $subj_id ) {
+						continue;
+					}
+					$existing_clean = preg_replace( '/\s+/u', ' ', trim( wp_strip_all_tags( isset( $q->question_text ) ? $q->question_text : '' ) ) );
+					if ( $existing_clean === $clean_target ) {
+						return (int) $q->id;
+					}
+				}
+			}
+			return null;
+		}
+
 		// COUNT queries
 		if ( strpos( $query, 'COUNT(*)' ) !== false ) {
 			if ( strpos( $query, $this->prefix . 'iaq_quizzes' ) !== false ) {
@@ -1833,7 +2064,31 @@ class Mock_WPDB {
 				return count( $this->tables[ $this->prefix . 'iaq_topics' ] );
 			}
 			if ( strpos( $query, $this->prefix . 'iaq_examinations' ) !== false ) {
+				$cat_filter = preg_match( "/(?:category_id|e\.category_id)\s*=\s*(\d+)/", $query, $cm ) ? (int) $cm[1] : 0;
+				$code_match = preg_match( "/code\s*=\s*'([^']+)'/", $query, $cdm ) ? $cdm[1] : null;
+				$name_like  = preg_match( "/name\s+LIKE\s+'%([^%]+)%'/i", $query, $nlm ) ? strtolower( $nlm[1] ) : null;
+				if ( $cat_filter > 0 || $code_match || $name_like ) {
+					$cnt = 0;
+					foreach ( $this->tables[ $this->prefix . 'iaq_examinations' ] as $ex ) {
+						if ( $cat_filter > 0 && ( ! isset( $ex->category_id ) || (int) $ex->category_id !== $cat_filter ) ) continue;
+						if ( $code_match && ( ! isset( $ex->code ) || $ex->code !== $code_match ) ) continue;
+						if ( $name_like && ( ! isset( $ex->name ) || false === stripos( $ex->name, $name_like ) ) ) continue;
+						$cnt++;
+					}
+					return $cnt;
+				}
 				return count( $this->tables[ $this->prefix . 'iaq_examinations' ] );
+			}
+			if ( strpos( $query, $this->prefix . 'iaq_exam_subjects' ) !== false ) {
+				$eid_filter = preg_match( "/exam_id\s*=\s*(\d+)/", $query, $em ) ? (int) $em[1] : 0;
+				if ( $eid_filter > 0 ) {
+					$cnt = 0;
+					foreach ( $this->tables[ $this->prefix . 'iaq_exam_subjects' ] as $es ) {
+						if ( isset( $es->exam_id ) && (int) $es->exam_id === $eid_filter ) $cnt++;
+					}
+					return $cnt;
+				}
+				return count( $this->tables[ $this->prefix . 'iaq_exam_subjects' ] );
 			}
 			if ( strpos( $query, $this->prefix . 'iaq_subscription_plans' ) !== false ) {
 				return count( $this->tables[ $this->prefix . 'iaq_subscription_plans' ] );
@@ -1844,6 +2099,42 @@ class Mock_WPDB {
 			if ( strpos( $query, $this->prefix . 'iaq_books' ) !== false ) {
 				return count( $this->tables[ $this->prefix . 'iaq_books' ] );
 			}
+			if ( strpos( $query, $this->prefix . 'iaq_quiz_attempts' ) !== false ) {
+				$qid         = preg_match( "/quiz_id\s*=\s*(\d+)/", $query, $qm ) ? (int) $qm[1] : 0;
+				$status_comp = ( strpos( $query, "status = 'completed'" ) !== false );
+				$score_lt    = preg_match( "/score\s*<\s*([\d\.\-]+)/", $query, $sltm ) ? (float) $sltm[1] : null;
+				$score_eq    = preg_match( "/score\s*=\s*([\d\.\-]+)/", $query, $seqm ) ? (float) $seqm[1] : null;
+
+				$cnt = 0;
+				foreach ( $this->tables[ $this->prefix . 'iaq_quiz_attempts' ] as $att ) {
+					if ( $qid > 0 && isset( $att->quiz_id ) && (int) $att->quiz_id !== $qid ) {
+						continue;
+					}
+					if ( $status_comp && ( ! isset( $att->status ) || 'completed' !== $att->status ) ) {
+						continue;
+					}
+					if ( null !== $score_lt && ( ! isset( $att->score ) || (float) $att->score >= $score_lt ) ) {
+						continue;
+					}
+					if ( null !== $score_eq && ( ! isset( $att->score ) || (float) $att->score != $score_eq ) ) {
+						continue;
+					}
+					$cnt++;
+				}
+				return $cnt;
+			}
+		}
+
+		// Negative deductions SUM query
+		if ( strpos( $query, $this->prefix . 'iaq_attempt_answers' ) !== false && strpos( $query, 'SUM(marks_awarded)' ) !== false ) {
+			$att_id    = preg_match( "/attempt_id\s*=\s*(\d+)/", $query, $am ) ? (int) $am[1] : 0;
+			$total_neg = 0.0;
+			foreach ( $this->tables[ $this->prefix . 'iaq_attempt_answers' ] as $ans ) {
+				if ( (int) $ans->attempt_id === $att_id && isset( $ans->marks_awarded ) && (float) $ans->marks_awarded < 0 ) {
+					$total_neg += abs( (float) $ans->marks_awarded );
+				}
+			}
+			return $total_neg;
 		}
 
 		// Books check
@@ -2207,21 +2498,26 @@ class Mock_WPDB {
 			return $ids;
 		}
 
-		if ( strpos( $query, 'question_id FROM ' . $this->prefix . 'iaq_wrong_notebook' ) !== false && preg_match( "/WHERE user_id = (\d+)/", $query, $m ) ) {
+		if ( ( strpos( $query, 'question_id FROM ' . $this->prefix . 'iaq_wrong_notebook' ) !== false || strpos( $query, 'n.question_id FROM ' . $this->prefix . 'iaq_wrong_notebook' ) !== false ) && preg_match( "/WHERE (?:n\.)?user_id = (\d+)/", $query, $m ) ) {
 			$uid = (int) $m[1];
 			$ids = array();
 			$status = null;
-			if ( preg_match( "/status = '([^']+)'/", $query, $sm ) ) {
+			$not_dismissed = ( strpos( $query, "!= 'dismissed'" ) !== false || strpos( $query, "<> 'dismissed'" ) !== false );
+			if ( preg_match( "/(?:n\.)?status = '([^']+)'/", $query, $sm ) ) {
 				$status = $sm[1];
 			}
 			foreach ( $this->tables[ $this->prefix . 'iaq_wrong_notebook' ] as $wn ) {
 				if ( (int) $wn->user_id === $uid ) {
-					if ( null === $status || ( isset( $wn->status ) && $wn->status === $status ) ) {
+					if ( $not_dismissed ) {
+						if ( ! isset( $wn->status ) || 'dismissed' !== $wn->status ) {
+							$ids[] = $wn->question_id;
+						}
+					} elseif ( null === $status || ( isset( $wn->status ) && $wn->status === $status ) ) {
 						$ids[] = $wn->question_id;
 					}
 				}
 			}
-			return $ids;
+			return array_values( array_unique( $ids ) );
 		}
 
 		return $col;
@@ -2272,4 +2568,5 @@ require_once dirname( __DIR__ ) . '/includes/class-study-streaks.php';
 require_once dirname( __DIR__ ) . '/includes/class-import-export.php';
 require_once dirname( __DIR__ ) . '/includes/class-frontend.php';
 require_once dirname( __DIR__ ) . '/includes/class-admin.php';
+require_once dirname( __DIR__ ) . '/includes/class-rest-api.php';
 require_once dirname( __DIR__ ) . '/includes/class-plugin.php';

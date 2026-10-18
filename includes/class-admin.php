@@ -248,6 +248,12 @@ class IAQ_Admin {
 			IAQ_Import_Export::generate_sample_csv();
 		}
 
+		// 1b. Download Sample JSON.
+		if ( isset( $_GET['iaq_action'] ) && 'download_sample_json' === $_GET['iaq_action'] ) {
+			check_admin_referer( 'iaq_download_sample_json' );
+			IAQ_Import_Export::generate_sample_json();
+		}
+
 		// 2. Export CSV.
 		if ( isset( $_GET['iaq_action'] ) && 'export_csv' === $_GET['iaq_action'] ) {
 			check_admin_referer( 'iaq_export_csv' );
@@ -341,33 +347,45 @@ class IAQ_Admin {
 			exit;
 		}
 
-		// 10. Handle CSV File Upload & Import.
+		// 10. Handle File Upload & Import (CSV or JSON).
 		if ( isset( $_POST['iaq_upload_csv'] ) ) {
 			check_admin_referer( 'iaq_upload_csv_nonce' );
 
-			if ( empty( $_FILES['csv_file']['tmp_name'] ) ) {
-				$this->add_notice( 'error', __( 'Please choose a valid CSV file to upload.', 'indianagri-quiz-engine' ) );
+			if ( empty( $_FILES['csv_file']['tmp_name'] ) || ! is_uploaded_file( $_FILES['csv_file']['tmp_name'] ) ) {
+				$this->add_notice( 'error', __( 'Please choose a valid JSON or CSV file to upload.', 'indianagri-quiz-engine' ) );
 				return;
 			}
 
 			$file_name = sanitize_file_name( $_FILES['csv_file']['name'] );
 			$ext       = strtolower( pathinfo( $file_name, PATHINFO_EXTENSION ) );
 
-			if ( 'csv' !== $ext ) {
-				$this->add_notice( 'error', __( 'Invalid file extension. Only .csv files are supported.', 'indianagri-quiz-engine' ) );
+			if ( ! in_array( $ext, array( 'csv', 'json' ), true ) ) {
+				$this->add_notice( 'error', __( 'Invalid file extension. Only .json and .csv files are supported.', 'indianagri-quiz-engine' ) );
 				return;
 			}
 
-			$import_res = IAQ_Import_Export::import_from_csv( $_FILES['csv_file']['tmp_name'] );
+			$target_quiz_id     = ! empty( $_POST['assign_quiz_id'] ) ? absint( $_POST['assign_quiz_id'] ) : 0;
+			$duplicate_handling = ! empty( $_POST['duplicate_handling'] ) && in_array( $_POST['duplicate_handling'], array( 'skip', 'update', 'allow' ), true ) ? sanitize_key( $_POST['duplicate_handling'] ) : 'skip';
+			$import_res         = IAQ_Import_Export::import_from_file( $_FILES['csv_file']['tmp_name'], $target_quiz_id, null, $file_name, $duplicate_handling );
 			if ( ! $import_res['success'] ) {
 				$this->add_notice( 'error', $import_res['message'] );
 			} else {
-				$msg = sprintf(
-					/* translators: 1: imported count, 2: skipped count */
-					__( 'Import complete: %1$d questions imported successfully. %2$d rows skipped.', 'indianagri-quiz-engine' ),
-					$import_res['imported'],
-					$import_res['skipped']
-				);
+				if ( $target_quiz_id > 0 ) {
+					$msg = sprintf(
+						/* translators: 1: imported count, 2: skipped count, 3: quiz id */
+						__( 'Import complete: %1$d questions imported and assigned directly to Quiz/Set #%3$d. %2$d rows skipped.', 'indianagri-quiz-engine' ),
+						$import_res['imported'],
+						$import_res['skipped'],
+						$target_quiz_id
+					);
+				} else {
+					$msg = sprintf(
+						/* translators: 1: imported count, 2: skipped count */
+						__( 'Import complete: %1$d questions imported successfully. %2$d rows skipped.', 'indianagri-quiz-engine' ),
+						$import_res['imported'],
+						$import_res['skipped']
+					);
+				}
 
 				if ( ! empty( $import_res['errors'] ) ) {
 					$msg .= '<br><ul style="margin-top:6px;list-style:disc;padding-left:20px;">';
@@ -415,6 +433,8 @@ class IAQ_Admin {
 				'leaderboard_limit'              => isset( $_POST['leaderboard_limit'] ) ? max( 5, min( 50, absint( $_POST['leaderboard_limit'] ) ) ) : 10,
 				// Custom Practice Limits
 				'custom_practice_max_questions'  => isset( $_POST['custom_practice_max_questions'] ) ? max( 5, min( 100, absint( $_POST['custom_practice_max_questions'] ) ) ) : 50,
+				// Bulk CSV Import Limit (Defaults to 200)
+				'bulk_import_max_limit'          => isset( $_POST['bulk_import_max_limit'] ) ? max( 10, min( 1000, absint( $_POST['bulk_import_max_limit'] ) ) ) : 200,
 				// Recommendations & Streaks Rules
 				'recommendations_focus_weak_areas'=> isset( $_POST['recommendations_focus_weak_areas'] ) ? 1 : 0,
 				'streak_qualifying_activity'     => ! empty( $_POST['streak_qualifying_activity'] ) ? sanitize_key( $_POST['streak_qualifying_activity'] ) : 'quiz_completed',
@@ -425,6 +445,7 @@ class IAQ_Admin {
 			update_option( 'iaq_leaderboard_enabled', $settings['enable_leaderboard'] );
 			update_option( 'iaq_leaderboard_name_type', $settings['leaderboard_name_type'] );
 			update_option( 'iaq_custom_practice_max_questions', $settings['custom_practice_max_questions'] );
+			update_option( 'iaq_bulk_import_max_limit', $settings['bulk_import_max_limit'] );
 			update_option( 'iaq_enable_bookmarks', $settings['enable_bookmarks'] );
 			update_option( 'iaq_enable_wrong_notebook', $settings['enable_wrong_notebook'] );
 			update_option( 'iaq_enable_study_streaks', $settings['enable_study_streaks'] );
@@ -664,6 +685,154 @@ class IAQ_Admin {
 			exit;
 		}
 
+		// 28b. Create Practice Set for Book (with optional Bulk CSV Import).
+		if ( isset( $_POST['iaq_create_book_practice_set'] ) ) {
+			check_admin_referer( 'iaq_create_book_practice_set_nonce' );
+			$b_id       = absint( $_POST['book_id'] );
+			$book       = IAQ_Practice_Sets::get_book( $b_id );
+			$sort_order = isset( $_POST['sort_order'] ) ? max( 1, intval( $_POST['sort_order'] ) ) : 1;
+			$set_title  = ! empty( $_POST['set_title'] ) ? sanitize_text_field( wp_unslash( $_POST['set_title'] ) ) : sprintf( __( 'Practice Set %d', 'indianagri-quiz-engine' ), $sort_order );
+			$subject_id = ! empty( $_POST['subject_id'] ) ? absint( $_POST['subject_id'] ) : ( $book ? (int) $book->subject_id : 0 );
+
+			// Save Quiz
+			$quiz_data = array(
+				'title'               => $set_title,
+				'slug'                => sanitize_title( ( $book ? $book->slug . '-' : '' ) . $set_title ),
+				'quiz_type'           => 'practice',
+				'book_id'             => $b_id,
+				'subject_id'          => $subject_id,
+				'topic_id'            => 0,
+				'duration_minutes'    => isset( $_POST['duration_minutes'] ) ? absint( $_POST['duration_minutes'] ) : 20,
+				'correct_marks'       => isset( $_POST['correct_marks'] ) ? floatval( $_POST['correct_marks'] ) : 1.00,
+				'negative_marks'      => isset( $_POST['negative_marks'] ) ? floatval( $_POST['negative_marks'] ) : 0.25,
+				'pass_percentage'     => isset( $_POST['pass_percentage'] ) ? floatval( $_POST['pass_percentage'] ) : 50.00,
+				'show_answers_mode'   => 'immediate',
+				'status'              => 'published',
+				'access_type'         => $book ? $book->access_type : 'free',
+				'display_order'       => $sort_order,
+			);
+
+			$quiz_id = IAQ_Quiz_Builder::save_quiz( $quiz_data );
+			if ( is_wp_error( $quiz_id ) ) {
+				$this->add_notice( 'error', $quiz_id->get_error_message() );
+			} else {
+				// Attach quiz to this book.
+				IAQ_Practice_Sets::assign_quiz_to_book( $b_id, $quiz_id, $sort_order );
+
+				// Check if bulk CSV or JSON was uploaded.
+				$imported_count = 0;
+				if ( ! empty( $_FILES['csv_file']['tmp_name'] ) && is_uploaded_file( $_FILES['csv_file']['tmp_name'] ) ) {
+					$ext = strtolower( pathinfo( $_FILES['csv_file']['name'], PATHINFO_EXTENSION ) );
+					if ( in_array( $ext, array( 'csv', 'json' ), true ) ) {
+						$import_res = IAQ_Import_Export::import_from_file( $_FILES['csv_file']['tmp_name'], $quiz_id, null, $_FILES['csv_file']['name'] );
+						if ( ! empty( $import_res['success'] ) ) {
+							$imported_count = (int) $import_res['imported'];
+						}
+					}
+				}
+
+				if ( $imported_count > 0 ) {
+					wp_safe_redirect(
+						add_query_arg(
+							array(
+								'page'    => 'iaq-books',
+								'action'  => 'manage_sets',
+								'book_id' => $b_id,
+								'message' => 'practice_set_created_with_import',
+								'count'   => $imported_count,
+							),
+							admin_url( 'admin.php' )
+						)
+					);
+				} else {
+					wp_safe_redirect(
+						add_query_arg(
+							array(
+								'page'    => 'iaq-books',
+								'action'  => 'manage_sets',
+								'book_id' => $b_id,
+								'message' => 'practice_set_created',
+							),
+							admin_url( 'admin.php' )
+						)
+					);
+				}
+				exit;
+			}
+		}
+
+		// 28c. Bulk Import Questions Directly to a Practice Set.
+		if ( isset( $_POST['iaq_bulk_import_to_quiz'] ) ) {
+			check_admin_referer( 'iaq_bulk_import_to_quiz_nonce' );
+			$b_id    = isset( $_POST['book_id'] ) ? absint( $_POST['book_id'] ) : 0;
+			$ex_id   = isset( $_POST['exam_id'] ) ? absint( $_POST['exam_id'] ) : 0;
+			$s_id    = isset( $_POST['subject_id'] ) ? absint( $_POST['subject_id'] ) : 0;
+			$c_id    = isset( $_POST['category_id'] ) ? absint( $_POST['category_id'] ) : 0;
+			$quiz_id = absint( $_POST['quiz_id'] );
+
+			if ( empty( $_FILES['csv_file']['tmp_name'] ) || ! is_uploaded_file( $_FILES['csv_file']['tmp_name'] ) ) {
+				$this->add_notice( 'error', __( 'Please choose a valid JSON or CSV file to upload.', 'indianagri-quiz-engine' ) );
+			} else {
+				$ext = strtolower( pathinfo( $_FILES['csv_file']['name'], PATHINFO_EXTENSION ) );
+				if ( ! in_array( $ext, array( 'csv', 'json' ), true ) ) {
+					$this->add_notice( 'error', __( 'Invalid file extension. Only .json and .csv files are supported.', 'indianagri-quiz-engine' ) );
+				} else {
+					$import_res = IAQ_Import_Export::import_from_file( $_FILES['csv_file']['tmp_name'], $quiz_id, null, $_FILES['csv_file']['name'] );
+					if ( empty( $import_res['success'] ) ) {
+						$this->add_notice( 'error', $import_res['message'] );
+					} else {
+						if ( $c_id && $ex_id && $s_id ) {
+							$redirect = add_query_arg(
+								array(
+									'page'        => 'iaq-mock-tests',
+									'category_id' => $c_id,
+									'exam_id'     => $ex_id,
+									'subject_id'  => $s_id,
+									'message'     => 'practice_set_imported',
+									'count'       => (int) $import_res['imported'],
+								),
+								admin_url( 'admin.php' )
+							);
+						} elseif ( $b_id ) {
+							$redirect = add_query_arg(
+								array(
+									'page'    => 'iaq-books',
+									'action'  => 'manage_sets',
+									'book_id' => $b_id,
+									'message' => 'practice_set_imported',
+									'count'   => (int) $import_res['imported'],
+								),
+								admin_url( 'admin.php' )
+							);
+						} elseif ( $ex_id && $s_id ) {
+							$redirect = add_query_arg(
+								array(
+									'page'       => 'iaq-examinations',
+									'action'     => 'manage_subject_quizzes',
+									'exam_id'    => $ex_id,
+									'subject_id' => $s_id,
+									'message'    => 'practice_set_imported',
+									'count'      => (int) $import_res['imported'],
+								),
+								admin_url( 'admin.php' )
+							);
+						} else {
+							$redirect = add_query_arg(
+								array(
+									'page'    => 'iaq-quizzes',
+									'message' => 'practice_set_imported',
+									'count'   => (int) $import_res['imported'],
+								),
+								admin_url( 'admin.php' )
+							);
+						}
+						wp_safe_redirect( $redirect );
+						exit;
+					}
+				}
+			}
+		}
+
 		// 29. Remove Quiz from Book.
 		if ( isset( $_GET['iaq_action'] ) && 'remove_book_quiz' === $_GET['iaq_action'] && isset( $_GET['book_id'] ) && isset( $_GET['quiz_id'] ) ) {
 			$b_id = absint( $_GET['book_id'] );
@@ -706,6 +875,86 @@ class IAQ_Admin {
 			wp_safe_redirect( add_query_arg( array( 'page' => 'iaq-examinations', 'action' => 'manage_subject_quizzes', 'exam_id' => $ex_id, 'subject_id' => $s_id, 'message' => 'esq_saved' ), admin_url( 'admin.php' ) ) );
 			exit;
 		}
+
+		// 32b. Create Practice Set for Examination + Subject (with optional Bulk CSV/JSON Import).
+		if ( isset( $_POST['iaq_create_exam_subject_practice_set'] ) ) {
+			check_admin_referer( 'iaq_create_esq_practice_set_nonce' );
+			$ex_id      = absint( $_POST['exam_id'] );
+			$s_id       = absint( $_POST['subject_id'] );
+			$exam       = IAQ_Examinations::get_examination( $ex_id );
+			$subject    = IAQ_Question_Bank::get_subject( $s_id );
+			$sort_order = isset( $_POST['sort_order'] ) ? max( 1, intval( $_POST['sort_order'] ) ) : 1;
+			$set_title  = ! empty( $_POST['set_title'] ) ? sanitize_text_field( wp_unslash( $_POST['set_title'] ) ) : sprintf( __( 'Practice Set %d', 'indianagri-quiz-engine' ), $sort_order );
+
+			// Save Quiz
+			$quiz_data = array(
+				'title'               => $set_title,
+				'slug'                => sanitize_title( ( $exam ? $exam->code . '-' : '' ) . ( $subject ? $subject->slug . '-' : '' ) . $set_title ),
+				'quiz_type'           => 'practice',
+				'exam_category'       => $exam ? $exam->name : '',
+				'subject_id'          => $s_id,
+				'topic_id'            => 0,
+				'duration_minutes'    => isset( $_POST['duration_minutes'] ) ? absint( $_POST['duration_minutes'] ) : 20,
+				'correct_marks'       => isset( $_POST['correct_marks'] ) ? floatval( $_POST['correct_marks'] ) : 1.00,
+				'negative_marks'      => isset( $_POST['negative_marks'] ) ? floatval( $_POST['negative_marks'] ) : 0.25,
+				'pass_percentage'     => isset( $_POST['pass_percentage'] ) ? floatval( $_POST['pass_percentage'] ) : 50.00,
+				'show_answers_mode'   => 'immediate',
+				'status'              => 'published',
+				'access_type'         => 'free',
+				'display_order'       => $sort_order,
+			);
+
+			$quiz_id = IAQ_Quiz_Builder::save_quiz( $quiz_data );
+			if ( is_wp_error( $quiz_id ) ) {
+				$this->add_notice( 'error', $quiz_id->get_error_message() );
+			} else {
+				// Attach quiz to this exam-subject combination.
+				IAQ_Practice_Sets::assign_quiz_to_exam_subject( $ex_id, $s_id, $quiz_id, $sort_order );
+
+				// Check if bulk CSV or JSON was uploaded.
+				$imported_count = 0;
+				if ( ! empty( $_FILES['csv_file']['tmp_name'] ) && is_uploaded_file( $_FILES['csv_file']['tmp_name'] ) ) {
+					$ext = strtolower( pathinfo( $_FILES['csv_file']['name'], PATHINFO_EXTENSION ) );
+					if ( in_array( $ext, array( 'csv', 'json' ), true ) ) {
+						$import_res = IAQ_Import_Export::import_from_file( $_FILES['csv_file']['tmp_name'], $quiz_id, null, $_FILES['csv_file']['name'] );
+						if ( ! empty( $import_res['success'] ) ) {
+							$imported_count = (int) $import_res['imported'];
+						}
+					}
+				}
+
+				if ( $imported_count > 0 ) {
+					wp_safe_redirect(
+						add_query_arg(
+							array(
+								'page'       => 'iaq-examinations',
+								'action'     => 'manage_subject_quizzes',
+								'exam_id'    => $ex_id,
+								'subject_id' => $s_id,
+								'message'    => 'practice_set_created_with_import',
+								'count'      => $imported_count,
+							),
+							admin_url( 'admin.php' )
+						)
+					);
+				} else {
+					wp_safe_redirect(
+						add_query_arg(
+							array(
+								'page'       => 'iaq-examinations',
+								'action'     => 'manage_subject_quizzes',
+								'exam_id'    => $ex_id,
+								'subject_id' => $s_id,
+								'message'    => 'practice_set_created',
+							),
+							admin_url( 'admin.php' )
+						)
+					);
+				}
+				exit;
+			}
+		}
+
 
 		// 33. Remove Quiz from Examination-Subject.
 		if ( isset( $_GET['iaq_action'] ) && 'remove_exam_subject_quiz' === $_GET['iaq_action'] && isset( $_GET['exam_id'] ) && isset( $_GET['subject_id'] ) && isset( $_GET['quiz_id'] ) ) {
@@ -824,6 +1073,214 @@ class IAQ_Admin {
 			wp_safe_redirect( add_query_arg( array( 'page' => 'iaq-mock-tests', 'tab' => 'quizzes', 'message' => 'quiz_detached' ), admin_url( 'admin.php' ) ) );
 			exit;
 		}
+
+		// 44. Save Examination under Mock Category.
+		if ( isset( $_POST['iaq_save_category_exam'] ) ) {
+			check_admin_referer( 'iaq_save_category_exam_nonce' );
+			$cat_id = isset( $_POST['category_id'] ) ? absint( $_POST['category_id'] ) : 0;
+			$res    = IAQ_Examinations::save_examination( $_POST );
+			if ( is_wp_error( $res ) ) {
+				$this->add_notice( 'error', $res->get_error_message() );
+			} else {
+				$redirect = add_query_arg(
+					array(
+						'page'        => 'iaq-mock-tests',
+						'category_id' => $cat_id,
+						'message'     => 'exam_saved',
+					),
+					admin_url( 'admin.php' )
+				);
+				wp_safe_redirect( $redirect );
+				exit;
+			}
+		}
+
+		// 45. Delete Examination under Mock Category.
+		if ( isset( $_GET['iaq_action'] ) && 'delete_category_exam' === $_GET['iaq_action'] && isset( $_GET['exam_id'] ) ) {
+			$exam_id = absint( $_GET['exam_id'] );
+			$cat_id  = isset( $_GET['category_id'] ) ? absint( $_GET['category_id'] ) : 0;
+			check_admin_referer( 'iaq_delete_cat_exam_' . $exam_id );
+			IAQ_Examinations::delete_examination( $exam_id );
+			$redirect = add_query_arg(
+				array(
+					'page'        => 'iaq-mock-tests',
+					'category_id' => $cat_id,
+					'message'     => 'exam_deleted',
+				),
+				admin_url( 'admin.php' )
+			);
+			wp_safe_redirect( $redirect );
+			exit;
+		}
+
+		// 46. Assign Subject to Examination in Mock Hierarchy.
+		if ( isset( $_POST['iaq_assign_mock_hierarchy_subject'] ) ) {
+			check_admin_referer( 'iaq_assign_mock_hierarchy_subject_nonce' );
+			$cat_id  = isset( $_POST['category_id'] ) ? absint( $_POST['category_id'] ) : 0;
+			$exam_id = isset( $_POST['exam_id'] ) ? absint( $_POST['exam_id'] ) : 0;
+			$subj_id = isset( $_POST['subject_id'] ) ? absint( $_POST['subject_id'] ) : 0;
+			$order   = isset( $_POST['display_order'] ) ? absint( $_POST['display_order'] ) : 0;
+
+			// Quick create subject if name provided
+			if ( ! empty( $_POST['new_subject_name'] ) ) {
+				$new_name = sanitize_text_field( $_POST['new_subject_name'] );
+				$new_sub  = IAQ_Question_Bank::save_subject(
+					array(
+						'name'        => $new_name,
+						'slug'        => sanitize_title( $new_name ),
+						'description' => '',
+					)
+				);
+				if ( ! is_wp_error( $new_sub ) && $new_sub ) {
+					$subj_id = absint( $new_sub );
+				}
+			}
+
+			if ( $exam_id && $subj_id ) {
+				IAQ_Practice_Sets::assign_subject_to_exam( $exam_id, $subj_id, $order );
+				$redirect = add_query_arg(
+					array(
+						'page'        => 'iaq-mock-tests',
+						'category_id' => $cat_id,
+						'exam_id'     => $exam_id,
+						'message'     => 'exam_subject_saved',
+					),
+					admin_url( 'admin.php' )
+				);
+				wp_safe_redirect( $redirect );
+				exit;
+			}
+		}
+
+		// 47. Remove Subject from Examination in Mock Hierarchy.
+		if ( isset( $_GET['iaq_action'] ) && 'remove_mock_hierarchy_subject' === $_GET['iaq_action'] && isset( $_GET['exam_id'] ) && isset( $_GET['subject_id'] ) ) {
+			$exam_id = absint( $_GET['exam_id'] );
+			$subj_id = absint( $_GET['subject_id'] );
+			$cat_id  = isset( $_GET['category_id'] ) ? absint( $_GET['category_id'] ) : 0;
+			check_admin_referer( 'iaq_remove_mock_subj_' . $exam_id . '_' . $subj_id );
+			IAQ_Practice_Sets::remove_subject_from_exam( $exam_id, $subj_id );
+			$redirect = add_query_arg(
+				array(
+					'page'        => 'iaq-mock-tests',
+					'category_id' => $cat_id,
+					'exam_id'     => $exam_id,
+					'message'     => 'exam_subject_removed',
+				),
+				admin_url( 'admin.php' )
+			);
+			wp_safe_redirect( $redirect );
+			exit;
+		}
+
+		// 48. Create Mock Test under Exam + Subject with Optional Bulk Import.
+		if ( isset( $_POST['iaq_create_mock_context_quiz'] ) ) {
+			check_admin_referer( 'iaq_create_mock_context_quiz_nonce' );
+			$cat_id     = isset( $_POST['category_id'] ) ? absint( $_POST['category_id'] ) : 0;
+			$exam_id    = isset( $_POST['exam_id'] ) ? absint( $_POST['exam_id'] ) : 0;
+			$subj_id    = isset( $_POST['subject_id'] ) ? absint( $_POST['subject_id'] ) : 0;
+			$title      = ! empty( $_POST['title'] ) ? sanitize_text_field( $_POST['title'] ) : '';
+			$sort_order = isset( $_POST['display_order'] ) ? absint( $_POST['display_order'] ) : 1;
+
+			$exam_obj   = $exam_id ? IAQ_Examinations::get_examination( $exam_id ) : null;
+			$subj_obj   = $subj_id ? IAQ_Question_Bank::get_subject( $subj_id ) : null;
+
+			if ( empty( $title ) ) {
+				$prefix = $exam_obj ? $exam_obj->name : 'Mock';
+				$sub_nm = $subj_obj ? $subj_obj->name : '';
+				$title  = trim( "{$prefix} {$sub_nm} - Mock Test {$sort_order}" );
+			}
+
+			$quiz_data = array(
+				'title'             => $title,
+				'slug'              => sanitize_title( $title ),
+				'quiz_type'         => 'mock',
+				'exam_category'     => $exam_obj ? $exam_obj->name : '',
+				'subject_id'        => $subj_id,
+				'topic_id'          => 0,
+				'duration_minutes'  => isset( $_POST['duration_minutes'] ) ? absint( $_POST['duration_minutes'] ) : 120,
+				'correct_marks'     => isset( $_POST['correct_marks'] ) ? floatval( $_POST['correct_marks'] ) : 4.00,
+				'negative_marks'    => isset( $_POST['negative_marks'] ) ? floatval( $_POST['negative_marks'] ) : 1.00,
+				'pass_percentage'   => isset( $_POST['pass_percentage'] ) ? floatval( $_POST['pass_percentage'] ) : 50.00,
+				'show_answers_mode' => 'after_submission',
+				'status'            => 'published',
+				'access_type'       => isset( $_POST['access_type'] ) && in_array( $_POST['access_type'], array( 'free', 'paid' ), true ) ? $_POST['access_type'] : 'free',
+				'display_order'     => $sort_order,
+			);
+
+			$quiz_id = IAQ_Quiz_Builder::save_quiz( $quiz_data );
+			if ( is_wp_error( $quiz_id ) ) {
+				$this->add_notice( 'error', $quiz_id->get_error_message() );
+			} else {
+				// Attach quiz to mock context
+				IAQ_Mock_Tests::attach_quiz_to_mock_context(
+					$quiz_id,
+					array(
+						'category_id' => $cat_id,
+						'exam_id'     => $exam_id,
+						'subject_id'  => $subj_id,
+						'sort_order'  => $sort_order,
+					)
+				);
+
+				// Also assign to exam_subject_quizzes for unified practice/exam tracking
+				IAQ_Practice_Sets::assign_quiz_to_exam_subject( $exam_id, $subj_id, $quiz_id, $sort_order );
+
+				// Bulk import file if provided
+				$imported_count = 0;
+				if ( ! empty( $_FILES['csv_file']['tmp_name'] ) && is_uploaded_file( $_FILES['csv_file']['tmp_name'] ) ) {
+					$ext = strtolower( pathinfo( $_FILES['csv_file']['name'], PATHINFO_EXTENSION ) );
+					if ( in_array( $ext, array( 'csv', 'json' ), true ) ) {
+						$import_res = IAQ_Import_Export::import_from_file( $_FILES['csv_file']['tmp_name'], $quiz_id, null, $_FILES['csv_file']['name'] );
+						if ( ! empty( $import_res['success'] ) ) {
+							$imported_count = (int) $import_res['imported'];
+						}
+					}
+				}
+
+				$msg = $imported_count > 0 ? 'practice_set_created_with_import' : 'practice_set_created';
+				$redirect = add_query_arg(
+					array(
+						'page'        => 'iaq-mock-tests',
+						'category_id' => $cat_id,
+						'exam_id'     => $exam_id,
+						'subject_id'  => $subj_id,
+						'message'     => $msg,
+						'count'       => $imported_count,
+					),
+					admin_url( 'admin.php' )
+				);
+				wp_safe_redirect( $redirect );
+				exit;
+			}
+		}
+
+		// 49. Detach / Delete Mock Context Quiz.
+		if ( isset( $_GET['iaq_action'] ) && 'delete_mock_context_quiz' === $_GET['iaq_action'] && isset( $_GET['quiz_id'] ) ) {
+			$quiz_id = absint( $_GET['quiz_id'] );
+			$cat_id  = isset( $_GET['category_id'] ) ? absint( $_GET['category_id'] ) : 0;
+			$exam_id = isset( $_GET['exam_id'] ) ? absint( $_GET['exam_id'] ) : 0;
+			$subj_id = isset( $_GET['subject_id'] ) ? absint( $_GET['subject_id'] ) : 0;
+			$rel_id  = isset( $_GET['rel_id'] ) ? absint( $_GET['rel_id'] ) : 0;
+
+			check_admin_referer( 'iaq_delete_mock_quiz_' . $quiz_id );
+			if ( $rel_id ) {
+				IAQ_Mock_Tests::detach_quiz_from_mock_context( $rel_id );
+			}
+			IAQ_Quiz_Builder::delete_quiz( $quiz_id );
+
+			$redirect = add_query_arg(
+				array(
+					'page'        => 'iaq-mock-tests',
+					'category_id' => $cat_id,
+					'exam_id'     => $exam_id,
+					'subject_id'  => $subj_id,
+					'message'     => 'quiz_deleted',
+				),
+				admin_url( 'admin.php' )
+			);
+			wp_safe_redirect( $redirect );
+			exit;
+		}
 	}
 
 	/**
@@ -891,12 +1348,25 @@ class IAQ_Admin {
 				'quiz_duplicated'         => array( 'success', __( 'Quiz duplicated successfully as draft.', 'indianagri-quiz-engine' ) ),
 				'book_saved'              => array( 'success', __( 'Practice book saved successfully.', 'indianagri-quiz-engine' ) ),
 				'book_deleted'            => array( 'success', __( 'Practice book archived successfully.', 'indianagri-quiz-engine' ) ),
-				'quiz_assigned_to_book'   => array( 'success', __( 'Practice set assigned to book successfully.', 'indianagri-quiz-engine' ) ),
-				'quiz_removed_from_book'  => array( 'success', __( 'Practice set removed from book.', 'indianagri-quiz-engine' ) ),
-				'exam_subject_saved'      => array( 'success', __( 'Subject associated with examination successfully.', 'indianagri-quiz-engine' ) ),
+				'quiz_assigned_to_book'            => array( 'success', __( 'Practice set assigned to book successfully.', 'indianagri-quiz-engine' ) ),
+				'quiz_removed_from_book'           => array( 'success', __( 'Practice set removed from book.', 'indianagri-quiz-engine' ) ),
+				'practice_set_created'             => array( 'success', __( 'Practice set created and attached to book successfully.', 'indianagri-quiz-engine' ) ),
+				'practice_set_created_with_import' => array( 'success', sprintf( __( 'Practice set created and %d questions bulk imported and assigned successfully!', 'indianagri-quiz-engine' ), $count ) ),
+				'practice_set_imported'            => array( 'success', sprintf( __( '%d questions bulk imported and assigned to practice set successfully!', 'indianagri-quiz-engine' ), $count ) ),
+				'exam_subject_saved'               => array( 'success', __( 'Subject associated with examination successfully.', 'indianagri-quiz-engine' ) ),
 				'exam_subject_removed'    => array( 'success', __( 'Subject removed from examination.', 'indianagri-quiz-engine' ) ),
 				'esq_saved'               => array( 'success', __( 'Practice set assigned to examination subject.', 'indianagri-quiz-engine' ) ),
 				'esq_removed'             => array( 'success', __( 'Practice set removed from examination subject.', 'indianagri-quiz-engine' ) ),
+				'mock_category_saved'     => array( 'success', __( 'Mock test category saved successfully.', 'indianagri-quiz-engine' ) ),
+				'mock_category_deleted'   => array( 'success', __( 'Mock test category deleted successfully.', 'indianagri-quiz-engine' ) ),
+				'state_univ_saved'        => array( 'success', __( 'State or University entry saved successfully.', 'indianagri-quiz-engine' ) ),
+				'state_univ_deleted'      => array( 'success', __( 'State or University entry deleted successfully.', 'indianagri-quiz-engine' ) ),
+				'vacancy_saved'           => array( 'success', __( 'Recruitment vacancy saved successfully.', 'indianagri-quiz-engine' ) ),
+				'vacancy_deleted'         => array( 'success', __( 'Recruitment vacancy deleted successfully.', 'indianagri-quiz-engine' ) ),
+				'series_saved'            => array( 'success', __( 'Mock test series saved successfully.', 'indianagri-quiz-engine' ) ),
+				'series_deleted'          => array( 'success', __( 'Mock test series deleted successfully.', 'indianagri-quiz-engine' ) ),
+				'quiz_attached'           => array( 'success', __( 'Mock test context attachment saved successfully.', 'indianagri-quiz-engine' ) ),
+				'quiz_detached'           => array( 'success', __( 'Mock test detached from hierarchy context.', 'indianagri-quiz-engine' ) ),
 			);
 
 			if ( isset( $map[ $msg_key ] ) ) {

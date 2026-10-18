@@ -183,7 +183,7 @@ $all_exams = class_exists( 'IAQ_Examinations' ) ? IAQ_Examinations::get_examinat
 											<?php if ( 1 === (int) $p->is_featured ) : ?>
 												<span style="background:#fef3c7;color:#b45309;font-size:10px;font-weight:800;padding:2px 6px;border-radius:4px;margin-left:4px;">★ <?php esc_html_e( 'FEATURED', 'indianagri-quiz-engine' ); ?></span>
 											<?php endif; ?>
-											<div style="font-size:11px;color:#64748b;font-family:monospace;"><?php echo esc_html( $p->code ); ?></div>
+											<div style="font-size:11px;color:#64748b;font-family:monospace;"><?php echo esc_html( ! empty( $p->code ) ? $p->code : ( ! empty( $p->slug ) ? $p->slug : '' ) ); ?></div>
 										</td>
 										<td>
 											<strong style="color:#117E3A;font-size:15px;">&#8377;<?php echo esc_html( number_format( (float) $p->price, 0 ) ); ?></strong>
@@ -192,13 +192,17 @@ $all_exams = class_exists( 'IAQ_Examinations' ) ? IAQ_Examinations::get_examinat
 											<?php echo esc_html( $p->duration_value . ' ' . ucfirst( $p->duration_unit ) ); ?>
 										</td>
 										<td>
-											<?php if ( 'all_access' === $p->access_scope ) : ?>
+											<?php
+											$p_scope = ! empty( $p->access_scope ) ? $p->access_scope : ( ! empty( $p->access_type ) ? $p->access_type : 'all_access' );
+											$p_cats  = ! empty( $p->included_categories ) ? $p->included_categories : ( ! empty( $p->included_exam_ids ) ? $p->included_exam_ids : '' );
+											?>
+											<?php if ( 'all_access' === $p_scope ) : ?>
 												<span class="iaq-badge" style="background:#e8f5e9;color:#117E3A;font-weight:700;"><?php esc_html_e( 'All Access', 'indianagri-quiz-engine' ); ?></span>
 											<?php else : ?>
 												<span class="iaq-badge" style="background:#f1f5f9;color:#334155;"><?php esc_html_e( 'Category Specific', 'indianagri-quiz-engine' ); ?></span>
-												<?php if ( ! empty( $p->included_categories ) ) : ?>
+												<?php if ( ! empty( $p_cats ) ) : ?>
 													<div style="font-size:11px;color:#64748b;margin-top:2px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-														<?php echo esc_html( $p->included_categories ); ?>
+														<?php echo esc_html( $p_cats ); ?>
 													</div>
 												<?php endif; ?>
 											<?php endif; ?>

@@ -16,6 +16,7 @@ class Test_Subscriptions_Monetization {
 		self::test_admin_manual_revocation();
 		self::test_woocommerce_order_processing_and_idempotency();
 		self::test_woocommerce_refund_revocation();
+		self::test_automatic_student_deactivation_on_expiry_and_reactivation();
 
 		echo "Test_Subscriptions_Monetization: ALL PASS\n";
 	}
@@ -211,5 +212,114 @@ class Test_Subscriptions_Monetization {
 		}
 
 		echo "  [PASS] WooCommerce refund event revocation policy verified.\n";
+	}
+
+	private static function test_automatic_student_deactivation_on_expiry_and_reactivation() {
+		global $wpdb;
+
+		$student_id = 555;
+		$plan       = IAQ_Access_Control::get_plan_by_code( 'asrb-agronomy-6m' );
+		if ( ! $plan ) {
+			throw new Exception( 'Could not find subscription plan for deactivation test.' );
+		}
+
+		// 1. Grant subscription to student
+		$sub_id = IAQ_Access_Control::grant_subscription( $student_id, $plan->id, null, 'Deactivation Test Grant' );
+		if ( ! $sub_id || is_wp_error( $sub_id ) ) {
+			throw new Exception( 'Failed to grant subscription in deactivation test.' );
+		}
+
+		// Verify student is active
+		if ( ! IAQ_Access_Control::is_student_active( $student_id ) ) {
+			throw new Exception( 'Student should be active after valid subscription grant.' );
+		}
+		if ( 1 !== (int) get_user_meta( $student_id, '_iaq_student_active', true ) ) {
+			throw new Exception( '_iaq_student_active user meta should be 1.' );
+		}
+		if ( 'active' !== get_user_meta( $student_id, '_iaq_subscription_status', true ) ) {
+			throw new Exception( '_iaq_subscription_status user meta should be active.' );
+		}
+
+		// 2. Simulate subscription expiry: set expiry_date into the past
+		$past_date = gmdate( 'Y-m-d H:i:s', time() - 3600 ); // 1 hour ago
+		$table_subs = IAQ_Database::get_table_name( 'user_subscriptions' );
+		$wpdb->update(
+			$table_subs,
+			array( 'expiry_date' => $past_date ),
+			array( 'id' => (int) $sub_id )
+		);
+
+		// Track action firing
+		$action_fired = false;
+		$hook_callback = function( $uid, $subs ) use ( &$action_fired, $student_id ) {
+			if ( (int) $uid === $student_id ) {
+				$action_fired = true;
+			}
+		};
+		add_action( 'iaq_student_subscription_completed_deactivated', $hook_callback, 10, 2 );
+
+		// Run automated sweep
+		$transitioned = IAQ_Access_Control::sync_expired_subscriptions( $student_id );
+		if ( 1 !== $transitioned ) {
+			throw new Exception( "Expected 1 subscription transitioned, got {$transitioned}." );
+		}
+
+		// Verify subscription record status transitioned to 'expired'
+		$sub_row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table_subs} WHERE id = %d", $sub_id ) );
+		if ( 'expired' !== $sub_row->status ) {
+			throw new Exception( "Subscription row status was not updated to 'expired', got {$sub_row->status}." );
+		}
+
+		// Verify student account is deactivated
+		if ( IAQ_Access_Control::is_student_active( $student_id ) ) {
+			throw new Exception( 'Student should be deactivated after subscription expired.' );
+		}
+		if ( 0 !== (int) get_user_meta( $student_id, '_iaq_student_active', true ) ) {
+			throw new Exception( '_iaq_student_active meta should be 0 after deactivation.' );
+		}
+		if ( 'expired' !== get_user_meta( $student_id, '_iaq_subscription_status', true ) ) {
+			throw new Exception( '_iaq_subscription_status meta should be expired.' );
+		}
+		if ( ! get_user_meta( $student_id, '_iaq_deactivated_at', true ) ) {
+			throw new Exception( '_iaq_deactivated_at timestamp meta should be set.' );
+		}
+		if ( ! $action_fired ) {
+			throw new Exception( 'iaq_student_subscription_completed_deactivated action did not fire.' );
+		}
+
+		// Verify entitlement check returns subscription_expired
+		$quiz = (object) array(
+			'id'            => 101,
+			'access_type'   => 'premium',
+			'exam_category' => 'asrb-net-agronomy',
+		);
+		$entitlement = IAQ_Access_Control::check_user_entitlement( $student_id, $quiz );
+		if ( ! empty( $entitlement['allowed'] ) || 'subscription_expired' !== $entitlement['code'] ) {
+			throw new Exception( 'Entitlement check should return subscription_expired denial.' );
+		}
+
+		// 3. Renew / grant new subscription: student should automatically be reactivated
+		$renewal_sub_id = IAQ_Access_Control::grant_subscription( $student_id, $plan->id, null, 'Renewal Test Grant' );
+		if ( ! $renewal_sub_id || is_wp_error( $renewal_sub_id ) ) {
+			throw new Exception( 'Failed to grant renewal subscription.' );
+		}
+
+		if ( ! IAQ_Access_Control::is_student_active( $student_id ) ) {
+			throw new Exception( 'Student should be reactivated after renewal grant.' );
+		}
+		if ( 1 !== (int) get_user_meta( $student_id, '_iaq_student_active', true ) ) {
+			throw new Exception( '_iaq_student_active meta should be 1 after reactivation.' );
+		}
+		if ( 'active' !== get_user_meta( $student_id, '_iaq_subscription_status', true ) ) {
+			throw new Exception( '_iaq_subscription_status meta should be active after reactivation.' );
+		}
+		if ( get_user_meta( $student_id, '_iaq_deactivated_at', true ) ) {
+			throw new Exception( '_iaq_deactivated_at timestamp should be deleted upon reactivation.' );
+		}
+
+		// Clean up hook
+		remove_action( 'iaq_student_subscription_completed_deactivated', $hook_callback, 10 );
+
+		echo "  [PASS] Automatic student deactivation on expiry and instant reactivation on renewal verified.\n";
 	}
 }

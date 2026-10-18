@@ -27,7 +27,7 @@ $page_url = function( $subview = '', $params = array() ) {
 	<div class="iaq-ps-banner">
 		<div class="iaq-ps-breadcrumbs">
 			<a href="<?php echo esc_url( $page_url() ); ?>" class="iaq-ps-bc-item">
-				<span class="dashicons dashicons-welcome-learn-more"></span> <?php esc_html_e( 'Practice Sets', 'indianagri-quiz-engine' ); ?>
+				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg> <?php esc_html_e( 'Practice Sets', 'indianagri-quiz-engine' ); ?>
 			</a>
 
 			<?php if ( 'books' === $view || 'book' === $view ) : ?>
@@ -85,7 +85,13 @@ $page_url = function( $subview = '', $params = array() ) {
 				} elseif ( 'exams' === $view ) {
 					esc_html_e( 'Practice by Exams — Target Competitive Entrance Tests', 'indianagri-quiz-engine' );
 				} elseif ( 'exam' === $view && ! empty( $exam ) ) {
-					printf( esc_html__( '%1$s (%2$s) — Subject Selection', 'indianagri-quiz-engine' ), esc_html( $exam->name ), esc_html( $exam->code ) );
+					$clean_name = preg_replace( '/[^a-z0-9]/i', '', $exam->name );
+					$clean_code = preg_replace( '/[^a-z0-9]/i', '', $exam->code ?? '' );
+					if ( ! empty( $exam->code ) && ! empty( $clean_code ) && false === stripos( $clean_name, $clean_code ) ) {
+						printf( esc_html__( '%1$s (%2$s) — Subject Selection', 'indianagri-quiz-engine' ), esc_html( $exam->name ), esc_html( $exam->code ) );
+					} else {
+						printf( esc_html__( '%s — Subject Selection', 'indianagri-quiz-engine' ), esc_html( $exam->name ) );
+					}
 				} elseif ( 'exam_subject' === $view && ! empty( $exam ) && ! empty( $subject ) ) {
 					printf( esc_html__( '%1$s → %2$s Practice Sets', 'indianagri-quiz-engine' ), esc_html( $exam->name ), esc_html( $subject->name ) );
 				}
@@ -112,7 +118,7 @@ $page_url = function( $subview = '', $params = array() ) {
 				} elseif ( 'exam' === $view && ! empty( $exam ) ) {
 					esc_html_e( 'Select an approved subject under this competitive examination to access tailored practice sets.', 'indianagri-quiz-engine' );
 				} elseif ( 'exam_subject' === $view && ! empty( $exam ) && ! empty( $subject ) ) {
-					printf( esc_html__( 'Practice sets specifically designed for %1$s in %2$s. Practice set numbering starts at 1.', 'indianagri-quiz-engine' ), esc_html( $exam->name ), esc_html( $subject->name ) );
+					printf( esc_html__( 'Practice sets specifically designed for %1$s in %2$s.', 'indianagri-quiz-engine' ), esc_html( $exam->name ), esc_html( $subject->name ) );
 				}
 				?>
 			</p>
@@ -127,14 +133,20 @@ $page_url = function( $subview = '', $params = array() ) {
 		?>
 		<div class="iaq-ps-landing-grid">
 			<!-- Section A: Practice by Book -->
-			<div class="iaq-ps-hero-card" id="card-practice-by-book">
-				<div class="iaq-ps-hero-icon-wrap" style="background:#e8f5e9;color:#117E3A;">
-					<span class="dashicons dashicons-book-alt"></span>
+			<div class="iaq-ps-hero-card iaq-ps-card-book" id="card-practice-by-book">
+				<div class="iaq-ps-card-accent"></div>
+				<div class="iaq-ps-hero-icon-wrap iaq-ps-icon-book">
+					<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+						<path d="M6 6h10"/>
+						<path d="M6 10h10"/>
+					</svg>
 				</div>
 				<div class="iaq-ps-hero-content">
 					<div class="iaq-ps-hero-topline">
-						<span class="iaq-pill iaq-pill-category"><?php esc_html_e( 'Category 1', 'indianagri-quiz-engine' ); ?></span>
+						<span class="iaq-pill iaq-pill-cat-book"><?php esc_html_e( 'Category 1', 'indianagri-quiz-engine' ); ?></span>
 						<span class="iaq-ps-hero-count">
+							<span class="iaq-ps-count-dot"></span>
 							<?php printf( esc_html__( '%d Books Available', 'indianagri-quiz-engine' ), count( $books ) ); ?>
 						</span>
 					</div>
@@ -143,27 +155,44 @@ $page_url = function( $subview = '', $params = array() ) {
 						<?php esc_html_e( 'Solve targeted practice questions curated from standard agricultural literature such as Nem Raj Sundha, Arun Katyayan, and other reference books.', 'indianagri-quiz-engine' ); ?>
 					</p>
 					<div class="iaq-ps-hero-features">
-						<span class="iaq-ps-feature-tag"><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Chapter-wise sets', 'indianagri-quiz-engine' ); ?></span>
-						<span class="iaq-ps-feature-tag"><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Author attribution', 'indianagri-quiz-engine' ); ?></span>
-						<span class="iaq-ps-feature-tag"><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Cover artwork', 'indianagri-quiz-engine' ); ?></span>
+						<span class="iaq-ps-feature-tag">
+							<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#117E3A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+							<?php esc_html_e( 'Chapter-wise sets', 'indianagri-quiz-engine' ); ?>
+						</span>
+						<span class="iaq-ps-feature-tag">
+							<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#117E3A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+							<?php esc_html_e( 'Author attribution', 'indianagri-quiz-engine' ); ?>
+						</span>
+						<span class="iaq-ps-feature-tag">
+							<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#117E3A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+							<?php esc_html_e( 'Cover artwork', 'indianagri-quiz-engine' ); ?>
+						</span>
 					</div>
 					<div class="iaq-ps-hero-action">
-						<a href="<?php echo esc_url( $page_url( 'books' ) ); ?>" class="iaq-btn iaq-btn-primary iaq-btn-large iaq-full-width">
-							<?php esc_html_e( 'Browse Practice Books', 'indianagri-quiz-engine' ); ?> &rarr;
+						<a href="<?php echo esc_url( $page_url( 'books' ) ); ?>" class="iaq-btn iaq-btn-hero iaq-btn-hero-book iaq-full-width">
+							<span><?php esc_html_e( 'Browse Practice Books', 'indianagri-quiz-engine' ); ?></span>
+							<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
 						</a>
 					</div>
 				</div>
 			</div>
 
 			<!-- Section B: Practice by Subjects -->
-			<div class="iaq-ps-hero-card" id="card-practice-by-subjects">
-				<div class="iaq-ps-hero-icon-wrap" style="background:#eff6ff;color:#1d4ed8;">
-					<span class="dashicons dashicons-category"></span>
+			<div class="iaq-ps-hero-card iaq-ps-card-subject" id="card-practice-by-subjects">
+				<div class="iaq-ps-card-accent"></div>
+				<div class="iaq-ps-hero-icon-wrap iaq-ps-icon-subject">
+					<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<rect width="7" height="7" x="3" y="3" rx="1.5"/>
+						<rect width="7" height="7" x="14" y="3" rx="1.5"/>
+						<rect width="7" height="7" x="14" y="14" rx="1.5"/>
+						<rect width="7" height="7" x="3" y="14" rx="1.5"/>
+					</svg>
 				</div>
 				<div class="iaq-ps-hero-content">
 					<div class="iaq-ps-hero-topline">
-						<span class="iaq-pill iaq-pill-category" style="background:#eff6ff;color:#1d4ed8;"><?php esc_html_e( 'Category 2', 'indianagri-quiz-engine' ); ?></span>
+						<span class="iaq-pill iaq-pill-cat-subject"><?php esc_html_e( 'Category 2', 'indianagri-quiz-engine' ); ?></span>
 						<span class="iaq-ps-hero-count">
+							<span class="iaq-ps-count-dot"></span>
 							<?php printf( esc_html__( '%d Subjects Available', 'indianagri-quiz-engine' ), count( $subjects ) ); ?>
 						</span>
 					</div>
@@ -172,27 +201,42 @@ $page_url = function( $subview = '', $params = array() ) {
 						<?php esc_html_e( 'Deep-dive into agricultural subjects like Agronomy, Soil Science, Horticulture, Plant Pathology, Economics, and Extension with ordered practice sets.', 'indianagri-quiz-engine' ); ?>
 					</p>
 					<div class="iaq-ps-hero-features">
-						<span class="iaq-ps-feature-tag"><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Sequential Set 1, 2, 3...', 'indianagri-quiz-engine' ); ?></span>
-						<span class="iaq-ps-feature-tag"><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Topic breakdown', 'indianagri-quiz-engine' ); ?></span>
-						<span class="iaq-ps-feature-tag"><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Detailed solutions', 'indianagri-quiz-engine' ); ?></span>
+						<span class="iaq-ps-feature-tag">
+							<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+							<?php esc_html_e( 'Sequential Set 1, 2, 3...', 'indianagri-quiz-engine' ); ?>
+						</span>
+						<span class="iaq-ps-feature-tag">
+							<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+							<?php esc_html_e( 'Topic breakdown', 'indianagri-quiz-engine' ); ?>
+						</span>
+						<span class="iaq-ps-feature-tag">
+							<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+							<?php esc_html_e( 'Detailed solutions', 'indianagri-quiz-engine' ); ?>
+						</span>
 					</div>
 					<div class="iaq-ps-hero-action">
-						<a href="<?php echo esc_url( $page_url( 'subjects' ) ); ?>" class="iaq-btn iaq-btn-primary iaq-btn-large iaq-full-width" style="background:#1d4ed8;">
-							<?php esc_html_e( 'Browse by Subject', 'indianagri-quiz-engine' ); ?> &rarr;
+						<a href="<?php echo esc_url( $page_url( 'subjects' ) ); ?>" class="iaq-btn iaq-btn-hero iaq-btn-hero-subject iaq-full-width">
+							<span><?php esc_html_e( 'Browse by Subject', 'indianagri-quiz-engine' ); ?></span>
+							<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
 						</a>
 					</div>
 				</div>
 			</div>
 
 			<!-- Section C: Practice by Exams -->
-			<div class="iaq-ps-hero-card" id="card-practice-by-exams">
-				<div class="iaq-ps-hero-icon-wrap" style="background:#fef3c7;color:#b45309;">
-					<span class="dashicons dashicons-awards"></span>
+			<div class="iaq-ps-hero-card iaq-ps-card-exam" id="card-practice-by-exams">
+				<div class="iaq-ps-card-accent"></div>
+				<div class="iaq-ps-hero-icon-wrap iaq-ps-icon-exam">
+					<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<circle cx="12" cy="8" r="6"/>
+						<path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
+					</svg>
 				</div>
 				<div class="iaq-ps-hero-content">
 					<div class="iaq-ps-hero-topline">
-						<span class="iaq-pill iaq-pill-category" style="background:#fef3c7;color:#b45309;"><?php esc_html_e( 'Category 3', 'indianagri-quiz-engine' ); ?></span>
+						<span class="iaq-pill iaq-pill-cat-exam"><?php esc_html_e( 'Category 3', 'indianagri-quiz-engine' ); ?></span>
 						<span class="iaq-ps-hero-count">
+							<span class="iaq-ps-count-dot"></span>
 							<?php printf( esc_html__( '%d Examinations Available', 'indianagri-quiz-engine' ), count( $exams ) ); ?>
 						</span>
 					</div>
@@ -201,13 +245,23 @@ $page_url = function( $subview = '', $params = array() ) {
 						<?php esc_html_e( 'Target competitive examinations including ICAR JRF/SRF, ASRB NET, UPCATET PG, CUET PG, and IBPS AFO through specialized multi-level question banks.', 'indianagri-quiz-engine' ); ?>
 					</p>
 					<div class="iaq-ps-hero-features">
-						<span class="iaq-ps-feature-tag"><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Exam → Subject flow', 'indianagri-quiz-engine' ); ?></span>
-						<span class="iaq-ps-feature-tag"><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Syllabus aligned', 'indianagri-quiz-engine' ); ?></span>
-						<span class="iaq-ps-feature-tag"><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Negative marking rules', 'indianagri-quiz-engine' ); ?></span>
+						<span class="iaq-ps-feature-tag">
+							<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+							<?php esc_html_e( 'Exam → Subject flow', 'indianagri-quiz-engine' ); ?>
+						</span>
+						<span class="iaq-ps-feature-tag">
+							<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+							<?php esc_html_e( 'Syllabus aligned', 'indianagri-quiz-engine' ); ?>
+						</span>
+						<span class="iaq-ps-feature-tag">
+							<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+							<?php esc_html_e( 'Negative marking rules', 'indianagri-quiz-engine' ); ?>
+						</span>
 					</div>
 					<div class="iaq-ps-hero-action">
-						<a href="<?php echo esc_url( $page_url( 'exams' ) ); ?>" class="iaq-btn iaq-btn-primary iaq-btn-large iaq-full-width" style="background:#b45309;">
-							<?php esc_html_e( 'Browse by Examination', 'indianagri-quiz-engine' ); ?> &rarr;
+						<a href="<?php echo esc_url( $page_url( 'exams' ) ); ?>" class="iaq-btn iaq-btn-hero iaq-btn-hero-exam iaq-full-width">
+							<span><?php esc_html_e( 'Browse by Examination', 'indianagri-quiz-engine' ); ?></span>
+							<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
 						</a>
 					</div>
 				</div>
@@ -227,10 +281,10 @@ $page_url = function( $subview = '', $params = array() ) {
 					<input type="hidden" name="page" value="<?php echo esc_attr( sanitize_key( $_GET['page'] ) ); ?>">
 				<?php endif; ?>
 				<div class="iaq-ps-search-input-wrap">
-					<span class="dashicons dashicons-search"></span>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="iaq-input-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
 					<input type="text" name="ps_search" value="<?php echo esc_attr( $search_term ); ?>" placeholder="<?php esc_attr_e( 'Search by book title or author name...', 'indianagri-quiz-engine' ); ?>" class="iaq-input">
 				</div>
-				<button type="submit" class="iaq-btn iaq-btn-primary"><?php esc_html_e( 'Search', 'indianagri-quiz-engine' ); ?></button>
+				<button type="submit" class="iaq-btn iaq-btn-primary iaq-btn-book"><?php esc_html_e( 'Search', 'indianagri-quiz-engine' ); ?></button>
 				<?php if ( ! empty( $search_term ) ) : ?>
 					<a href="<?php echo esc_url( $page_url( 'books' ) ); ?>" class="iaq-btn iaq-btn-outline"><?php esc_html_e( 'Clear', 'indianagri-quiz-engine' ); ?></a>
 				<?php endif; ?>
@@ -239,7 +293,7 @@ $page_url = function( $subview = '', $params = array() ) {
 
 		<?php if ( empty( $books ) ) : ?>
 			<div class="iaq-ps-empty-state">
-				<span class="dashicons dashicons-book" style="font-size:54px;width:54px;height:54px;color:#94a3b8;"></span>
+				<svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
 				<h3><?php esc_html_e( 'No Books Have Been Published Yet', 'indianagri-quiz-engine' ); ?></h3>
 				<p><?php esc_html_e( 'Check back soon as our team publishes new reference books and practice sets.', 'indianagri-quiz-engine' ); ?></p>
 				<a href="<?php echo esc_url( $page_url() ); ?>" class="iaq-btn iaq-btn-outline" style="margin-top:14px;">
@@ -255,7 +309,7 @@ $page_url = function( $subview = '', $params = array() ) {
 								<img src="<?php echo esc_url( $b->cover_image_url ); ?>" alt="<?php echo esc_attr( $b->title ); ?>" class="iaq-ps-book-cover-img">
 							<?php else : ?>
 								<div class="iaq-ps-book-cover-placeholder">
-									<span class="dashicons dashicons-book-alt"></span>
+									<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
 									<span class="iaq-ps-cover-title"><?php echo esc_html( wp_trim_words( $b->title, 4, '...' ) ); ?></span>
 								</div>
 							<?php endif; ?>
@@ -282,7 +336,7 @@ $page_url = function( $subview = '', $params = array() ) {
 
 							<?php if ( ! empty( $b->author ) ) : ?>
 								<div class="iaq-ps-book-author">
-									<span class="dashicons dashicons-admin-users"></span>
+									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg>
 									<span><?php printf( esc_html__( 'By %s', 'indianagri-quiz-engine' ), esc_html( $b->author ) ); ?></span>
 								</div>
 							<?php endif; ?>
@@ -295,19 +349,19 @@ $page_url = function( $subview = '', $params = array() ) {
 
 							<div class="iaq-ps-book-meta">
 								<span class="iaq-ps-meta-stat">
-									<span class="dashicons dashicons-list-view"></span>
+									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
 									<strong><?php echo (int) $b->practice_sets_count; ?></strong> <?php esc_html_e( 'Practice Sets', 'indianagri-quiz-engine' ); ?>
 								</span>
 								<?php if ( ! empty( $b->subject_name ) ) : ?>
 									<span class="iaq-ps-meta-stat">
-										<span class="dashicons dashicons-tag"></span>
+										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
 										<?php echo esc_html( $b->subject_name ); ?>
 									</span>
 								<?php endif; ?>
 							</div>
 
 							<div class="iaq-ps-book-footer">
-								<a href="<?php echo esc_url( $page_url( 'book', array( 'book_id' => $b->id ) ) ); ?>" class="iaq-btn iaq-btn-primary iaq-full-width">
+								<a href="<?php echo esc_url( $page_url( 'book', array( 'book_id' => $b->id ) ) ); ?>" class="iaq-btn iaq-btn-primary iaq-btn-book iaq-full-width">
 									<?php esc_html_e( 'Explore Practice Sets', 'indianagri-quiz-engine' ); ?> &rarr;
 								</a>
 							</div>
@@ -330,7 +384,7 @@ $page_url = function( $subview = '', $params = array() ) {
 					<img src="<?php echo esc_url( $book->cover_image_url ); ?>" alt="<?php echo esc_attr( $book->title ); ?>">
 				<?php else : ?>
 					<div class="iaq-ps-detail-cover-ph">
-						<span class="dashicons dashicons-book-alt"></span>
+						<svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
 					</div>
 				<?php endif; ?>
 			</div>
@@ -354,7 +408,7 @@ $page_url = function( $subview = '', $params = array() ) {
 
 				<?php if ( ! empty( $book->author ) ) : ?>
 					<div class="iaq-ps-detail-author">
-						<span class="dashicons dashicons-admin-users"></span> <?php printf( esc_html__( 'Author / Source: %s', 'indianagri-quiz-engine' ), esc_html( $book->author ) ); ?>
+						<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg> <?php printf( esc_html__( 'Author / Source: %s', 'indianagri-quiz-engine' ), esc_html( $book->author ) ); ?>
 					</div>
 				<?php endif; ?>
 
@@ -382,15 +436,15 @@ $page_url = function( $subview = '', $params = array() ) {
 
 		<!-- Practice Sets List -->
 		<div class="iaq-ps-section-header">
-			<h3><span class="dashicons dashicons-list-view"></span> <?php esc_html_e( 'Available Practice Sets', 'indianagri-quiz-engine' ); ?></h3>
+			<h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> <?php esc_html_e( 'Available Practice Sets', 'indianagri-quiz-engine' ); ?></h3>
 			<span class="iaq-card-help"><?php esc_html_e( 'Numbered in sequence according to chapter progression.', 'indianagri-quiz-engine' ); ?></span>
 		</div>
 
 		<?php if ( empty( $quizzes ) ) : ?>
 			<div class="iaq-ps-empty-state">
-				<span class="dashicons dashicons-media-text" style="font-size:48px;width:48px;height:48px;color:#94a3b8;"></span>
+				<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
 				<h3><?php esc_html_e( 'No Practice Sets Available for this Book', 'indianagri-quiz-engine' ); ?></h3>
-				<p><?php esc_html_e( 'The administrator has not added practice sets to this book yet.', 'indianagri-quiz-engine' ); ?></p>
+				<p><?php esc_html_e( 'No practice sets have been added to this book yet.', 'indianagri-quiz-engine' ); ?></p>
 				<a href="<?php echo esc_url( $page_url( 'books' ) ); ?>" class="iaq-btn iaq-btn-outline" style="margin-top:12px;">
 					&larr; <?php esc_html_e( 'Back to Books Catalog', 'indianagri-quiz-engine' ); ?>
 				</a>
@@ -416,10 +470,10 @@ $page_url = function( $subview = '', $params = array() ) {
 					<input type="hidden" name="page" value="<?php echo esc_attr( sanitize_key( $_GET['page'] ) ); ?>">
 				<?php endif; ?>
 				<div class="iaq-ps-search-input-wrap">
-					<span class="dashicons dashicons-search"></span>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="iaq-input-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
 					<input type="text" name="ps_search" value="<?php echo esc_attr( $search_term ); ?>" placeholder="<?php esc_attr_e( 'Search by subject name...', 'indianagri-quiz-engine' ); ?>" class="iaq-input">
 				</div>
-				<button type="submit" class="iaq-btn iaq-btn-primary"><?php esc_html_e( 'Search', 'indianagri-quiz-engine' ); ?></button>
+				<button type="submit" class="iaq-btn iaq-btn-primary iaq-btn-subject"><?php esc_html_e( 'Search', 'indianagri-quiz-engine' ); ?></button>
 				<?php if ( ! empty( $search_term ) ) : ?>
 					<a href="<?php echo esc_url( $page_url( 'subjects' ) ); ?>" class="iaq-btn iaq-btn-outline"><?php esc_html_e( 'Clear', 'indianagri-quiz-engine' ); ?></a>
 				<?php endif; ?>
@@ -428,7 +482,7 @@ $page_url = function( $subview = '', $params = array() ) {
 
 		<?php if ( empty( $subjects ) ) : ?>
 			<div class="iaq-ps-empty-state">
-				<span class="dashicons dashicons-category" style="font-size:54px;width:54px;height:54px;color:#94a3b8;"></span>
+				<svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><rect width="7" height="7" x="3" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="14" rx="1.5"/><rect width="7" height="7" x="3" y="14" rx="1.5"/></svg>
 				<h3><?php esc_html_e( 'No Subjects Found', 'indianagri-quiz-engine' ); ?></h3>
 				<p><?php esc_html_e( 'No subjects currently match your search criteria.', 'indianagri-quiz-engine' ); ?></p>
 			</div>
@@ -438,7 +492,7 @@ $page_url = function( $subview = '', $params = array() ) {
 					<div class="iaq-ps-subject-card">
 						<div class="iaq-ps-subject-icon-bar">
 							<div class="iaq-ps-subject-avatar">
-								<span class="dashicons dashicons-leaf"></span>
+								<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
 							</div>
 							<span class="iaq-pill iaq-pill-category">
 								<?php printf( esc_html__( '%d Practice Sets', 'indianagri-quiz-engine' ), (int) $subj->practice_sets_count ); ?>
@@ -458,11 +512,11 @@ $page_url = function( $subview = '', $params = array() ) {
 						<?php endif; ?>
 
 						<div class="iaq-ps-subject-meta">
-							<span><span class="dashicons dashicons-book"></span> <?php printf( esc_html__( '%d Topics', 'indianagri-quiz-engine' ), (int) $subj->topics_count ); ?></span>
+							<span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg> <?php printf( esc_html__( '%d Topics', 'indianagri-quiz-engine' ), (int) $subj->topics_count ); ?></span>
 						</div>
 
 						<div class="iaq-ps-subject-action">
-							<a href="<?php echo esc_url( $page_url( 'subject', array( 'subject_id' => $subj->id ) ) ); ?>" class="iaq-btn iaq-btn-primary iaq-full-width">
+							<a href="<?php echo esc_url( $page_url( 'subject', array( 'subject_id' => $subj->id ) ) ); ?>" class="iaq-btn iaq-btn-primary iaq-btn-subject iaq-full-width">
 								<?php esc_html_e( 'Explore Subject', 'indianagri-quiz-engine' ); ?> &rarr;
 							</a>
 						</div>
@@ -495,13 +549,13 @@ $page_url = function( $subview = '', $params = array() ) {
 		</div>
 
 		<div class="iaq-ps-section-header">
-			<h3><span class="dashicons dashicons-list-view"></span> <?php esc_html_e( 'Subject Practice Sets (Sequential Drills)', 'indianagri-quiz-engine' ); ?></h3>
-			<span class="iaq-card-help"><?php esc_html_e( 'Numbering dynamically restarts at Set 1 according to display order.', 'indianagri-quiz-engine' ); ?></span>
+			<h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> <?php esc_html_e( 'Subject Practice Sets (Sequential Drills)', 'indianagri-quiz-engine' ); ?></h3>
+			<span class="iaq-card-help"><?php esc_html_e( 'Sequential drills arranged by topic.', 'indianagri-quiz-engine' ); ?></span>
 		</div>
 
 		<?php if ( empty( $quizzes ) ) : ?>
 			<div class="iaq-ps-empty-state">
-				<span class="dashicons dashicons-media-text" style="font-size:48px;width:48px;height:48px;color:#94a3b8;"></span>
+				<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
 				<h3><?php esc_html_e( 'No Practice Sets Available for this Subject', 'indianagri-quiz-engine' ); ?></h3>
 				<p><?php esc_html_e( 'No practice sets have been created for this subject yet.', 'indianagri-quiz-engine' ); ?></p>
 				<a href="<?php echo esc_url( $page_url( 'subjects' ) ); ?>" class="iaq-btn iaq-btn-outline" style="margin-top:12px;">
@@ -529,10 +583,10 @@ $page_url = function( $subview = '', $params = array() ) {
 					<input type="hidden" name="page" value="<?php echo esc_attr( sanitize_key( $_GET['page'] ) ); ?>">
 				<?php endif; ?>
 				<div class="iaq-ps-search-input-wrap">
-					<span class="dashicons dashicons-search"></span>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="iaq-input-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
 					<input type="text" name="ps_search" value="<?php echo esc_attr( $search_term ); ?>" placeholder="<?php esc_attr_e( 'Search by exam name or code (e.g., ICAR, NET, UPCATET)...', 'indianagri-quiz-engine' ); ?>" class="iaq-input">
 				</div>
-				<button type="submit" class="iaq-btn iaq-btn-primary"><?php esc_html_e( 'Search', 'indianagri-quiz-engine' ); ?></button>
+				<button type="submit" class="iaq-btn iaq-btn-primary iaq-btn-exam"><?php esc_html_e( 'Search', 'indianagri-quiz-engine' ); ?></button>
 				<?php if ( ! empty( $search_term ) ) : ?>
 					<a href="<?php echo esc_url( $page_url( 'exams' ) ); ?>" class="iaq-btn iaq-btn-outline"><?php esc_html_e( 'Clear', 'indianagri-quiz-engine' ); ?></a>
 				<?php endif; ?>
@@ -541,7 +595,7 @@ $page_url = function( $subview = '', $params = array() ) {
 
 		<?php if ( empty( $exams ) ) : ?>
 			<div class="iaq-ps-empty-state">
-				<span class="dashicons dashicons-awards" style="font-size:54px;width:54px;height:54px;color:#94a3b8;"></span>
+				<svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
 				<h3><?php esc_html_e( 'No Examinations Found', 'indianagri-quiz-engine' ); ?></h3>
 				<p><?php esc_html_e( 'No competitive examinations match your search criteria.', 'indianagri-quiz-engine' ); ?></p>
 			</div>
@@ -572,17 +626,17 @@ $page_url = function( $subview = '', $params = array() ) {
 
 						<div class="iaq-ps-exam-meta">
 							<span class="iaq-ps-meta-stat">
-								<span class="dashicons dashicons-category"></span>
-								<strong><?php echo (int) $ex->assigned_subjects_count; ?></strong> <?php esc_html_e( 'Subjects', 'indianagri-quiz-engine' ); ?>
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><rect width="7" height="7" x="3" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="14" rx="1.5"/><rect width="7" height="7" x="3" y="14" rx="1.5"/></svg>
+								<strong><?php echo (int) $ex->assigned_subjects_count; ?></strong> <?php echo esc_html( _n( 'Subject', 'Subjects', (int) $ex->assigned_subjects_count, 'indianagri-quiz-engine' ) ); ?>
 							</span>
 							<span class="iaq-ps-meta-stat">
-								<span class="dashicons dashicons-media-text"></span>
-								<strong><?php echo (int) $ex->practice_sets_count; ?></strong> <?php esc_html_e( 'Sets', 'indianagri-quiz-engine' ); ?>
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+								<strong><?php echo (int) $ex->practice_sets_count; ?></strong> <?php echo esc_html( _n( 'Set', 'Sets', (int) $ex->practice_sets_count, 'indianagri-quiz-engine' ) ); ?>
 							</span>
 						</div>
 
 						<div class="iaq-ps-exam-action">
-							<a href="<?php echo esc_url( $page_url( 'exam', array( 'exam_id' => $ex->id ) ) ); ?>" class="iaq-btn iaq-btn-primary iaq-full-width" style="background:#b45309;">
+							<a href="<?php echo esc_url( $page_url( 'exam', array( 'exam_id' => $ex->id ) ) ); ?>" class="iaq-btn iaq-btn-primary iaq-btn-exam iaq-full-width">
 								<?php esc_html_e( 'Explore Examination', 'indianagri-quiz-engine' ); ?> &rarr;
 							</a>
 						</div>
@@ -601,8 +655,12 @@ $page_url = function( $subview = '', $params = array() ) {
 			<div class="iaq-ps-detail-info" style="width:100%;">
 				<div class="iaq-badges-line">
 					<span class="iaq-pill iaq-pill-category" style="background:#fef3c7;color:#b45309;"><?php esc_html_e( 'Competitive Examination', 'indianagri-quiz-engine' ); ?></span>
-					<span class="iaq-pill" style="background:#e0f2fe;color:#0369a1;font-weight:700;"><?php echo esc_html( $exam->code ); ?></span>
-					<span class="iaq-pill" style="background:#f0fdf4;color:#117E3A;"><?php echo esc_html( $exam->category ); ?></span>
+					<?php if ( ! empty( $exam->code ) ) : ?>
+						<span class="iaq-pill" style="background:#e0f2fe;color:#0369a1;font-weight:700;"><?php echo esc_html( $exam->code ); ?></span>
+					<?php endif; ?>
+					<?php if ( ! empty( $exam->category ) ) : ?>
+						<span class="iaq-pill" style="background:#f0fdf4;color:#117E3A;"><?php echo esc_html( $exam->category ); ?></span>
+					<?php endif; ?>
 				</div>
 
 				<h2 class="iaq-ps-detail-title"><?php echo esc_html( $exam->name ); ?></h2>
@@ -614,15 +672,15 @@ $page_url = function( $subview = '', $params = array() ) {
 		</div>
 
 		<div class="iaq-ps-section-header">
-			<h3><span class="dashicons dashicons-category"></span> <?php esc_html_e( 'Step 2: Select a Subject under this Examination', 'indianagri-quiz-engine' ); ?></h3>
-			<span class="iaq-card-help"><?php esc_html_e( 'Only displays subjects configured for this examination by the administrator.', 'indianagri-quiz-engine' ); ?></span>
+			<h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><rect width="7" height="7" x="3" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="14" rx="1.5"/><rect width="7" height="7" x="3" y="14" rx="1.5"/></svg> <?php esc_html_e( 'Select a Subject under this Examination', 'indianagri-quiz-engine' ); ?></h3>
+			<span class="iaq-card-help"><?php esc_html_e( 'Choose a subject to view available practice sets.', 'indianagri-quiz-engine' ); ?></span>
 		</div>
 
 		<?php if ( empty( $exam_subjects ) ) : ?>
 			<div class="iaq-ps-empty-state">
-				<span class="dashicons dashicons-category" style="font-size:48px;width:48px;height:48px;color:#94a3b8;"></span>
+				<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><rect width="7" height="7" x="3" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="14" rx="1.5"/><rect width="7" height="7" x="3" y="14" rx="1.5"/></svg>
 				<h3><?php esc_html_e( 'No Subjects Assigned to this Examination', 'indianagri-quiz-engine' ); ?></h3>
-				<p><?php esc_html_e( 'The administrator has not configured subjects for this examination yet.', 'indianagri-quiz-engine' ); ?></p>
+				<p><?php esc_html_e( 'No subjects have been configured for this examination yet.', 'indianagri-quiz-engine' ); ?></p>
 				<a href="<?php echo esc_url( $page_url( 'exams' ) ); ?>" class="iaq-btn iaq-btn-outline" style="margin-top:12px;">
 					&larr; <?php esc_html_e( 'Back to All Examinations', 'indianagri-quiz-engine' ); ?>
 				</a>
@@ -633,10 +691,16 @@ $page_url = function( $subview = '', $params = array() ) {
 					<div class="iaq-ps-subject-card">
 						<div class="iaq-ps-subject-icon-bar">
 							<div class="iaq-ps-subject-avatar" style="background:#fef3c7;color:#b45309;">
-								<span class="dashicons dashicons-welcome-learn-more"></span>
+								<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
 							</div>
 							<span class="iaq-pill" style="background:#f0fdf4;color:#117E3A;font-weight:700;">
-								<?php printf( esc_html__( '%d Sets Available', 'indianagri-quiz-engine' ), (int) $esub->practice_sets_count ); ?>
+								<?php
+								$scount = (int) $esub->practice_sets_count;
+								printf(
+									esc_html( _n( '%d Set Available', '%d Sets Available', $scount, 'indianagri-quiz-engine' ) ),
+									$scount
+								);
+								?>
 							</span>
 						</div>
 
@@ -653,7 +717,7 @@ $page_url = function( $subview = '', $params = array() ) {
 						<?php endif; ?>
 
 						<div class="iaq-ps-subject-action">
-							<a href="<?php echo esc_url( $page_url( 'exam_subject', array( 'exam_id' => $exam->id, 'subject_id' => $esub->id ) ) ); ?>" class="iaq-btn iaq-btn-primary iaq-full-width" style="background:#b45309;">
+							<a href="<?php echo esc_url( $page_url( 'exam_subject', array( 'exam_id' => $exam->id, 'subject_id' => $esub->id ) ) ); ?>" class="iaq-btn iaq-btn-primary iaq-btn-exam iaq-full-width">
 								<?php esc_html_e( 'View Practice Sets', 'indianagri-quiz-engine' ); ?> &rarr;
 							</a>
 						</div>
@@ -674,27 +738,33 @@ $page_url = function( $subview = '', $params = array() ) {
 					<span class="iaq-pill iaq-pill-category" style="background:#fef3c7;color:#b45309;"><?php echo esc_html( $exam->code ); ?></span>
 					<span class="iaq-pill iaq-pill-category"><?php echo esc_html( $subject->name ); ?></span>
 					<span class="iaq-pill" style="background:#f0fdf4;color:#117E3A;font-weight:700;">
-						<?php printf( esc_html__( '%d Practice Sets', 'indianagri-quiz-engine' ), count( $quizzes ) ); ?>
+						<?php
+						$qcount = count( $quizzes );
+						printf(
+							esc_html( _n( '%d Practice Set', '%d Practice Sets', $qcount, 'indianagri-quiz-engine' ) ),
+							$qcount
+						);
+						?>
 					</span>
 				</div>
 
 				<h2 class="iaq-ps-detail-title"><?php printf( esc_html__( '%1$s — %2$s Practice Sets', 'indianagri-quiz-engine' ), esc_html( $exam->name ), esc_html( $subject->name ) ); ?></h2>
 				<p class="iaq-ps-subtitle" style="margin:4px 0 0 0;font-size:13px;color:#64748b;">
-					<?php esc_html_e( 'Practice sets restart numbering at Set 1 for this examination and subject combination.', 'indianagri-quiz-engine' ); ?>
+					<?php esc_html_e( 'Sequential practice drills and question sets for this subject.', 'indianagri-quiz-engine' ); ?>
 				</p>
 			</div>
 		</div>
 
 		<div class="iaq-ps-section-header">
-			<h3><span class="dashicons dashicons-list-view"></span> <?php esc_html_e( 'Examination Subject Practice Sets', 'indianagri-quiz-engine' ); ?></h3>
-			<span class="iaq-card-help"><?php esc_html_e( 'Numbering dynamically restarts at 1.', 'indianagri-quiz-engine' ); ?></span>
+			<h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> <?php esc_html_e( 'Examination Subject Practice Sets', 'indianagri-quiz-engine' ); ?></h3>
+			<span class="iaq-card-help"><?php esc_html_e( 'Sequential drills with detailed explanations.', 'indianagri-quiz-engine' ); ?></span>
 		</div>
 
 		<?php if ( empty( $quizzes ) ) : ?>
 			<div class="iaq-ps-empty-state">
-				<span class="dashicons dashicons-media-text" style="font-size:48px;width:48px;height:48px;color:#94a3b8;"></span>
+				<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
 				<h3><?php esc_html_e( 'No Practice Sets Available for this Combination', 'indianagri-quiz-engine' ); ?></h3>
-				<p><?php esc_html_e( 'The administrator has not added practice sets to this examination and subject yet.', 'indianagri-quiz-engine' ); ?></p>
+				<p><?php esc_html_e( 'No practice sets have been added to this examination and subject yet.', 'indianagri-quiz-engine' ); ?></p>
 				<a href="<?php echo esc_url( $page_url( 'exam', array( 'exam_id' => $exam->id ) ) ); ?>" class="iaq-btn iaq-btn-outline" style="margin-top:12px;">
 					&larr; <?php printf( esc_html__( 'Back to %s Subjects', 'indianagri-quiz-engine' ), esc_html( $exam->code ) ); ?>
 				</a>

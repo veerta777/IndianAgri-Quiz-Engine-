@@ -47,11 +47,93 @@ if ( 'manage_sets' === $action && $book_id ) :
 		</div>
 
 		<div class="iaq-two-col-layout" style="display:grid;grid-template-columns:360px 1fr;gap:24px;margin-top:20px;">
-			<!-- Assign Quiz Form Column -->
+		<?php $next_set_number = count( $assigned_quizzes ) + 1; ?>
+		<div class="iaq-two-col-layout" style="display:grid;grid-template-columns:380px 1fr;gap:24px;margin-top:20px;">
+			<!-- Form Column: Create Practice Set with Bulk Import -->
 			<div class="iaq-form-column">
-				<div class="iaq-card">
+				<!-- Card 1: 1-Click Create & Bulk Import -->
+				<div class="iaq-card" style="border: 2px solid #117E3A;">
+					<div class="iaq-card-header" style="background:#f0fdf4;display:flex;justify-content:space-between;align-items:center;">
+						<h2 style="color:#117E3A;font-size:15px;margin:0;">
+							<span class="dashicons dashicons-upload"></span> <?php printf( esc_html__( 'Create Practice Set %d & Import', 'indianagri-quiz-engine' ), $next_set_number ); ?>
+						</h2>
+						<span class="iaq-pill" style="background:#117E3A;color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;">1-Step Setup</span>
+					</div>
+					<div class="iaq-card-body">
+						<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin.php?page=iaq-books&action=manage_sets&book_id=' . $book_id ) ); ?>">
+							<?php wp_nonce_field( 'iaq_create_book_practice_set_nonce' ); ?>
+							<input type="hidden" name="book_id" value="<?php echo esc_attr( $book_id ); ?>">
+
+							<div class="iaq-form-group">
+								<label for="new-set-title"><?php esc_html_e( 'Practice Set Title', 'indianagri-quiz-engine' ); ?> <span class="iaq-required">*</span></label>
+								<input type="text" name="set_title" id="new-set-title" class="iaq-input iaq-full-width" value="<?php echo esc_attr( sprintf( __( 'Practice Set %d', 'indianagri-quiz-engine' ), $next_set_number ) ); ?>" required>
+							</div>
+
+							<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+								<div class="iaq-form-group">
+									<label for="new-set-order"><?php esc_html_e( 'Display Position', 'indianagri-quiz-engine' ); ?></label>
+									<input type="number" min="1" name="sort_order" id="new-set-order" class="iaq-input iaq-full-width" value="<?php echo esc_attr( $next_set_number ); ?>">
+									<span class="iaq-card-help"><?php esc_html_e( 'Set # in sequence', 'indianagri-quiz-engine' ); ?></span>
+								</div>
+								<div class="iaq-form-group">
+									<label for="new-set-duration"><?php esc_html_e( 'Duration (Mins)', 'indianagri-quiz-engine' ); ?></label>
+									<input type="number" min="0" name="duration_minutes" id="new-set-duration" class="iaq-input iaq-full-width" value="20">
+									<span class="iaq-card-help"><?php esc_html_e( '0 for untimed', 'indianagri-quiz-engine' ); ?></span>
+								</div>
+							</div>
+
+							<div class="iaq-form-group">
+								<label for="new-set-subject"><?php esc_html_e( 'Subject', 'indianagri-quiz-engine' ); ?></label>
+								<select name="subject_id" id="new-set-subject" class="iaq-select iaq-full-width">
+									<option value="0"><?php esc_html_e( '— Select Subject —', 'indianagri-quiz-engine' ); ?></option>
+									<?php foreach ( $subjects as $s ) : ?>
+										<option value="<?php echo esc_attr( $s->id ); ?>" <?php selected( $book && (int) $book->subject_id === (int) $s->id ); ?>>
+											<?php echo esc_html( $s->name ); ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
+							</div>
+
+							<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+								<div class="iaq-form-group">
+									<label for="new-set-marks"><?php esc_html_e( 'Marks (+)', 'indianagri-quiz-engine' ); ?></label>
+									<input type="number" step="0.01" min="0.01" name="correct_marks" id="new-set-marks" class="iaq-input iaq-full-width" value="1.00">
+								</div>
+								<div class="iaq-form-group">
+									<label for="new-set-neg"><?php esc_html_e( 'Negative (-)', 'indianagri-quiz-engine' ); ?></label>
+									<input type="number" step="0.01" min="0.00" name="negative_marks" id="new-set-neg" class="iaq-input iaq-full-width" value="0.25">
+								</div>
+							</div>
+
+							<div class="iaq-form-group" style="background:#f8fafc;padding:12px;border:1px dashed #cbd5e1;border-radius:6px;margin-top:8px;">
+								<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+									<label for="new-set-csv" style="font-weight:700;color:#0f172a;margin:0;">
+										<span class="dashicons dashicons-media-spreadsheet" style="color:#117E3A;vertical-align:middle;"></span>
+										<?php esc_html_e( 'Bulk Import Questions (JSON / CSV)', 'indianagri-quiz-engine' ); ?>
+									</label>
+									<a href="<?php echo esc_url( admin_url( 'admin.php?page=iaq-import-export' ) ); ?>" class="iaq-link" style="font-size:11px;color:#117E3A;font-weight:600;text-decoration:none;" title="<?php esc_attr_e( 'Download JSON or CSV templates with Hindi & English agriculture questions', 'indianagri-quiz-engine' ); ?>">
+										<span class="dashicons dashicons-download" style="font-size:13px;vertical-align:middle;"></span> Templates
+									</a>
+								</div>
+								<input type="file" name="csv_file" id="new-set-csv" accept=".json,.csv" class="iaq-full-width" style="font-size:12px;">
+								<span class="iaq-card-help" style="display:block;margin-top:4px;">
+									<?php printf( esc_html__( 'Upload JSON or CSV (up to 200 MCQs at a time) to immediately complete Practice Set %d with questions attached.', 'indianagri-quiz-engine' ), $next_set_number ); ?>
+								</span>
+							</div>
+
+							<div style="margin-top:16px;">
+								<button type="submit" name="iaq_create_book_practice_set" class="iaq-btn iaq-btn-primary iaq-full-width" style="padding:10px 16px;font-size:14px;font-weight:700;">
+									<span class="dashicons dashicons-plus-alt"></span> <?php printf( esc_html__( 'Create Practice Set %d & Import', 'indianagri-quiz-engine' ), $next_set_number ); ?>
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+
+				<!-- Card 2: Attach Existing Practice Set -->
+				<div class="iaq-card" style="margin-top:20px;">
 					<div class="iaq-card-header">
-						<h2><span class="dashicons dashicons-paperclip"></span> <?php esc_html_e( 'Attach Existing Practice Set', 'indianagri-quiz-engine' ); ?></h2>
+						<h2><span class="dashicons dashicons-paperclip"></span> <?php esc_html_e( 'Or Attach Existing Quiz', 'indianagri-quiz-engine' ); ?></h2>
 					</div>
 					<div class="iaq-card-body">
 						<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=iaq-books&action=manage_sets&book_id=' . $book_id ) ); ?>">
@@ -70,18 +152,16 @@ if ( 'manage_sets' === $action && $book_id ) :
 										<?php endif; ?>
 									<?php endforeach; ?>
 								</select>
-								<span class="iaq-card-help"><?php esc_html_e( 'Reuses the existing quiz without duplicating questions or historical student records.', 'indianagri-quiz-engine' ); ?></span>
 							</div>
 
 							<div class="iaq-form-group">
 								<label for="assign-sort-order"><?php esc_html_e( 'Display Position / Sort Order', 'indianagri-quiz-engine' ); ?></label>
-								<input type="number" min="1" name="sort_order" id="assign-sort-order" class="iaq-input iaq-full-width" value="<?php echo esc_attr( count( $assigned_quizzes ) + 1 ); ?>">
-								<span class="iaq-card-help"><?php esc_html_e( 'Determines whether this appears as Practice Set 1, 2, 3...', 'indianagri-quiz-engine' ); ?></span>
+								<input type="number" min="1" name="sort_order" id="assign-sort-order" class="iaq-input iaq-full-width" value="<?php echo esc_attr( $next_set_number ); ?>">
 							</div>
 
 							<div style="margin-top:16px;">
-								<button type="submit" name="iaq_assign_book_quiz" class="iaq-btn iaq-btn-primary iaq-full-width">
-									<span class="dashicons dashicons-saved"></span> <?php esc_html_e( 'Attach to Book', 'indianagri-quiz-engine' ); ?>
+								<button type="submit" name="iaq_assign_book_quiz" class="iaq-btn iaq-btn-outline iaq-full-width">
+									<span class="dashicons dashicons-saved"></span> <?php esc_html_e( 'Attach Existing Quiz', 'indianagri-quiz-engine' ); ?>
 								</button>
 							</div>
 						</form>
@@ -124,7 +204,7 @@ if ( 'manage_sets' === $action && $book_id ) :
 							<div style="padding:40px;text-align:center;color:#64748b;">
 								<span class="dashicons dashicons-book" style="font-size:48px;width:48px;height:48px;color:#cbd5e1;margin-bottom:12px;"></span>
 								<h3 style="margin:0 0 8px 0;color:#334155;"><?php esc_html_e( 'No Practice Sets Assigned Yet', 'indianagri-quiz-engine' ); ?></h3>
-								<p style="margin:0;font-size:13px;"><?php esc_html_e( 'Use the form on the left to attach existing practice tests, or click "Create New Quiz" above.', 'indianagri-quiz-engine' ); ?></p>
+								<p style="margin:0;font-size:13px;"><?php esc_html_e( 'Use the "Create Practice Set 1 & Import" form on the left to set up your first set with questions in one step.', 'indianagri-quiz-engine' ); ?></p>
 							</div>
 						<?php else : ?>
 							<table class="iaq-admin-table" style="width:100%;border-collapse:collapse;">
@@ -136,7 +216,7 @@ if ( 'manage_sets' === $action && $book_id ) :
 										<th style="padding:12px 16px;width:80px;"><?php esc_html_e( 'Marks', 'indianagri-quiz-engine' ); ?></th>
 										<th style="padding:12px 16px;width:90px;"><?php esc_html_e( 'Duration', 'indianagri-quiz-engine' ); ?></th>
 										<th style="padding:12px 16px;width:80px;"><?php esc_html_e( 'Status', 'indianagri-quiz-engine' ); ?></th>
-										<th style="padding:12px 16px;text-align:right;width:140px;"><?php esc_html_e( 'Actions', 'indianagri-quiz-engine' ); ?></th>
+										<th style="padding:12px 16px;text-align:right;width:180px;"><?php esc_html_e( 'Actions', 'indianagri-quiz-engine' ); ?></th>
 									</tr>
 								</thead>
 								<tbody>
@@ -155,7 +235,7 @@ if ( 'manage_sets' === $action && $book_id ) :
 													&bull; <?php echo 'paid' === $pq->access_type ? '<span style="color:#d97706;">Paid</span>' : '<span style="color:#117E3A;">Free</span>'; ?>
 												</div>
 											</td>
-											<td style="padding:12px 16px;color:#475569;">
+											<td style="padding:12px 16px;color:#475569;font-weight:600;">
 												<?php echo esc_html( $pq->total_questions ); ?> Qs
 											</td>
 											<td style="padding:12px 16px;color:#475569;">
@@ -170,6 +250,12 @@ if ( 'manage_sets' === $action && $book_id ) :
 												</span>
 											</td>
 											<td style="padding:12px 16px;text-align:right;">
+												<button type="button" class="iaq-table-action iaq-btn-trigger-modal" data-quiz-id="<?php echo esc_attr( $pq->id ); ?>" data-quiz-title="<?php echo esc_attr( $pq->title ); ?>" title="<?php esc_attr_e( 'Bulk Import Questions into this Set', 'indianagri-quiz-engine' ); ?>" style="color:#117E3A;background:none;border:none;cursor:pointer;">
+													<span class="dashicons dashicons-upload"></span>
+												</button>
+												<a href="<?php echo esc_url( admin_url( 'admin.php?page=iaq-quizzes&action=manage_questions&id=' . $pq->id ) ); ?>" class="iaq-table-action" title="<?php esc_attr_e( 'Manage & View Questions', 'indianagri-quiz-engine' ); ?>">
+													<span class="dashicons dashicons-list-view"></span>
+												</a>
 												<a href="<?php echo esc_url( admin_url( 'admin.php?page=iaq-quizzes&action=edit&id=' . $pq->id ) ); ?>" class="iaq-table-action" title="<?php esc_attr_e( 'Edit Quiz Settings', 'indianagri-quiz-engine' ); ?>">
 													<span class="dashicons dashicons-edit"></span>
 												</a>
@@ -186,6 +272,59 @@ if ( 'manage_sets' === $action && $book_id ) :
 				</div>
 			</div>
 		</div>
+
+		<!-- Quick Bulk Import Modal for Existing Practice Set -->
+		<div id="iaq-quiz-import-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.6);z-index:99999;align-items:center;justify-content:center;">
+			<div style="background:#fff;border-radius:8px;max-width:500px;width:90%;box-shadow:0 10px 25px rgba(0,0,0,0.2);overflow:hidden;">
+				<div style="padding:16px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
+					<h3 style="margin:0;font-size:16px;color:#0f172a;display:flex;align-items:center;gap:8px;">
+						<span class="dashicons dashicons-upload" style="color:#117E3A;"></span>
+						<span id="iaq-modal-title"><?php esc_html_e( 'Bulk Import Questions', 'indianagri-quiz-engine' ); ?></span>
+					</h3>
+					<button type="button" onclick="document.getElementById('iaq-quiz-import-modal').style.display='none';" style="background:none;border:none;font-size:20px;cursor:pointer;color:#64748b;">&times;</button>
+				</div>
+				<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin.php?page=iaq-books&action=manage_sets&book_id=' . $book_id ) ); ?>" style="padding:20px;">
+					<?php wp_nonce_field( 'iaq_bulk_import_to_quiz_nonce' ); ?>
+					<input type="hidden" name="book_id" value="<?php echo esc_attr( $book_id ); ?>">
+					<input type="hidden" name="quiz_id" id="iaq-modal-quiz-id" value="0">
+
+					<p style="margin:0 0 16px 0;font-size:13px;color:#475569;">
+						<?php esc_html_e( 'Select a JSON or CSV file containing questions (up to 200 MCQs at a time). All valid questions will be imported into the Question Bank and automatically assigned to this practice set.', 'indianagri-quiz-engine' ); ?>
+					</p>
+
+					<div class="iaq-form-group">
+						<label for="iaq-modal-csv" style="font-weight:600;display:block;margin-bottom:6px;"><?php esc_html_e( 'Select Questions File (JSON or CSV)', 'indianagri-quiz-engine' ); ?> <span class="iaq-required">*</span></label>
+						<input type="file" name="csv_file" id="iaq-modal-csv" accept=".json,.csv" class="iaq-full-width" required>
+					</div>
+
+					<div style="margin-top:20px;display:flex;justify-content:flex-end;gap:10px;">
+						<button type="button" class="iaq-btn iaq-btn-outline" onclick="document.getElementById('iaq-quiz-import-modal').style.display='none';"><?php esc_html_e( 'Cancel', 'indianagri-quiz-engine' ); ?></button>
+						<button type="submit" name="iaq_bulk_import_to_quiz" class="iaq-btn iaq-btn-primary">
+							<span class="dashicons dashicons-upload"></span> <?php esc_html_e( 'Upload & Assign to Set', 'indianagri-quiz-engine' ); ?>
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+
+		<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			var triggers = document.querySelectorAll('.iaq-btn-trigger-modal');
+			var modal    = document.getElementById('iaq-quiz-import-modal');
+			var modalTitle = document.getElementById('iaq-modal-title');
+			var modalQuizId = document.getElementById('iaq-modal-quiz-id');
+
+			triggers.forEach(function(btn) {
+				btn.addEventListener('click', function() {
+					var qid   = this.getAttribute('data-quiz-id');
+					var title = this.getAttribute('data-quiz-title');
+					modalQuizId.value = qid;
+					modalTitle.textContent = 'Import Questions to: ' + title;
+					modal.style.display = 'flex';
+				});
+			});
+		});
+		</script>
 	</div>
 	<?php
 	return;
@@ -386,7 +525,10 @@ $books = IAQ_Practice_Sets::get_books( array( 'status' => '' ) );
 												<?php echo esc_html( ucfirst( $b->status ) ); ?>
 											</span>
 										</td>
-										<td style="padding:12px 16px;text-align:right;">
+										<td style="padding:12px 16px;text-align:right;white-space:nowrap;">
+											<a href="<?php echo esc_url( admin_url( 'admin.php?page=iaq-books&action=manage_sets&book_id=' . $b->id ) ); ?>" class="iaq-btn iaq-btn-primary" style="padding:4px 8px;font-size:12px;margin-right:4px;" title="<?php esc_attr_e( 'Create New Practice Set or Bulk Import', 'indianagri-quiz-engine' ); ?>">
+												<span class="dashicons dashicons-plus-alt" style="font-size:13px;vertical-align:middle;margin-right:2px;"></span><?php esc_html_e( '+ Set', 'indianagri-quiz-engine' ); ?>
+											</a>
 											<a href="<?php echo esc_url( admin_url( 'admin.php?page=iaq-books&action=manage_sets&book_id=' . $b->id ) ); ?>" class="iaq-btn iaq-btn-outline" style="padding:4px 8px;font-size:12px;margin-right:4px;" title="<?php esc_attr_e( 'Manage Practice Sets', 'indianagri-quiz-engine' ); ?>">
 												<?php esc_html_e( 'Manage Sets', 'indianagri-quiz-engine' ); ?>
 											</a>

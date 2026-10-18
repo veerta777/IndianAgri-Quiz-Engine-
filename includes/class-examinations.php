@@ -51,6 +51,16 @@ class IAQ_Examinations {
 			$values[] = $like;
 		}
 
+		if ( ! empty( $r['category_id'] ) ) {
+			$where[]  = 'category_id = %d';
+			$values[] = absint( $r['category_id'] );
+		}
+
+		if ( isset( $r['parent_id'] ) && '' !== $r['parent_id'] ) {
+			$where[]  = 'parent_id = %d';
+			$values[] = absint( $r['parent_id'] );
+		}
+
 		$where_clause = implode( ' AND ', $where );
 		$allowed_orderby = array( 'id', 'name', 'code', 'display_order', 'created_at', 'status' );
 		$orderby         = in_array( $r['orderby'], $allowed_orderby, true ) ? $r['orderby'] : 'display_order';
@@ -147,14 +157,21 @@ class IAQ_Examinations {
 			'status'        => $status,
 		);
 
+		if ( isset( $data['category_id'] ) ) {
+			$payload['category_id'] = ! empty( $data['category_id'] ) ? absint( $data['category_id'] ) : null;
+		}
+		if ( isset( $data['parent_id'] ) ) {
+			$payload['parent_id'] = ! empty( $data['parent_id'] ) ? absint( $data['parent_id'] ) : null;
+		}
+
 		if ( $exam_id > 0 ) {
 			$payload['updated_at'] = current_time( 'mysql' );
-			$wpdb->update( $table_name, $payload, array( 'id' => $exam_id ), array( '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s' ), array( '%d' ) );
+			$wpdb->update( $table_name, $payload, array( 'id' => $exam_id ) );
 			return $exam_id;
 		}
 
 		$payload['created_at'] = current_time( 'mysql' );
-		$wpdb->insert( $table_name, $payload, array( '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s' ) );
+		$wpdb->insert( $table_name, $payload );
 		return (int) $wpdb->insert_id;
 	}
 

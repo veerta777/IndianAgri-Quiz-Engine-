@@ -36,18 +36,19 @@ class IAQ_Wrong_Notebook {
 		// Check if record already exists for this user and question.
 		$existing = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT id, times_incorrect FROM {$table_notebook} WHERE user_id = %d AND question_id = %d",
+				"SELECT id, times_incorrect, last_attempt_id FROM {$table_notebook} WHERE user_id = %d AND question_id = %d",
 				$user_id,
 				$question_id
 			)
 		);
 
 		if ( $existing ) {
+			$increment = ( $attempt_id > 0 && isset( $existing->last_attempt_id ) && (int) $existing->last_attempt_id === $attempt_id ) ? 0 : 1;
 			$wpdb->update(
 				$table_notebook,
 				array(
 					'last_attempt_id' => $attempt_id,
-					'times_incorrect' => (int) $existing->times_incorrect + 1,
+					'times_incorrect' => (int) $existing->times_incorrect + $increment,
 					'status'          => 'active', // Reactivate on repeat mistake
 					'updated_at'      => current_time( 'mysql' ),
 				),
@@ -345,27 +346,43 @@ class IAQ_Wrong_Notebook {
 			return new WP_Error( 'unauthorized', __( 'Authentication required.', 'indianagri-quiz-engine' ) );
 		}
 
-		$table_notebook = IAQ_Database::get_table_name( 'wrong_notebook' );
+		$table_notebook  = IAQ_Database::get_table_name( 'wrong_notebook' );
+		$table_questions = IAQ_Database::get_table_name( 'questions' );
 
 		// Query active incorrect question IDs belonging to this user.
-		$where  = array( 'user_id = %d', "status = 'active'" );
-		$params = array( $user_id );
-
 		if ( ! empty( $args['subject_id'] ) ) {
-			$table_questions = IAQ_Database::get_table_name( 'questions' );
 			$sql = "SELECT n.question_id FROM {$table_notebook} n
 			        JOIN {$table_questions} q ON n.question_id = q.id
 			        WHERE n.user_id = %d AND n.status = 'active' AND q.subject_id = %d
 			        ORDER BY n.times_incorrect DESC, n.updated_at DESC";
 			$question_ids = $wpdb->get_col( $wpdb->prepare( $sql, $user_id, absint( $args['subject_id'] ) ) );
 		} else {
-			$sql = "SELECT question_id FROM {$table_notebook}
-			        WHERE user_id = %d AND status = 'active'
-			        ORDER BY times_incorrect DESC, updated_at DESC";
+			$sql = "SELECT n.question_id FROM {$table_notebook} n
+			        JOIN {$table_questions} q ON n.question_id = q.id
+			        WHERE n.user_id = %d AND n.status = 'active'
+			        ORDER BY n.times_incorrect DESC, n.updated_at DESC";
 			$question_ids = $wpdb->get_col( $wpdb->prepare( $sql, $user_id ) );
 		}
 
-		$question_ids = array_map( 'intval', (array) $question_ids );
+		$question_ids = array_values( array_unique( array_filter( array_map( 'intval', (array) $question_ids ) ) ) );
+
+		if ( empty( $question_ids ) ) {
+			// Fallback: If no 'active' questions, check if any non-dismissed entries exist for retry
+			if ( ! empty( $args['subject_id'] ) ) {
+				$sql = "SELECT n.question_id FROM {$table_notebook} n
+				        JOIN {$table_questions} q ON n.question_id = q.id
+				        WHERE n.user_id = %d AND n.status != 'dismissed' AND q.subject_id = %d
+				        ORDER BY n.times_incorrect DESC, n.updated_at DESC";
+				$question_ids = $wpdb->get_col( $wpdb->prepare( $sql, $user_id, absint( $args['subject_id'] ) ) );
+			} else {
+				$sql = "SELECT n.question_id FROM {$table_notebook} n
+				        JOIN {$table_questions} q ON n.question_id = q.id
+				        WHERE n.user_id = %d AND n.status != 'dismissed'
+				        ORDER BY n.times_incorrect DESC, n.updated_at DESC";
+				$question_ids = $wpdb->get_col( $wpdb->prepare( $sql, $user_id ) );
+			}
+			$question_ids = array_values( array_unique( array_filter( array_map( 'intval', (array) $question_ids ) ) ) );
+		}
 
 		if ( empty( $question_ids ) ) {
 			return new WP_Error( 'no_questions', __( 'No active incorrect questions found in your notebook for retry practice.', 'indianagri-quiz-engine' ) );

@@ -25,7 +25,7 @@ $active_plan_ids = ! empty( $active_subs ) ? wp_list_pluck( $active_subs, 'plan_
 			<?php esc_html_e( 'Choose Your Exam Preparation Plan', 'indianagri-quiz-engine' ); ?>
 		</h2>
 		<p style="font-size: 16px; color: #64748b; max-width: 650px; margin: 0 auto;">
-			<?php esc_html_e( 'Unlock unlimited agricultural practice sets, authentic timed mock tests, previous-year question papers, and bilingual Hindi/English solutions.', 'indianagri-quiz-engine' ); ?>
+			<?php esc_html_e( 'Unlock unlimited agricultural practice sets, authentic timed mock tests, previous-year question papers, and detailed scientific solutions.', 'indianagri-quiz-engine' ); ?>
 		</p>
 	</div>
 
@@ -69,10 +69,14 @@ $active_plan_ids = ! empty( $active_subs ) ? wp_list_pluck( $active_subs, 'plan_
 						</div>
 
 						<div style="display: inline-block; padding: 3px 10px; background: #f1f5f9; border-radius: 6px; font-size: 12px; font-weight: 600; color: #475569;">
-							<?php if ( 'all_access' === $plan->access_scope ) : ?>
+							<?php
+							$f_scope = ! empty( $plan->access_scope ) ? $plan->access_scope : ( ! empty( $plan->access_type ) ? $plan->access_type : 'all_access' );
+							$f_cats  = ! empty( $plan->included_categories ) ? $plan->included_categories : ( ! empty( $plan->included_exam_ids ) ? $plan->included_exam_ids : __( 'Agricultural Exams', 'indianagri-quiz-engine' ) );
+							?>
+							<?php if ( 'all_access' === $f_scope ) : ?>
 								&#10004; <?php esc_html_e( 'All Agricultural Examinations', 'indianagri-quiz-engine' ); ?>
 							<?php else : ?>
-								&#9679; <?php echo esc_html( $plan->included_categories ); ?>
+								&#9679; <?php echo esc_html( $f_cats ); ?>
 							<?php endif; ?>
 						</div>
 					</div>
@@ -85,7 +89,7 @@ $active_plan_ids = ! empty( $active_subs ) ? wp_list_pluck( $active_subs, 'plan_
 							</li>
 							<li style="display: flex; align-items: center; gap: 8px;">
 								<span style="color: #117E3A; font-weight: bold;">&#10003;</span>
-								<?php esc_html_e( 'Bilingual (English & Hindi) Content', 'indianagri-quiz-engine' ); ?>
+								<?php esc_html_e( 'Comprehensive High-Yield Question Bank', 'indianagri-quiz-engine' ); ?>
 							</li>
 							<li style="display: flex; align-items: center; gap: 8px;">
 								<span style="color: #117E3A; font-weight: bold;">&#10003;</span>

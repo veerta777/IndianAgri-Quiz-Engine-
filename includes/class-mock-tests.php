@@ -77,11 +77,18 @@ class IAQ_Mock_Tests {
 		global $wpdb;
 		$table_cats = IAQ_Database::get_table_name( 'mock_categories' );
 
-		if ( is_numeric( $id_or_slug ) ) {
-			return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table_cats} WHERE id = %d", absint( $id_or_slug ) ) );
-		} else {
-			return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table_cats} WHERE slug = %s", sanitize_title( $id_or_slug ) ) );
+		$row = is_numeric( $id_or_slug )
+			? $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table_cats} WHERE id = %d", absint( $id_or_slug ) ) )
+			: $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table_cats} WHERE slug = %s", sanitize_title( $id_or_slug ) ) );
+		if ( $row ) {
+			$row->description   = isset( $row->description ) ? $row->description : '';
+			$row->code          = isset( $row->code ) ? $row->code : '';
+			$row->badge_text    = isset( $row->badge_text ) ? $row->badge_text : '';
+			$row->icon          = isset( $row->icon ) ? $row->icon : 'dashicons-awards';
+			$row->display_order = isset( $row->display_order ) ? (int) $row->display_order : 1;
+			$row->status        = isset( $row->status ) ? $row->status : 'active';
 		}
+		return $row ?: null;
 	}
 
 	/**
@@ -342,6 +349,13 @@ class IAQ_Mock_Tests {
 			return null;
 		}
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table_su} WHERE id = %d", $id ) );
+		if ( $row ) {
+			$type             = ! empty( $row->entity_type ) ? $row->entity_type : ( ! empty( $row->type ) ? $row->type : 'state' );
+			$row->type        = $type;
+			$row->entity_type = $type;
+			$row->code        = isset( $row->code ) ? $row->code : '';
+			$row->description = isset( $row->description ) ? $row->description : '';
+		}
 		return $row ?: null;
 	}
 
@@ -458,6 +472,14 @@ class IAQ_Mock_Tests {
 			return null;
 		}
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table_vac} WHERE id = %d", $id ) );
+		if ( $row ) {
+			$eid                   = ! empty( $row->exam_id ) ? (int) $row->exam_id : ( ! empty( $row->examination_id ) ? (int) $row->examination_id : 0 );
+			$row->exam_id          = $eid;
+			$row->examination_id   = $eid;
+			$row->posts_count      = isset( $row->posts_count ) ? (int) $row->posts_count : 0;
+			$row->advertisement_no = isset( $row->advertisement_no ) ? $row->advertisement_no : '';
+			$row->description      = isset( $row->description ) ? $row->description : '';
+		}
 		return $row ?: null;
 	}
 
@@ -480,6 +502,7 @@ class IAQ_Mock_Tests {
 		$slug    = ! empty( $data['slug'] ) ? sanitize_title( $data['slug'] ) : sanitize_title( $title );
 		$desc    = isset( $data['description'] ) ? wp_kses_post( $data['description'] ) : '';
 		$posts   = isset( $data['posts_count'] ) ? intval( $data['posts_count'] ) : 0;
+		$advt    = isset( $data['advertisement_no'] ) ? sanitize_text_field( $data['advertisement_no'] ) : '';
 		$order   = isset( $data['display_order'] ) ? intval( $data['display_order'] ) : 0;
 		$stat    = ! empty( $data['status'] ) && in_array( $data['status'], array( 'active', 'inactive' ), true ) ? $data['status'] : 'active';
 		$id      = ! empty( $data['id'] ) ? absint( $data['id'] ) : 0;
@@ -488,16 +511,17 @@ class IAQ_Mock_Tests {
 			$wpdb->update(
 				$table_vac,
 				array(
-					'exam_id'       => $exam_id,
-					'title'         => $title,
-					'slug'          => $slug,
-					'description'   => $desc,
-					'posts_count'   => $posts,
-					'display_order' => $order,
-					'status'        => $stat,
+					'exam_id'          => $exam_id,
+					'title'            => $title,
+					'slug'             => $slug,
+					'description'      => $desc,
+					'posts_count'      => $posts,
+					'advertisement_no' => $advt,
+					'display_order'    => $order,
+					'status'           => $stat,
 				),
 				array( 'id' => $id ),
-				array( '%d', '%s', '%s', '%s', '%d', '%d', '%s' ),
+				array( '%d', '%s', '%s', '%s', '%d', '%s', '%d', '%s' ),
 				array( '%d' )
 			);
 			return $id;
@@ -506,16 +530,17 @@ class IAQ_Mock_Tests {
 		$wpdb->insert(
 			$table_vac,
 			array(
-				'exam_id'       => $exam_id,
-				'title'         => $title,
-				'slug'          => $slug,
-				'description'   => $desc,
-				'posts_count'   => $posts,
-				'display_order' => $order,
-				'status'        => $stat,
-				'created_at'    => current_time( 'mysql' ),
+				'exam_id'          => $exam_id,
+				'title'            => $title,
+				'slug'             => $slug,
+				'description'      => $desc,
+				'posts_count'      => $posts,
+				'advertisement_no' => $advt,
+				'display_order'    => $order,
+				'status'           => $stat,
+				'created_at'       => current_time( 'mysql' ),
 			),
-			array( '%d', '%s', '%s', '%s', '%d', '%d', '%s', '%s' )
+			array( '%d', '%s', '%s', '%s', '%d', '%s', '%d', '%s', '%s' )
 		);
 
 		return $wpdb->insert_id;
@@ -607,7 +632,15 @@ class IAQ_Mock_Tests {
 	public static function get_series( $series_id ) {
 		global $wpdb;
 		$table_ser = IAQ_Database::get_table_name( 'mock_series' );
-		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table_ser} WHERE id = %d", absint( $series_id ) ) );
+		$row       = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table_ser} WHERE id = %d", absint( $series_id ) ) );
+		if ( $row ) {
+			$eid                 = ! empty( $row->exam_id ) ? (int) $row->exam_id : ( ! empty( $row->examination_id ) ? (int) $row->examination_id : 0 );
+			$row->exam_id        = $eid;
+			$row->examination_id = $eid;
+			$row->description    = isset( $row->description ) ? $row->description : '';
+			$row->total_tests    = isset( $row->total_tests ) ? (int) $row->total_tests : 10;
+		}
+		return $row ?: null;
 	}
 
 	/**
@@ -626,12 +659,12 @@ class IAQ_Mock_Tests {
 
 		$title   = sanitize_text_field( $data['title'] );
 		$cat_id  = isset( $data['category_id'] ) ? absint( $data['category_id'] ) : 1;
-		$exam_id = isset( $data['exam_id'] ) && absint( $data['exam_id'] ) > 0 ? absint( $data['exam_id'] ) : null;
+		$exam_id = ! empty( $data['exam_id'] ) ? absint( $data['exam_id'] ) : ( ! empty( $data['examination_id'] ) ? absint( $data['examination_id'] ) : null );
 		$sub_id  = isset( $data['subject_id'] ) && absint( $data['subject_id'] ) > 0 ? absint( $data['subject_id'] ) : null;
 		$slug    = ! empty( $data['slug'] ) ? sanitize_title( $data['slug'] ) : sanitize_title( $title );
 		$desc    = isset( $data['description'] ) ? wp_kses_post( $data['description'] ) : '';
 		$total   = isset( $data['total_tests'] ) ? intval( $data['total_tests'] ) : 0;
-		$access  = ! empty( $data['access_type'] ) && in_array( $data['access_type'], array( 'free', 'paid' ), true ) ? $data['access_type'] : 'free';
+		$access  = ! empty( $data['access_type'] ) && in_array( $data['access_type'], array( 'free', 'paid', 'premium' ), true ) ? $data['access_type'] : 'free';
 		$order   = isset( $data['display_order'] ) ? intval( $data['display_order'] ) : 0;
 		$stat    = ! empty( $data['status'] ) && in_array( $data['status'], array( 'published', 'draft', 'archived' ), true ) ? $data['status'] : 'published';
 		$id      = ! empty( $data['id'] ) ? absint( $data['id'] ) : 0;
@@ -753,13 +786,16 @@ class IAQ_Mock_Tests {
 
 		$rel_where_clause = implode( ' AND ', $rel_where );
 
+		$status_filter = ! empty( $context['status'] ) ? sanitize_key( $context['status'] ) : 'published';
+		$status_clause = 'all' === $status_filter ? '' : " AND q.status = '{$status_filter}'";
+
 		// Query joined mock tests
 		$query = "
 			SELECT q.*, r.id AS mock_rel_id, r.sort_order AS mock_sort_order, r.series_id AS mock_series_id
 			FROM {$table_quizzes} q
 			INNER JOIN {$table_relations} r ON q.id = r.quiz_id
 			WHERE q.quiz_type = 'mock'
-			  AND q.status = 'published'
+			  {$status_clause}
 			  AND {$rel_where_clause}
 			ORDER BY r.sort_order ASC, q.display_order ASC, q.id ASC
 		";
@@ -774,7 +810,10 @@ class IAQ_Mock_Tests {
 
 		// Fallback: If no relation records exist yet, match directly from canonical wp_iaq_quizzes
 		if ( empty( $quizzes ) ) {
-			$direct_where = array( "q.quiz_type = 'mock'", "q.status = 'published'" );
+			$direct_where = array( "q.quiz_type = 'mock'" );
+			if ( 'all' !== $status_filter ) {
+				$direct_where[] = "q.status = '{$status_filter}'";
+			}
 			$direct_vals  = array();
 
 			if ( $sub_id > 0 ) {
@@ -801,10 +840,11 @@ class IAQ_Mock_Tests {
 			}
 		}
 
-		// Fallback for general categories: if still empty and top category is requested, return published mock quizzes
+		// Fallback for general categories: if still empty and top category is requested, return mock quizzes
 		if ( empty( $quizzes ) && ( $cat_id > 0 || empty( $context ) ) ) {
+			$fb_status = 'all' === $status_filter ? '' : " AND q.status = 'published'";
 			$quizzes = $wpdb->get_results(
-				"SELECT q.*, 0 AS mock_rel_id, q.display_order AS mock_sort_order, 0 AS mock_series_id FROM {$table_quizzes} q WHERE q.quiz_type = 'mock' AND q.status = 'published' ORDER BY q.display_order ASC, q.id ASC"
+				"SELECT q.*, 0 AS mock_rel_id, q.display_order AS mock_sort_order, 0 AS mock_series_id FROM {$table_quizzes} q WHERE q.quiz_type = 'mock' {$fb_status} ORDER BY q.display_order ASC, q.id ASC"
 			);
 		}
 
@@ -816,9 +856,16 @@ class IAQ_Mock_Tests {
 		$unique = array();
 		$seen   = array();
 		foreach ( $quizzes as $qz ) {
-			if ( ! in_array( (int) $qz->id, $seen, true ) ) {
-				$seen[]   = (int) $qz->id;
-				$unique[] = $qz;
+			if ( empty( $qz ) ) {
+				continue;
+			}
+			$qid = is_object( $qz ) ? ( isset( $qz->id ) ? (int) $qz->id : 0 ) : ( isset( $qz['id'] ) ? (int) $qz['id'] : 0 );
+			if ( ! $qid ) {
+				continue;
+			}
+			if ( ! in_array( $qid, $seen, true ) ) {
+				$seen[]   = $qid;
+				$unique[] = is_object( $qz ) ? $qz : (object) $qz;
 			}
 		}
 
@@ -1104,5 +1151,140 @@ class IAQ_Mock_Tests {
 		}
 
 		return add_query_arg( $args, $base_url );
+	}
+
+	/**
+	 * Ensure default exams and subjects are linked to categories if not yet configured.
+	 *
+	 * @param int $category_id Category ID.
+	 */
+	public static function ensure_default_category_hierarchy( $category_id ) {
+		global $wpdb;
+		$category_id = absint( $category_id );
+		if ( ! $category_id ) {
+			return;
+		}
+
+		$cat = self::get_category( $category_id );
+		if ( ! $cat ) {
+			return;
+		}
+
+		$table_exams         = IAQ_Database::get_table_name( 'examinations' );
+		$table_exam_subjects = IAQ_Database::get_table_name( 'exam_subjects' );
+		$table_subjects      = IAQ_Database::get_table_name( 'subjects' );
+
+		$cat_slug = $cat->slug;
+		if ( 'icar-exams' === $cat_slug || false !== strpos( strtolower( $cat->name ), 'icar' ) ) {
+			$has_icar = (int) $wpdb->get_var(
+				$wpdb->prepare( "SELECT COUNT(*) FROM {$table_exams} WHERE category_id = %d AND (code = 'ICAR-JRF' OR name LIKE '%%JRF%%')", $category_id )
+			);
+			if ( 0 === $has_icar ) {
+				$default_icar = array(
+					array(
+						'name'        => 'ICAR JRF (Junior Research Fellowship)',
+						'code'        => 'ICAR-JRF',
+						'slug'        => 'icar-jrf',
+						'description' => 'ICAR All India Entrance Examination for PG Admission & Junior Research Fellowship in Agriculture.',
+						'order'       => 1,
+					),
+					array(
+						'name'        => 'ICAR SRF (Senior Research Fellowship)',
+						'code'        => 'ICAR-SRF',
+						'slug'        => 'icar-srf',
+						'description' => 'ICAR All India Competitive Examination for Ph.D. Admission & Senior Research Fellowship.',
+						'order'       => 2,
+					),
+					array(
+						'name'        => 'ICAR NET / ASRB NET',
+						'code'        => 'ICAR-NET',
+						'slug'        => 'icar-net',
+						'description' => 'Agricultural Scientists Recruitment Board National Eligibility Test for Agricultural Lectureship.',
+						'order'       => 3,
+					),
+				);
+
+				foreach ( $default_icar as $item ) {
+					// Check if exam already exists by code
+					$exam_row = $wpdb->get_row(
+						$wpdb->prepare( "SELECT id FROM {$table_exams} WHERE code = %s", $item['code'] )
+					);
+					if ( $exam_row ) {
+						$wpdb->update(
+							$table_exams,
+							array( 'category_id' => $category_id ),
+							array( 'id' => $exam_row->id )
+						);
+						$e_id = (int) $exam_row->id;
+					} else {
+						$wpdb->insert(
+							$table_exams,
+							array(
+								'category_id'   => $category_id,
+								'name'          => $item['name'],
+								'code'          => $item['code'],
+								'slug'          => $item['slug'],
+								'description'   => $item['description'],
+								'instructions'  => 'Attempt all questions in accordance with examination guidelines. Negative marking: -1.00 for incorrect answers.',
+								'display_order' => $item['order'],
+								'status'        => 'active',
+								'created_at'    => current_time( 'mysql' ),
+							)
+						);
+						$e_id = (int) $wpdb->insert_id;
+					}
+
+					// Assign top subjects to ICAR JRF / SRF / NET
+					if ( $e_id ) {
+						$assigned_sub_count = (int) $wpdb->get_var(
+							$wpdb->prepare( "SELECT COUNT(*) FROM {$table_exam_subjects} WHERE exam_id = %d", $e_id )
+						);
+						if ( 0 === $assigned_sub_count ) {
+							$all_subs = $wpdb->get_results( "SELECT id FROM {$table_subjects} ORDER BY id ASC" );
+							if ( ! empty( $all_subs ) ) {
+								$sub_order = 1;
+								foreach ( $all_subs as $s_row ) {
+									$wpdb->insert(
+										$table_exam_subjects,
+										array(
+											'exam_id'       => $e_id,
+											'subject_id'    => $s_row->id,
+											'display_order' => $sub_order++,
+											'created_at'    => current_time( 'mysql' ),
+										)
+									);
+								}
+							}
+						}
+					}
+				}
+			} elseif ( 'cuet' === $cat_slug || false !== strpos( strtolower( $cat->name ), 'cuet' ) ) {
+				$cuet_row = $wpdb->get_row( "SELECT id FROM {$table_exams} WHERE code LIKE 'CUET%' LIMIT 1" );
+				if ( $cuet_row ) {
+					$wpdb->update( $table_exams, array( 'category_id' => $category_id ), array( 'id' => $cuet_row->id ) );
+				}
+			} elseif ( 'up-agriculture-exams' === $cat_slug || false !== strpos( strtolower( $cat->name ), 'up' ) ) {
+				$up_row = $wpdb->get_row( "SELECT id FROM {$table_exams} WHERE code LIKE 'UP%' LIMIT 1" );
+				if ( $up_row ) {
+					$wpdb->update( $table_exams, array( 'category_id' => $category_id ), array( 'id' => $up_row->id ) );
+				}
+			} elseif ( 'banking-afo' === $cat_slug || false !== strpos( strtolower( $cat->name ), 'banking' ) ) {
+				$bank_row = $wpdb->get_row( "SELECT id FROM {$table_exams} WHERE code LIKE 'IBPS%' LIMIT 1" );
+				if ( $bank_row ) {
+					$wpdb->update( $table_exams, array( 'category_id' => $category_id ), array( 'id' => $bank_row->id ) );
+				}
+			}
+		}
+	}
+
+	/**
+	 * Retrieve examinations for a specific mock category.
+	 *
+	 * @param int $category_id Category ID.
+	 * @return array
+	 */
+	public static function get_category_examinations( $category_id ) {
+		self::ensure_default_category_hierarchy( $category_id );
+		return IAQ_Examinations::get_examinations( array( 'category_id' => absint( $category_id ), 'limit' => 200 ) );
 	}
 }

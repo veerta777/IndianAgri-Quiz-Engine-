@@ -20,6 +20,27 @@ class IAQ_Access_Control {
 		add_action( 'woocommerce_order_status_processing', array( __CLASS__, 'handle_wc_order_activated' ) );
 		add_action( 'woocommerce_order_status_refunded', array( __CLASS__, 'handle_wc_order_refunded' ) );
 		add_action( 'woocommerce_order_status_cancelled', array( __CLASS__, 'handle_wc_order_cancelled' ) );
+
+		// Scheduled cron for automatic subscription expiration and student deactivation.
+		add_action( 'iaq_hourly_subscription_sweep', array( __CLASS__, 'sync_expired_subscriptions' ) );
+		if ( function_exists( 'wp_next_scheduled' ) && ! wp_next_scheduled( 'iaq_hourly_subscription_sweep' ) ) {
+			wp_schedule_event( time(), 'hourly', 'iaq_hourly_subscription_sweep' );
+		}
+
+		// Real-time synchronization upon student login.
+		add_action( 'wp_login', array( __CLASS__, 'on_user_login' ), 10, 2 );
+	}
+
+	/**
+	 * Synchronize student subscription status upon WordPress user login.
+	 *
+	 * @param string  $user_login User login username.
+	 * @param WP_User $user       WP_User object.
+	 */
+	public static function on_user_login( $user_login, $user ) {
+		if ( $user && ! empty( $user->ID ) ) {
+			self::sync_expired_subscriptions( (int) $user->ID );
+		}
 	}
 
 	/**
@@ -290,13 +311,17 @@ class IAQ_Access_Control {
 			'created_at'                 => $now,
 		);
 
-		$wpdb->insert(
-			$table_subs,
-			$payload,
-			array( '%d', '%d', '%s', '%f', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s' )
-		);
+		$inserted = $wpdb->insert( $table_subs, $payload );
+		if ( false === $inserted ) {
+			return new WP_Error( 'db_insert_error', __( 'Could not insert subscription record.', 'indianagri-quiz-engine' ) );
+		}
 
-		return (int) $wpdb->insert_id;
+		$inserted_id = (int) $wpdb->insert_id;
+		if ( $inserted_id > 0 ) {
+			self::sync_student_deactivation_status( (int) $user_id );
+		}
+
+		return $inserted_id;
 	}
 
 	/**
@@ -310,6 +335,8 @@ class IAQ_Access_Control {
 	public static function revoke_subscription( $subscription_id, $notes_or_status = '', $notes = '' ) {
 		global $wpdb;
 		$table_subs = IAQ_Database::get_table_name( 'user_subscriptions' );
+
+		$sub = $wpdb->get_row( $wpdb->prepare( "SELECT user_id FROM {$table_subs} WHERE id = %d", $subscription_id ) );
 
 		$status      = 'cancelled';
 		$final_notes = '';
@@ -331,11 +358,17 @@ class IAQ_Access_Control {
 			$update['notes'] = $final_notes;
 		}
 
-		return (bool) $wpdb->update(
+		$res = (bool) $wpdb->update(
 			$table_subs,
 			$update,
 			array( 'id' => absint( $subscription_id ) )
 		);
+
+		if ( $sub && ! empty( $sub->user_id ) ) {
+			self::sync_student_deactivation_status( (int) $sub->user_id );
+		}
+
+		return $res;
 	}
 
 	/**
@@ -475,12 +508,25 @@ class IAQ_Access_Control {
 			);
 		}
 
-		// 4. Inspect student's active subscriptions
+		// 4. Run lazy expiration sweep for student to guarantee real-time deactivation consistency.
+		self::sync_expired_subscriptions( $user_id );
+
+		// 5. Inspect student's active subscriptions
 		$active_subs = self::get_user_active_subscriptions( $user_id );
 		if ( empty( $active_subs ) ) {
+			$all_subs = self::get_user_subscriptions( $user_id, 'all' );
+			if ( ! empty( $all_subs ) ) {
+				return array(
+					'allowed' => false,
+					'reason'  => __( 'Your subscription is complete and your student access has been automatically deactivated. Please renew your plan to continue taking examinations.', 'indianagri-quiz-engine' ),
+					'code'    => 'subscription_expired',
+				);
+			}
+
 			return array(
 				'allowed' => false,
 				'reason'  => __( 'This examination is premium. You do not have an active subscription covering this paper. Please subscribe to unlock.', 'indianagri-quiz-engine' ),
+				'code'    => 'no_subscription',
 			);
 		}
 
@@ -569,6 +615,143 @@ class IAQ_Access_Control {
 	}
 
 	/**
+	 * Automatically sweep and transition completed/expired subscriptions to 'expired' status,
+	 * and update student active state accordingly.
+	 *
+	 * @param int|null $user_id Optional specific user ID to evaluate. If null, sweeps globally.
+	 * @return int Number of subscriptions transitioned to expired.
+	 */
+	public static function sync_expired_subscriptions( $user_id = null ) {
+		global $wpdb;
+		$table_subs = IAQ_Database::get_table_name( 'user_subscriptions' );
+		$now        = current_time( 'mysql' );
+
+		if ( $user_id ) {
+			$expired_rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT id, user_id, expiry_date FROM {$table_subs} WHERE user_id = %d AND status = 'active' AND expiry_date < %s",
+					$user_id,
+					$now
+				)
+			);
+		} else {
+			$expired_rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT id, user_id, expiry_date FROM {$table_subs} WHERE status = 'active' AND expiry_date < %s",
+					$now
+				)
+			);
+		}
+
+		if ( empty( $expired_rows ) ) {
+			if ( $user_id ) {
+				self::sync_student_deactivation_status( (int) $user_id );
+			}
+			return 0;
+		}
+
+		$affected_user_ids = array();
+		$transitioned_count = 0;
+		foreach ( $expired_rows as $row ) {
+			if ( ! empty( $row->expiry_date ) && strtotime( $row->expiry_date ) >= strtotime( $now ) ) {
+				continue;
+			}
+
+			$wpdb->update(
+				$table_subs,
+				array(
+					'status'     => 'expired',
+					'updated_at' => $now,
+				),
+				array( 'id' => (int) $row->id ),
+				array( '%s', '%s' ),
+				array( '%d' )
+			);
+			$affected_user_ids[ (int) $row->user_id ] = true;
+			$transitioned_count++;
+		}
+
+		// Evaluate student account active state for all affected students.
+		foreach ( array_keys( $affected_user_ids ) as $uid ) {
+			self::sync_student_deactivation_status( (int) $uid );
+		}
+
+		return $transitioned_count;
+	}
+
+	/**
+	 * Evaluate and update student account status based on active subscriptions.
+	 *
+	 * When a student's subscription is complete and no active subscriptions remain:
+	 * Deactivates the student status, sets user meta, and triggers hook.
+	 *
+	 * @param int $user_id WordPress User ID.
+	 * @return bool True if student is active, false if deactivated.
+	 */
+	public static function sync_student_deactivation_status( $user_id ) {
+		if ( empty( $user_id ) ) {
+			return false;
+		}
+
+		// Administrators and instructors are exempt from student deactivation.
+		if ( user_can( $user_id, 'manage_options' ) || user_can( $user_id, 'manage_iaq_quizzes' ) ) {
+			update_user_meta( $user_id, '_iaq_student_active', 1 );
+			update_user_meta( $user_id, '_iaq_subscription_status', 'active' );
+			return true;
+		}
+
+		$active_subs = self::get_user_active_subscriptions( $user_id );
+		$is_active   = ! empty( $active_subs );
+
+		if ( $is_active ) {
+			update_user_meta( $user_id, '_iaq_student_active', 1 );
+			update_user_meta( $user_id, '_iaq_subscription_status', 'active' );
+			delete_user_meta( $user_id, '_iaq_deactivated_at' );
+		} else {
+			// Check if the user had at least one subscription that has completed/expired.
+			$all_subs = self::get_user_subscriptions( $user_id, 'all' );
+			if ( ! empty( $all_subs ) ) {
+				update_user_meta( $user_id, '_iaq_student_active', 0 );
+				update_user_meta( $user_id, '_iaq_subscription_status', 'expired' );
+				if ( ! get_user_meta( $user_id, '_iaq_deactivated_at', true ) ) {
+					update_user_meta( $user_id, '_iaq_deactivated_at', current_time( 'mysql' ) );
+				}
+
+				/**
+				 * Fires when a student account is automatically deactivated after subscription completes.
+				 *
+				 * @param int   $user_id  Student WordPress User ID.
+				 * @param array $all_subs All past subscription records.
+				 */
+				do_action( 'iaq_student_subscription_completed_deactivated', $user_id, $all_subs );
+			}
+		}
+
+		return $is_active;
+	}
+
+	/**
+	 * Check if a student user is currently active with valid subscription.
+	 *
+	 * @param int $user_id WordPress User ID.
+	 * @return bool
+	 */
+	public static function is_student_active( $user_id ) {
+		if ( empty( $user_id ) ) {
+			return false;
+		}
+		if ( function_exists( 'user_can' ) && ( user_can( $user_id, 'manage_options' ) || user_can( $user_id, 'manage_iaq_quizzes' ) ) ) {
+			return true;
+		}
+		self::sync_expired_subscriptions( $user_id );
+		$active_meta = get_user_meta( $user_id, '_iaq_student_active', true );
+		if ( '' !== $active_meta ) {
+			return (bool) $active_meta;
+		}
+		return self::sync_student_deactivation_status( $user_id );
+	}
+
+	/**
 	 * WooCommerce Order Refunded Hook.
 	 *
 	 * @param int $order_id WooCommerce Order ID.
@@ -576,6 +759,11 @@ class IAQ_Access_Control {
 	public static function handle_wc_order_refunded( $order_id ) {
 		global $wpdb;
 		$table_subs = IAQ_Database::get_table_name( 'user_subscriptions' );
+
+		$affected_uids = $wpdb->get_col(
+			$wpdb->prepare( "SELECT DISTINCT user_id FROM {$table_subs} WHERE wc_order_id = %d", $order_id )
+		);
+
 		$wpdb->update(
 			$table_subs,
 			array(
@@ -587,6 +775,12 @@ class IAQ_Access_Control {
 			array( '%s', '%s', '%s' ),
 			array( '%d', '%s' )
 		);
+
+		if ( ! empty( $affected_uids ) ) {
+			foreach ( $affected_uids as $uid ) {
+				self::sync_student_deactivation_status( (int) $uid );
+			}
+		}
 	}
 
 	/**
@@ -597,6 +791,11 @@ class IAQ_Access_Control {
 	public static function handle_wc_order_cancelled( $order_id ) {
 		global $wpdb;
 		$table_subs = IAQ_Database::get_table_name( 'user_subscriptions' );
+
+		$affected_uids = $wpdb->get_col(
+			$wpdb->prepare( "SELECT DISTINCT user_id FROM {$table_subs} WHERE wc_order_id = %d", $order_id )
+		);
+
 		$wpdb->update(
 			$table_subs,
 			array(
@@ -608,5 +807,11 @@ class IAQ_Access_Control {
 			array( '%s', '%s', '%s' ),
 			array( '%d', '%s' )
 		);
+
+		if ( ! empty( $affected_uids ) ) {
+			foreach ( $affected_uids as $uid ) {
+				self::sync_student_deactivation_status( (int) $uid );
+			}
+		}
 	}
 }

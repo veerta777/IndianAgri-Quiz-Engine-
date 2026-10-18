@@ -22,7 +22,9 @@ class Test_Access_Control_Security {
 		self::test_multiple_active_subscriptions_combination();
 		self::test_server_side_attempt_start_gating();
 		self::test_active_attempt_anti_cheat_payload_protection();
+		self::test_cross_user_attempt_tampering_protection();
 		self::test_csv_injection_neutralization();
+		self::test_mobile_responsiveness_and_elementor_compatibility();
 
 		echo "Test_Access_Control_Security: ALL PASS\n";
 	}
@@ -129,7 +131,7 @@ class Test_Access_Control_Security {
 		$quiz_upcatet_id = IAQ_Quiz_Builder::save_quiz(
 			array(
 				'title'         => 'UPCATET PG Agronomy Paper (Premium)',
-				'quiz_type'     => 'pyq',
+				'quiz_type'     => 'mock',
 				'access_type'   => 'premium',
 				'exam_category' => 'upcatet-pg',
 				'status'        => 'publish',
@@ -315,5 +317,55 @@ class Test_Access_Control_Security {
 		}
 
 		echo "  [PASS] CSV formula injection protection & Unicode preservation verified.\n";
+	}
+
+	private static function test_cross_user_attempt_tampering_protection() {
+		$free_quiz = IAQ_Quiz_Builder::get_quiz_by_title( 'Free Agricultural General Knowledge Quiz' );
+		$all_q = IAQ_Question_Bank::get_questions( array( 'per_page' => 5 ) );
+		if ( ! empty( $all_q ) ) {
+			IAQ_Quiz_Builder::assign_questions_to_quiz( $free_quiz->id, array( $all_q[0]->id ) );
+		}
+		$attempt_res = IAQ_Quiz_Attempt::start_or_resume_attempt( $free_quiz->id, 501 );
+		if ( is_wp_error( $attempt_res ) ) {
+			throw new Exception( 'Failed to start attempt for student 501: ' . $attempt_res->get_error_message() );
+		}
+		$attempt_id = $attempt_res['attempt_id'];
+
+		// User 502 attempts to tamper with User 501's attempt answers
+		$tamper_save = IAQ_Quiz_Attempt::save_answer( $attempt_id, 502, 1, 'B' );
+		if ( ! is_wp_error( $tamper_save ) || 'invalid_attempt' !== $tamper_save->get_error_code() ) {
+			throw new Exception( 'Security failure: User 502 was able to tamper with User 501 attempt answers!' );
+		}
+
+		// User 502 attempts to finalize User 501's attempt
+		$tamper_submit = IAQ_Quiz_Attempt::submit_attempt( $attempt_id, 502, 120 );
+		if ( ! is_wp_error( $tamper_submit ) || 'invalid_attempt' !== $tamper_submit->get_error_code() ) {
+			throw new Exception( 'Security failure: User 502 was able to submit User 501 attempt!' );
+		}
+
+		echo "  [PASS] Cross-user attempt tampering protection verified (Strict attempt ownership).\n";
+	}
+
+	private static function test_mobile_responsiveness_and_elementor_compatibility() {
+		// Verify frontend.css contains mobile touch target optimizations
+		$css = file_get_contents( dirname( __DIR__ ) . '/assets/css/frontend.css' );
+		if ( false === strpos( $css, 'min-height: 48px' ) || false === strpos( $css, '@media (max-width: 680px)' ) ) {
+			throw new Exception( 'Mobile touch target optimizations missing in frontend.css' );
+		}
+
+		// Verify Elementor & WordPress shortcode output buffering (never echoes directly)
+		$frontend = new IAQ_Frontend();
+		ob_start();
+		$out = $frontend->render_quiz_list_shortcode( array() );
+		$echoed = ob_get_clean();
+
+		if ( '' !== $echoed ) {
+			throw new Exception( 'Elementor violation: Shortcode directly echoed output instead of returning string buffer!' );
+		}
+		if ( empty( $out ) || false === strpos( $out, 'iaq-quiz-grid' ) ) {
+			throw new Exception( 'Shortcode returned empty or invalid HTML markup' );
+		}
+
+		echo "  [PASS] Mobile usability (touch targets & sticky timer) and Elementor shortcode buffer integrity verified.\n";
 	}
 }

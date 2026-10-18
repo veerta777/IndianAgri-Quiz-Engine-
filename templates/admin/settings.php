@@ -32,6 +32,7 @@ $enable_study_streaks      = isset( $settings['enable_study_streaks'] ) ? (int) 
 $leaderboard_name_type     = isset( $settings['leaderboard_name_type'] ) ? $settings['leaderboard_name_type'] : get_option( 'iaq_leaderboard_name_type', 'pseudonym' );
 $leaderboard_limit         = isset( $settings['leaderboard_limit'] ) ? (int) $settings['leaderboard_limit'] : 10;
 $custom_practice_max       = isset( $settings['custom_practice_max_questions'] ) ? (int) $settings['custom_practice_max_questions'] : (int) get_option( 'iaq_custom_practice_max_questions', 50 );
+$bulk_import_max           = isset( $settings['bulk_import_max_limit'] ) ? (int) $settings['bulk_import_max_limit'] : (int) get_option( 'iaq_bulk_import_max_limit', 200 );
 $recommendations_weak      = isset( $settings['recommendations_focus_weak_areas'] ) ? (int) $settings['recommendations_focus_weak_areas'] : 1;
 $streak_qualifying         = isset( $settings['streak_qualifying_activity'] ) ? $settings['streak_qualifying_activity'] : 'quiz_completed';
 ?>
@@ -204,6 +205,11 @@ $streak_qualifying         = isset( $settings['streak_qualifying_activity'] ) ? 
 				</div>
 
 				<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+					<div class="iaq-form-group">
+						<label for="iaq-bulk-import-max"><?php esc_html_e( 'Bulk Import: Max MCQs per CSV Batch', 'indianagri-quiz-engine' ); ?></label>
+						<input type="number" name="bulk_import_max_limit" id="iaq-bulk-import-max" class="iaq-input iaq-full-width" min="10" max="1000" step="10" value="<?php echo esc_attr( $bulk_import_max ); ?>">
+						<span class="iaq-card-help"><?php esc_html_e( 'Maximum number of MCQs processed per single CSV upload (default: 200).', 'indianagri-quiz-engine' ); ?></span>
+					</div>
 					<div class="iaq-form-group">
 						<label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
 							<input type="checkbox" name="recommendations_focus_weak_areas" value="1" <?php checked( $recommendations_weak, 1 ); ?>>

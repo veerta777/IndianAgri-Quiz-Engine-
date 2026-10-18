@@ -14,6 +14,11 @@ $sample_csv_url = wp_nonce_url(
 	'iaq_download_sample_csv'
 );
 
+$sample_json_url = wp_nonce_url(
+	admin_url( 'admin.php?page=iaq-import-export&iaq_action=download_sample_json' ),
+	'iaq_download_sample_json'
+);
+
 $export_all_url = wp_nonce_url(
 	admin_url( 'admin.php?page=iaq-import-export&iaq_action=export_csv' ),
 	'iaq_export_csv'
@@ -28,7 +33,7 @@ $expected_cols = IAQ_Import_Export::get_expected_headers();
 			<div class="iaq-header-badge"><?php esc_html_e( 'IndianAgriExam.com', 'indianagri-quiz-engine' ); ?></div>
 			<h1><?php esc_html_e( 'Bulk Question Import & Export', 'indianagri-quiz-engine' ); ?></h1>
 			<p class="iaq-header-desc">
-				<?php esc_html_e( 'Seamlessly upload thousands of agricultural MCQs from CSV spreadsheets or export your question repository with full English & Hindi UTF-8 support.', 'indianagri-quiz-engine' ); ?>
+				<?php printf( esc_html__( 'Seamlessly upload up to %d agricultural MCQs at a time from CSV spreadsheets or export your question repository with full English & Hindi UTF-8 support.', 'indianagri-quiz-engine' ), IAQ_Import_Export::get_max_import_limit() ); ?>
 			</p>
 		</div>
 		<div class="iaq-header-actions">
@@ -44,7 +49,7 @@ $expected_cols = IAQ_Import_Export::get_expected_headers();
 			<!-- Upload Form Card -->
 			<div class="iaq-card">
 				<div class="iaq-card-header">
-					<h2><span class="dashicons dashicons-upload"></span> <?php esc_html_e( 'Import Questions via CSV', 'indianagri-quiz-engine' ); ?></h2>
+					<h2><span class="dashicons dashicons-upload"></span> <?php esc_html_e( 'Import Questions via JSON or CSV', 'indianagri-quiz-engine' ); ?></h2>
 				</div>
 				<div class="iaq-card-body">
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=iaq-import-export' ) ); ?>" enctype="multipart/form-data">
@@ -52,14 +57,38 @@ $expected_cols = IAQ_Import_Export::get_expected_headers();
 
 						<div class="iaq-upload-dropzone" id="iaq-dropzone">
 							<span class="dashicons dashicons-media-spreadsheet iaq-upload-icon"></span>
-							<h3><?php esc_html_e( 'Select or Drop your CSV file here', 'indianagri-quiz-engine' ); ?></h3>
-							<p><?php esc_html_e( 'File must be UTF-8 encoded with .csv extension.', 'indianagri-quiz-engine' ); ?></p>
-							<input type="file" name="csv_file" id="iaq-csv-file-input" accept=".csv" required>
+							<h3><?php esc_html_e( 'Select or Drop your JSON or CSV file here', 'indianagri-quiz-engine' ); ?></h3>
+							<p><?php printf( esc_html__( 'File must be UTF-8 encoded with .json or .csv extension (supports up to %d MCQs per upload).', 'indianagri-quiz-engine' ), IAQ_Import_Export::get_max_import_limit() ); ?></p>
+							<input type="file" name="csv_file" id="iaq-csv-file-input" accept=".json,.csv" required>
 						</div>
 
 						<div class="iaq-file-chosen-preview" id="iaq-file-preview" style="display:none;">
 							<span class="dashicons dashicons-yes-alt"></span>
 							<span id="iaq-file-name-display"></span>
+						</div>
+
+						<?php $all_quizzes = IAQ_Quiz_Builder::get_quizzes( array( 'per_page' => 200, 'orderby' => 'title', 'order' => 'ASC' ) ); ?>
+						<div class="iaq-form-group" style="margin-top: 16px;">
+							<label for="assign-quiz-id" style="font-weight:600;display:block;margin-bottom:6px;"><?php esc_html_e( 'Auto-Assign to Practice Set / Quiz (Optional)', 'indianagri-quiz-engine' ); ?></label>
+							<select name="assign_quiz_id" id="assign-quiz-id" class="iaq-select iaq-full-width">
+								<option value="0"><?php esc_html_e( '— None (Import into Question Bank Only) —', 'indianagri-quiz-engine' ); ?></option>
+								<?php foreach ( $all_quizzes as $qz ) : ?>
+									<option value="<?php echo esc_attr( $qz->id ); ?>">
+										#<?php echo esc_html( $qz->id ); ?>: <?php echo esc_html( $qz->title ); ?> (<?php echo esc_html( ucfirst( $qz->quiz_type ) ); ?>)
+									</option>
+								<?php endforeach; ?>
+							</select>
+							<span class="iaq-card-help" style="display:block;margin-top:4px;"><?php esc_html_e( 'All imported MCQs will be immediately linked to this Practice Set / Quiz upon upload.', 'indianagri-quiz-engine' ); ?></span>
+						</div>
+
+						<div class="iaq-form-group" style="margin-top: 16px;">
+							<label for="iaq-duplicate-handling" style="font-weight:600;display:block;margin-bottom:6px;"><?php esc_html_e( 'Duplicate Question Handling', 'indianagri-quiz-engine' ); ?></label>
+							<select name="duplicate_handling" id="iaq-duplicate-handling" class="iaq-select iaq-full-width">
+								<option value="skip" selected><?php esc_html_e( 'Skip Duplicates (Recommended — do not import questions already in the bank or file)', 'indianagri-quiz-engine' ); ?></option>
+								<option value="update"><?php esc_html_e( 'Update Existing (Overwrite question details if matching stem exists)', 'indianagri-quiz-engine' ); ?></option>
+								<option value="allow"><?php esc_html_e( 'Allow Duplicates (Import all rows as brand new questions)', 'indianagri-quiz-engine' ); ?></option>
+							</select>
+							<span class="iaq-card-help" style="display:block;margin-top:4px;"><?php esc_html_e( 'Checks for matching question stems (English or Hindi) and prevents unintentional redundancy.', 'indianagri-quiz-engine' ); ?></span>
 						</div>
 
 						<div class="iaq-form-actions" style="margin-top: 20px;">
@@ -74,15 +103,20 @@ $expected_cols = IAQ_Import_Export::get_expected_headers();
 			<!-- Sample Template Card -->
 			<div class="iaq-card">
 				<div class="iaq-card-header">
-					<h2><span class="dashicons dashicons-media-default"></span> <?php esc_html_e( 'Download Sample CSV Template', 'indianagri-quiz-engine' ); ?></h2>
+					<h2><span class="dashicons dashicons-media-default"></span> <?php esc_html_e( 'Download Sample Templates', 'indianagri-quiz-engine' ); ?></h2>
 				</div>
 				<div class="iaq-card-body">
 					<p>
-						<?php esc_html_e( 'Download our pre-formatted CSV template populated with sample English & Hindi agricultural MCQs. Use this format in Microsoft Excel, Google Sheets, or LibreOffice Calc.', 'indianagri-quiz-engine' ); ?>
+						<?php esc_html_e( 'Download pre-formatted templates populated with sample English & Hindi agricultural MCQs. Both JSON and CSV formats are supported.', 'indianagri-quiz-engine' ); ?>
 					</p>
-					<a href="<?php echo esc_url( $sample_csv_url ); ?>" class="iaq-btn iaq-btn-secondary">
-						<span class="dashicons dashicons-download"></span> <?php esc_html_e( 'Download Sample Template (.CSV)', 'indianagri-quiz-engine' ); ?>
-					</a>
+					<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+						<a href="<?php echo esc_url( $sample_json_url ); ?>" class="iaq-btn iaq-btn-primary">
+							<span class="dashicons dashicons-media-code"></span> <?php esc_html_e( 'Download Sample JSON', 'indianagri-quiz-engine' ); ?>
+						</a>
+						<a href="<?php echo esc_url( $sample_csv_url ); ?>" class="iaq-btn iaq-btn-secondary">
+							<span class="dashicons dashicons-download"></span> <?php esc_html_e( 'Download Sample CSV', 'indianagri-quiz-engine' ); ?>
+						</a>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -105,6 +139,34 @@ $expected_cols = IAQ_Import_Export::get_expected_headers();
 			</div>
 
 			<!-- Column Format Specification -->
+			<div class="iaq-card">
+				<div class="iaq-card-header">
+					<h2><span class="dashicons dashicons-media-code"></span> <?php esc_html_e( 'JSON Structure Specification', 'indianagri-quiz-engine' ); ?></h2>
+				</div>
+				<div class="iaq-card-body">
+					<p style="font-size:13px;color:#475569;margin-bottom:12px;">
+						<?php esc_html_e( 'Your JSON file should have a top-level "questions" array with option objects and isCorrect flags:', 'indianagri-quiz-engine' ); ?>
+					</p>
+					<pre style="background:#0f172a;color:#f8fafc;padding:14px;border-radius:6px;font-size:12px;overflow-x:auto;line-height:1.5;">{
+  "questions": [
+    {
+      "questionType": "MCQ_SINGLE",
+      "stem": "Which one of the following is considered the primary objective of tillage?",
+      "explanation": "Preparing a suitable seedbed for crop establishment is a primary objective of tillage.",
+      "difficulty": "MEDIUM",
+      "options": [
+        { "label": "A", "text": "Increasing soil compaction", "isCorrect": false },
+        { "label": "B", "text": "Preparing a suitable seedbed for crop establishment", "isCorrect": true },
+        { "label": "C", "text": "Increasing soil erosion", "isCorrect": false },
+        { "label": "D", "text": "Reducing soil aeration", "isCorrect": false }
+      ]
+    }
+  ]
+}</pre>
+				</div>
+			</div>
+
+			<!-- CSV Column Format Specification -->
 			<div class="iaq-card">
 				<div class="iaq-card-header">
 					<h2><span class="dashicons dashicons-editor-help"></span> <?php esc_html_e( 'CSV Column Structure Guide', 'indianagri-quiz-engine' ); ?></h2>

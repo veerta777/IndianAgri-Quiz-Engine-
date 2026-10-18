@@ -22,7 +22,6 @@ $count_questions = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_questions
 $count_quizzes   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_quizzes}" );
 $count_mocks     = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_quizzes} WHERE quiz_type = 'mock'" );
 $count_practice  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_quizzes} WHERE quiz_type = 'practice'" );
-$count_pyqs      = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_quizzes} WHERE quiz_type = 'previous_year'" );
 $count_exams     = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_exams}" );
 $count_plans     = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_plans} WHERE status = 'active'" );
 $count_subs      = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_subs} WHERE status = 'active' AND expiry_date > NOW()" );
@@ -88,7 +87,7 @@ $recent_attempts = $wpdb->get_results(
 						<?php echo esc_html( number_format_i18n( $count_quizzes ) ); ?>
 					</div>
 					<div style="font-size:12px;color:#0284c7;margin-top:2px;">
-						<?php printf( esc_html__( '%1$d Mocks | %2$d Practice | %3$d PYQs', 'indianagri-quiz-engine' ), $count_mocks, $count_practice, $count_pyqs ); ?>
+						<?php printf( esc_html__( '%1$d Mocks | %2$d Practice Sets', 'indianagri-quiz-engine' ), $count_mocks, $count_practice ); ?>
 					</div>
 				</div>
 				<div style="width:44px;height:44px;border-radius:10px;background:#e0f2fe;color:#0284c7;display:flex;align-items:center;justify-content:center;font-size:20px;">

@@ -190,12 +190,47 @@ class Test_Results_Analytics {
 		assert( ! empty( $review_questions[0]['subject_name'] ), 'Subject name should be tagged on review item' );
 		echo "  [PASS] Review questions contain full verified keys, subject tags, and scientific explanations\n";
 
-		// 6. Verify Shortcode [iaq_quiz_results id="..."]
+		// 6. Verify Negative Deductions & Cohort Percentile Guard
+		assert( isset( $scorecard['negative_deductions'] ), 'Negative deductions field should be present in scorecard' );
+		assert( $scorecard['negative_deductions'] == 1.0, '1 incorrect question should result in 1.00 negative deduction' );
+		assert( $scorecard['percentile'] === null, 'Percentile should be null when cohort < 5 to prevent false statistics' );
+		echo "  [PASS] Negative marking deductions (-1.00) and Insufficient Cohort Percentile protection verified\n";
+
+		// Seed 4 additional attempts to reach cohort >= 5
+		global $wpdb;
+		for ( $i = 2; $i <= 5; $i++ ) {
+			$wpdb->insert(
+				$wpdb->prefix . 'iaq_quiz_attempts',
+				array(
+					'quiz_id'             => $quiz_id,
+					'user_id'             => 100 + $i,
+					'status'              => 'completed',
+					'score'               => ( $i * 2 ),
+					'total_marks'         => 20.0,
+					'percentage'          => ( $i * 10 ),
+					'time_spent_seconds'  => 600,
+					'total_questions'     => 5,
+					'attempted_questions' => 5,
+					'correct_answers'     => $i,
+					'incorrect_answers'   => 5 - $i,
+					'start_time'          => current_time( 'mysql' ),
+					'end_time'            => current_time( 'mysql' ),
+				)
+			);
+		}
+		$scorecard_with_cohort = IAQ_Quiz_Attempt::get_attempt_scorecard( $attempt_id, $user_id );
+		assert( $scorecard_with_cohort['cohort_count'] >= 5, 'Cohort count should now be at least 5' );
+		assert( $scorecard_with_cohort['percentile'] !== null, 'Percentile should now be calculated with valid cohort' );
+		assert( $scorecard_with_cohort['percentile'] >= 0 && $scorecard_with_cohort['percentile'] <= 100, 'Percentile must be between 0 and 100' );
+		echo "  [PASS] Cohort Percentile successfully computed (" . $scorecard_with_cohort['percentile'] . "th percentile) with valid comparison population (N=" . $scorecard_with_cohort['cohort_count'] . ")\n";
+
+		// 7. Verify Shortcode [iaq_quiz_results id="..."]
 		$frontend = new IAQ_Frontend();
 		$html = $frontend->render_results_shortcode( array( 'id' => $attempt_id ) );
 		assert( strpos( $html, 'iaq-standalone-scorecard' ) !== false, 'Scorecard template should render in shortcode' );
 		assert( strpos( $html, 'iaq-subject-analytics-card' ) !== false, 'Subject analytics table should be included in shortcode output' );
 		assert( strpos( $html, 'iaq-solution-card' ) !== false, 'Question solutions should be included in shortcode output' );
+		assert( strpos( $html, 'is-negative-deduction' ) !== false, 'Negative deduction badge should be rendered on scorecard' );
 		echo "  [PASS] Shortcode [iaq_quiz_results id=\"...\"] rendered complete scorecard & solutions portal\n";
 
 		echo "All Results & Analytics tests passed successfully!\n\n";

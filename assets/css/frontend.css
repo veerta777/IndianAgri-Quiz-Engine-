@@ -1,33 +1,86 @@
 /**
  * IndianAgri Quiz Engine - Frontend Styles
  * Primary Brand Color: #117E3A
+ * Typography: Poppins (Latin) & Noto Sans Devanagari (Hindi)
  */
 
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800;900&display=swap');
+
 :root {
+	--iaq-fe-font-family: 'Poppins', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
 	--iaq-fe-primary: #117E3A;
 	--iaq-fe-primary-hover: #0d632e;
 	--iaq-fe-primary-light: #e8f5e9;
 	--iaq-fe-text: #1e293b;
+	--iaq-fe-text-dark: #0f172a;
 	--iaq-fe-muted: #64748b;
 	--iaq-fe-border: #e2e8f0;
 	--iaq-fe-bg: #ffffff;
 	--iaq-fe-radius: 10px;
 	--iaq-fe-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+
+	/* Unified Typography Scale Tokens */
+	--iaq-font-xs: 12px;
+	--iaq-font-sm: 13.5px;
+	--iaq-font-base: 15px;
+	--iaq-font-md: 16px;
+	--iaq-font-lg: 18px;
+	--iaq-font-xl: 20px;
+	--iaq-font-2xl: 24px;
+	--iaq-font-3xl: 28px;
+	--iaq-line-height-tight: 1.25;
+	--iaq-line-height-snug: 1.38;
+	--iaq-line-height-normal: 1.55;
+	--iaq-line-height-relaxed: 1.68;
 }
 
 .iaq-exam-card,
 .iaq-quiz-grid-wrapper,
-.iaq-portal-card {
-	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+.iaq-portal-card,
+.iaq-portal-wrapper,
+.iaq-student-portal,
+.iaq-student-dashboard,
+.iaq-practice-module-wrap,
+.iaq-mock-module-wrap {
+	font-family: var(--iaq-fe-font-family) !important;
 	color: var(--iaq-fe-text);
 	box-sizing: border-box;
-	line-height: 1.5;
+	line-height: var(--iaq-line-height-normal);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	text-rendering: optimizeLegibility;
 }
 
+/* Strict theme isolation: ensure WordPress themes, Elementor, and Tutor LMS don't override font */
+.iaq-student-portal h1, .iaq-student-portal h2, .iaq-student-portal h3,
+.iaq-student-portal h4, .iaq-student-portal h5, .iaq-student-portal h6,
+.iaq-student-portal p, .iaq-student-portal span, .iaq-student-portal a,
+.iaq-student-portal button, .iaq-student-portal input, .iaq-student-portal select,
+.iaq-student-dashboard h1, .iaq-student-dashboard h2, .iaq-student-dashboard h3,
+.iaq-student-dashboard h4, .iaq-student-dashboard h5, .iaq-student-dashboard h6,
+.iaq-student-dashboard p, .iaq-student-dashboard span, .iaq-student-dashboard a,
+.iaq-student-dashboard button, .iaq-student-dashboard input, .iaq-student-dashboard select,
+.iaq-portal-wrapper h1, .iaq-portal-wrapper h2, .iaq-portal-wrapper h3,
+.iaq-portal-wrapper h4, .iaq-portal-wrapper h5, .iaq-portal-wrapper h6,
+.iaq-portal-wrapper p, .iaq-portal-wrapper span, .iaq-portal-wrapper a,
+.iaq-portal-wrapper button, .iaq-portal-wrapper input, .iaq-portal-wrapper select {
+	font-family: var(--iaq-fe-font-family) !important;
+	box-sizing: border-box;
+}
+
+/* Non-destructive word wrapping: never break syllables mid-word, allow natural wrapping */
 .iaq-exam-card *,
 .iaq-quiz-grid-wrapper *,
-.iaq-portal-card * {
+.iaq-portal-card *,
+.iaq-portal-wrapper *,
+.iaq-student-portal *,
+.iaq-student-dashboard *,
+.iaq-practice-module-wrap *,
+.iaq-mock-module-wrap * {
 	box-sizing: border-box;
+	overflow-wrap: break-word;
+	word-break: normal;
+	hyphens: none;
 }
 
 /* Single Quiz Overview Card */
@@ -76,6 +129,78 @@
 .iaq-pill-paid {
 	background: #fef3c7;
 	color: #b45309;
+}
+
+/* =========================================================================
+   Frontend Button System (.iaq-btn)
+   ========================================================================= */
+.iaq-btn {
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	gap: 8px !important;
+	padding: 9px 18px !important;
+	font-family: var(--iaq-fe-font-family) !important;
+	font-size: 14px !important;
+	font-weight: 600 !important;
+	line-height: 1.4 !important;
+	border-radius: 8px !important;
+	cursor: pointer !important;
+	text-decoration: none !important;
+	border: 1px solid transparent !important;
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+	white-space: nowrap !important;
+	box-sizing: border-box !important;
+	text-align: center !important;
+}
+
+.iaq-btn:focus,
+.iaq-btn:active {
+	outline: none !important;
+	text-decoration: none !important;
+}
+
+.iaq-btn-primary {
+	background: #117E3A !important;
+	color: #ffffff !important;
+	border-color: #117E3A !important;
+	box-shadow: 0 2px 5px rgba(17, 126, 58, 0.2) !important;
+}
+
+.iaq-btn-primary:hover,
+.iaq-btn-primary:focus {
+	background: #0d632e !important;
+	color: #ffffff !important;
+	border-color: #0d632e !important;
+	box-shadow: 0 4px 12px rgba(17, 126, 58, 0.35) !important;
+	transform: translateY(-1px) !important;
+	text-decoration: none !important;
+}
+
+.iaq-btn-outline {
+	background: #ffffff !important;
+	color: #334155 !important;
+	border-color: #cbd5e1 !important;
+}
+
+.iaq-btn-outline:hover,
+.iaq-btn-outline:focus {
+	background: #f8fafc !important;
+	color: #0f172a !important;
+	border-color: #94a3b8 !important;
+	text-decoration: none !important;
+}
+
+.iaq-btn-large {
+	padding: 13px 22px !important;
+	font-size: 15px !important;
+	font-weight: 700 !important;
+	border-radius: 10px !important;
+}
+
+.iaq-full-width {
+	width: 100% !important;
+	display: flex !important;
 }
 
 .iaq-exam-title {
@@ -336,7 +461,7 @@
 	box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
 	margin: 20px 0;
 	overflow: hidden;
-	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Devanagari", sans-serif;
+	font-family: var(--iaq-fe-font-family);
 	color: var(--iaq-fe-text);
 }
 
@@ -411,12 +536,12 @@
 }
 
 .iaq-timer-label {
-	font-size: 9px;
+	font-size: 11px;
 	text-transform: uppercase;
 	color: #94a3b8;
 	letter-spacing: 0.5px;
 	font-weight: 700;
-	line-height: 1;
+	line-height: 1.1;
 }
 
 .iaq-timer-digits {
@@ -610,7 +735,7 @@
 
 .iaq-option-item {
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	gap: 14px;
 	background: #ffffff;
 	border: 1.5px solid #e2e8f0;
@@ -619,6 +744,7 @@
 	cursor: pointer;
 	transition: all 0.15s ease-in-out;
 	user-select: none;
+	min-width: 0;
 }
 
 .iaq-option-item:hover {
@@ -645,6 +771,7 @@
 	font-weight: 700;
 	font-size: 13px;
 	flex-shrink: 0;
+	margin-top: 2px;
 	transition: all 0.15s ease;
 }
 
@@ -656,13 +783,225 @@
 .iaq-option-label {
 	font-size: 15px;
 	color: #1e293b;
-	line-height: 1.4;
-	flex: 1;
+	line-height: var(--iaq-line-height-relaxed);
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow-wrap: break-word;
+	word-break: normal;
 }
 
 .iaq-option-item.is-selected .iaq-option-label {
 	font-weight: 600;
 	color: #0f172a;
+}
+
+/* Immediate Feedback Mode Styles (Practice Sets) */
+.iaq-option-item.is-immediate-correct {
+	border-color: #10b981 !important;
+	background: #ecfdf5 !important;
+	box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25) !important;
+}
+
+.iaq-option-item.is-immediate-correct .iaq-option-key {
+	background: #10b981 !important;
+	color: #ffffff !important;
+}
+
+.iaq-option-item.is-immediate-correct .iaq-option-label {
+	color: #065f46 !important;
+	font-weight: 600 !important;
+}
+
+.iaq-option-item.is-immediate-incorrect {
+	border-color: #ef4444 !important;
+	background: #fef2f2 !important;
+	box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25) !important;
+}
+
+.iaq-option-item.is-immediate-incorrect .iaq-option-key {
+	background: #ef4444 !important;
+	color: #ffffff !important;
+}
+
+.iaq-option-item.is-immediate-incorrect .iaq-option-label {
+	color: #991b1b !important;
+	font-weight: 600 !important;
+}
+
+.iaq-option-item.is-disabled {
+	pointer-events: none !important;
+	cursor: default !important;
+}
+
+.iaq-option-status-tag {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 12px;
+	font-weight: 700;
+	padding: 4px 10px;
+	border-radius: 9999px;
+	margin-left: auto;
+	flex-shrink: 0;
+	letter-spacing: 0.01em;
+}
+
+.iaq-option-status-tag.is-correct-tag {
+	background: #d1fae5;
+	color: #065f46;
+	border: 1px solid #a7f3d0;
+}
+
+.iaq-option-status-tag.is-incorrect-tag {
+	background: #fee2e2;
+	color: #991b1b;
+	border: 1px solid #fecaca;
+}
+
+/* Immediate Feedback Card */
+.iaq-immediate-feedback-box {
+	margin-top: 20px;
+	margin-bottom: 24px;
+	border-radius: 12px;
+	overflow: hidden;
+	animation: iaqFadeInUp 0.25s ease-out;
+	border: 1.5px solid #e2e8f0;
+	background: #ffffff;
+	box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.05);
+}
+
+@keyframes iaqFadeInUp {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.iaq-feedback-banner {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 14px 18px;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.iaq-feedback-banner.is-correct {
+	background: #ecfdf5;
+	border-bottom: 1.5px solid #a7f3d0;
+	color: #065f46;
+}
+
+.iaq-feedback-banner.is-incorrect {
+	background: #fffbeb;
+	border-bottom: 1.5px solid #fef3c7;
+	color: #92400e;
+}
+
+.iaq-feedback-msg-group {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.iaq-feedback-icon {
+	font-size: 22px;
+	line-height: 1;
+	flex-shrink: 0;
+}
+
+.iaq-feedback-title {
+	font-size: 15px;
+	font-weight: 700;
+	margin: 0;
+	line-height: 1.4;
+}
+
+.iaq-feedback-score-pill {
+	display: inline-flex;
+	align-items: center;
+	padding: 4px 10px;
+	border-radius: 9999px;
+	font-size: 12px;
+	font-weight: 700;
+	flex-shrink: 0;
+}
+
+.iaq-feedback-banner.is-correct .iaq-feedback-score-pill {
+	background: #10b981;
+	color: #ffffff;
+}
+
+.iaq-feedback-banner.is-incorrect .iaq-feedback-score-pill {
+	background: #f59e0b;
+	color: #ffffff;
+}
+
+.iaq-feedback-explanation {
+	padding: 18px;
+	background: #f8fafc;
+	border-bottom: 1px solid #f1f5f9;
+}
+
+.iaq-feedback-expl-title {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0 0 10px 0;
+	font-size: 14px;
+	font-weight: 700;
+	color: #0f172a;
+}
+
+.iaq-feedback-expl-title .dashicons {
+	color: #eab308;
+	font-size: 18px;
+}
+
+.iaq-feedback-expl-text {
+	font-size: 14px;
+	line-height: 1.65;
+	color: #334155;
+	overflow-wrap: break-word;
+}
+
+.iaq-feedback-expl-text p:last-child {
+	margin-bottom: 0;
+}
+
+.iaq-feedback-action-row {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	padding: 12px 18px;
+	background: #ffffff;
+}
+
+.iaq-feedback-next-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 9px 20px;
+	background: var(--iaq-fe-primary, #15803d);
+	color: #ffffff;
+	font-weight: 700;
+	font-size: 14px;
+	border: none;
+	border-radius: 8px;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.iaq-feedback-next-btn:hover {
+	background: var(--iaq-fe-primary-dark, #166534);
+	transform: translateY(-1px);
+	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
 }
 
 /* Bottom Actions Bar */
@@ -1062,6 +1401,106 @@
 	background: var(--iaq-fe-primary-hover);
 }
 
+/* Mobile Usability & Responsive Enhancements (Screen widths <= 680px) */
+@media (max-width: 680px) {
+	.iaq-exam-topbar {
+		padding: 10px 14px;
+		flex-direction: row;
+		position: sticky;
+		top: 0;
+		z-index: 100;
+	}
+
+	.iaq-topbar-heading {
+		font-size: 14px;
+	}
+
+	.iaq-timer-clock-badge {
+		padding: 4px 8px;
+		gap: 6px;
+	}
+
+	.iaq-timer-digits {
+		font-size: 15px;
+	}
+
+	.iaq-timer-icon {
+		font-size: 15px;
+		width: 15px;
+		height: 15px;
+	}
+
+	.iaq-exam-workspace {
+		padding: 14px;
+	}
+
+	.iaq-question-card {
+		padding: 14px 16px;
+		margin-bottom: 16px;
+	}
+
+	.iaq-question-content {
+		font-size: 15px;
+		line-height: 1.5;
+	}
+
+	/* Touch-Friendly Options (Minimum 48px target height) */
+	.iaq-option-item {
+		padding: 12px 14px;
+		min-height: 48px;
+		gap: 10px;
+	}
+
+	.iaq-option-label {
+		font-size: 14px;
+	}
+
+	/* Mobile Action Buttons Bar */
+	.iaq-exam-actions-bar {
+		flex-direction: column;
+		gap: 8px;
+		padding-top: 14px;
+	}
+
+	.iaq-actions-left,
+	.iaq-actions-right {
+		width: 100%;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 8px;
+	}
+
+	.iaq-btn-action {
+		width: 100%;
+		justify-content: center;
+		padding: 12px 8px;
+		min-height: 44px;
+		font-size: 13px;
+		text-align: center;
+	}
+
+	/* Palette Grid on Mobile */
+	.iaq-palette-panel {
+		padding: 14px;
+	}
+
+	.iaq-palette-grid {
+		grid-template-columns: repeat(6, 1fr);
+		gap: 6px;
+	}
+
+	.iaq-palette-btn {
+		min-height: 38px;
+		font-size: 13px;
+	}
+
+	.iaq-btn-finalize-submit {
+		padding: 14px 16px;
+		min-height: 48px;
+		font-size: 15px;
+	}
+}
+
 /* ==========================================================================
    Results Scorecard Portal Styles
    ========================================================================== */
@@ -1146,9 +1585,13 @@
 	color: var(--iaq-fe-primary);
 }
 
+.iaq-stat-tile.is-percentile .iaq-stat-big {
+	color: #0284c7;
+}
+
 .iaq-breakdown-row {
 	display: grid;
-	grid-template-columns: repeat(3, 1fr);
+	grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
 	gap: 12px;
 	background: #f1f5f9;
 	border-radius: 8px;
@@ -1173,11 +1616,58 @@
 .iaq-breakdown-item.is-correct .iaq-bd-count { color: #15803d; }
 .iaq-breakdown-item.is-incorrect .iaq-bd-count { color: #dc2626; }
 .iaq-breakdown-item.is-unattempted .iaq-bd-count { color: #64748b; }
+.iaq-breakdown-item.is-negative-deduction .iaq-bd-count { color: #b91c1c; }
 
 .iaq-bd-label {
 	font-size: 12px;
 	font-weight: 600;
 	color: #475569;
+}
+
+/* Exam Back to Dashboard Button */
+.iaq-btn-exam-back {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: #ffffff;
+	color: #334155;
+	border: 1px solid #cbd5e1;
+	border-radius: 6px;
+	padding: 6px 12px;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	text-decoration: none;
+	transition: all 0.15s ease;
+	vertical-align: middle;
+}
+
+.iaq-btn-exam-back:hover {
+	background: #f8fafc;
+	color: #0f172a;
+	border-color: #94a3b8;
+}
+
+.iaq-btn-exam-back .dashicons {
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+	line-height: 16px;
+}
+
+/* Screen Reader Accessible Utility */
+.iaq-sr-only,
+.screen-reader-text {
+	border: 0;
+	clip: rect(1px, 1px, 1px, 1px);
+	clip-path: inset(50%);
+	height: 1px;
+	margin: -1px;
+	overflow: hidden;
+	padding: 0;
+	position: absolute;
+	width: 1px;
+	word-wrap: normal !important;
 }
 
 .iaq-results-actions {
@@ -1646,33 +2136,205 @@
 	border-top: 1px solid #e2e8f0;
 }
 
-/* Print Styles */
+/* Print Styles - Optimized for PDF download and printing results & solutions */
 @media print {
-	body {
-		background: #ffffff !important;
-	}
+	/* Hide non-printable navigation, dashboard chrome, and action buttons */
+	#wpadminbar,
+	header:not(.iaq-results-header),
+	footer,
+	nav,
 	.iaq-sandbox-bar,
+	.iaq-dash-topbar,
+	.iaq-dash-sidebar,
+	.iaq-dash-mobile-nav,
+	.iaq-side-nav,
 	.iaq-results-actions,
 	.iaq-solutions-header-actions,
 	.iaq-solutions-footer,
-	.iaq-filter-tabs-bar {
+	.iaq-filter-tabs-bar,
+	.iaq-btn-print,
+	.iaq-btn-retake,
+	.iaq-btn-back-list,
+	.iaq-btn-action-primary,
+	.iaq-btn-action-secondary,
+	.iaq-exam-header-right,
+	.iaq-exam-left,
+	.iaq-exam-nav-footer,
+	.iaq-modal-backdrop,
+	.iaq-modal,
+	.iaq-notice-box,
+	.iaq-scorecard-header-actions,
+	#iaq-examination-portal {
 		display: none !important;
 	}
-	.iaq-portal-wrapper {
-		box-shadow: none !important;
-		border: 1px solid #000000 !important;
+
+	body,
+	html {
+		background: #ffffff !important;
+		color: #0f172a !important;
+		font-size: 11pt !important;
 		margin: 0 !important;
+		padding: 0 !important;
 	}
+
+	/* Reset layout containers for printing & PDF */
+	.iaq-student-portal,
+	.iaq-portal-wrapper,
+	.iaq-standalone-scorecard,
+	.iaq-results-card,
+	.iaq-solutions-wrapper {
+		display: block !important;
+		width: 100% !important;
+		max-width: 100% !important;
+		margin: 0 !important;
+		padding: 0 !important;
+		box-shadow: none !important;
+		border: none !important;
+		background: #ffffff !important;
+	}
+
+	/* Ensure visible portal renders cleanly */
+	#iaq-results-portal:not([style*="display: none"]),
+	#iaq-results-portal:not([style*="display:none"]) {
+		display: block !important;
+	}
+
+	#iaq-solutions-portal:not([style*="display: none"]),
+	#iaq-solutions-portal:not([style*="display:none"]) {
+		display: block !important;
+	}
+
+	/* Print Header Branding */
+	.iaq-results-header,
+	.iaq-solutions-header {
+		border-bottom: 2px solid #117E3A !important;
+		padding-bottom: 12px !important;
+		margin-bottom: 18px !important;
+	}
+
+	.iaq-results-title,
+	.iaq-solutions-heading {
+		color: #0f172a !important;
+		font-size: 18pt !important;
+	}
+
+	/* Scorecard Stat Tiles Grid */
+	.iaq-score-matrix {
+		display: grid !important;
+		grid-template-columns: repeat(4, 1fr) !important;
+		gap: 10px !important;
+		margin-bottom: 18px !important;
+		page-break-inside: avoid !important;
+		break-inside: avoid !important;
+	}
+
+	.iaq-stat-tile {
+		border: 1px solid #cbd5e1 !important;
+		box-shadow: none !important;
+		padding: 8px 12px !important;
+		background: #f8fafc !important;
+		page-break-inside: avoid !important;
+		break-inside: avoid !important;
+	}
+
+	.iaq-stat-tile .iaq-stat-big {
+		font-size: 16pt !important;
+	}
+
+	/* Accuracy Breakdown Row */
+	.iaq-breakdown-row {
+		display: flex !important;
+		gap: 12px !important;
+		margin-bottom: 20px !important;
+		page-break-inside: avoid !important;
+		break-inside: avoid !important;
+	}
+
+	.iaq-breakdown-item {
+		border: 1px solid #cbd5e1 !important;
+		box-shadow: none !important;
+		padding: 6px 12px !important;
+		background: #ffffff !important;
+		page-break-inside: avoid !important;
+		break-inside: avoid !important;
+	}
+
+	/* Domain Mastery Tables */
+	.iaq-subject-analytics-card {
+		border: 1px solid #cbd5e1 !important;
+		box-shadow: none !important;
+		margin-bottom: 24px !important;
+		page-break-inside: avoid !important;
+		break-inside: avoid !important;
+	}
+
+	.iaq-analytics-table {
+		width: 100% !important;
+		border-collapse: collapse !important;
+	}
+
+	.iaq-analytics-table th,
+	.iaq-analytics-table td {
+		border: 1px solid #cbd5e1 !important;
+		padding: 6px 8px !important;
+		font-size: 9.5pt !important;
+	}
+
+	/* Solution Question Cards */
 	.iaq-solution-card {
-		page-break-inside: avoid;
+		border: 1px solid #cbd5e1 !important;
+		box-shadow: none !important;
+		margin-bottom: 16px !important;
+		padding: 12px 16px !important;
+		background: #ffffff !important;
+		page-break-inside: avoid !important;
+		break-inside: avoid !important;
 	}
+
+	.iaq-sol-explanation-box {
+		background: #f0fdf4 !important;
+		border: 1px solid #bbf7d0 !important;
+		border-left: 3px solid #117E3A !important;
+		page-break-inside: avoid !important;
+		break-inside: avoid !important;
+	}
+
+	/* Maintain color fidelity in print and PDF exports */
+	* {
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+}
+
+/* Button style for Print & Download PDF */
+.iaq-btn-print {
+	background: #ffffff;
+	color: #117E3A;
+	border: 1.5px solid #117E3A;
+	border-radius: 8px;
+	padding: 11px 20px;
+	font-size: 14px;
+	font-weight: 700;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	transition: all 0.15s ease;
+	text-decoration: none;
+}
+
+.iaq-btn-print:hover {
+	background: #117E3A;
+	color: #ffffff;
+	transform: translateY(-1px);
+	box-shadow: 0 4px 8px rgba(17, 126, 58, 0.2);
 }
 
 /* ==========================================================================
    Student Dashboard [iaq_student_dashboard] Styles
    ========================================================================== */
 
-.iaq-student-dashboard {
+.iaq-student-dashboard:not(.iaq-student-dashboard-layout) {
 	max-width: 1100px;
 	margin: 0 auto;
 }
@@ -2888,6 +3550,10 @@
 }
 
 /* Custom Practice Form */
+.iaq-custom-form-container {
+	margin-top: 8px;
+}
+
 .iaq-custom-form-card {
 	background: #ffffff;
 	border: 1px solid #e2e8f0;
@@ -2898,17 +3564,162 @@
 
 .iaq-custom-form-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-	gap: 18px;
-	margin-bottom: 24px;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 22px 24px;
+	margin-bottom: 26px;
+}
+
+@media (max-width: 991px) {
+	.iaq-custom-form-grid {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 18px 20px;
+	}
+}
+
+@media (max-width: 640px) {
+	.iaq-custom-form-grid {
+		grid-template-columns: 1fr;
+		gap: 16px;
+	}
+}
+
+.iaq-form-group {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.iaq-form-group label {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 13px;
+	font-weight: 700;
+	color: #1e293b;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	margin: 0;
+	padding: 0;
+	line-height: 1.4;
+}
+
+.iaq-form-label-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border-radius: 6px;
+	background: #ecfdf5;
+	color: #059669;
+	flex-shrink: 0;
+}
+
+.iaq-select,
+.iaq-select.iaq-full-width {
+	width: 100%;
+	height: 48px;
+	padding: 0 42px 0 14px;
+	font-size: 14px;
+	font-weight: 600;
+	color: #0f172a;
+	background-color: #ffffff;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23059669' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 14px center;
+	background-size: 16px 16px;
+	border: 1.5px solid #cbd5e1;
+	border-radius: 10px;
+	outline: none;
+	appearance: none;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	cursor: pointer;
+}
+
+.iaq-select:hover {
+	border-color: #94a3b8;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.iaq-select:focus {
+	border-color: #117E3A;
+	box-shadow: 0 0 0 3px rgba(17, 126, 58, 0.15);
+	background-color: #ffffff;
+}
+
+.iaq-input,
+.iaq-input.iaq-full-width {
+	width: 100%;
+	height: 48px;
+	padding: 0 16px;
+	font-size: 15px;
+	font-weight: 600;
+	color: #0f172a;
+	background-color: #ffffff;
+	border: 1.5px solid #cbd5e1;
+	border-radius: 10px;
+	outline: none;
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	box-sizing: border-box;
+}
+
+.iaq-input:hover {
+	border-color: #94a3b8;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.iaq-input:focus {
+	border-color: #117E3A;
+	box-shadow: 0 0 0 3px rgba(17, 126, 58, 0.15);
+	background-color: #ffffff;
+}
+
+.iaq-goals-edit-box {
+	background: #ffffff;
+	border: 1px solid #e2e8f0;
+	border-radius: 12px;
+	padding: 24px;
+	margin-top: 24px;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
 }
 
 .iaq-ct-submit-row {
 	display: flex;
 	align-items: center;
-	gap: 16px;
-	padding-top: 18px;
+	gap: 18px;
+	padding-top: 22px;
 	border-top: 1px solid #f1f5f9;
+}
+
+.iaq-btn-action-primary.iaq-btn-large {
+	padding: 13px 26px;
+	font-size: 15px;
+	font-weight: 700;
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	background: linear-gradient(135deg, #117E3A 0%, #0d632e 100%);
+	color: #ffffff;
+	border: none;
+	border-radius: 10px;
+	box-shadow: 0 4px 14px rgba(17, 126, 58, 0.25);
+	cursor: pointer;
+	transition: all 0.2s ease;
+	text-decoration: none;
+}
+
+.iaq-btn-action-primary.iaq-btn-large:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 6px 20px rgba(17, 126, 58, 0.35);
+	background: linear-gradient(135deg, #159344 0%, #0f7235 100%);
+	color: #ffffff;
 }
 
 .iaq-ct-status {
@@ -3352,15 +4163,106 @@
    Matches media_1791715011624.png Exactly
    ========================================================================== */
 
-.iaq-student-dashboard-layout {
+/* Full-Screen Portal Page Shell */
+html:has(.iaq-student-portal),
+body:has(.iaq-student-portal),
+body.iaq-portal-active {
+	overflow-x: hidden !important;
+	width: 100% !important;
+	max-width: 100% !important;
+}
+
+/* Breakout of Elementor & Theme Constrained Containers */
+.elementor-section:has(.iaq-student-portal),
+.elementor-container:has(.iaq-student-portal),
+.elementor-column:has(.iaq-student-portal),
+.elementor-widget-wrap:has(.iaq-student-portal),
+.elementor-widget:has(.iaq-student-portal),
+.elementor-widget-container:has(.iaq-student-portal),
+.iaq-elementor-fullscreen-parent {
+	max-width: 100% !important;
+	width: 100% !important;
+	padding-left: 0 !important;
+	padding-right: 0 !important;
+	margin-left: 0 !important;
+	margin-right: 0 !important;
+}
+
+/* Scoped Full-Screen Portal Container */
+.iaq-student-portal.iaq-portal-fullscreen {
+	position: relative !important;
+	width: 100vw !important;
+	max-width: 100vw !important;
+	min-height: 100vh !important;
+	min-height: 100dvh !important;
+	margin-left: calc(-50vw + 50%) !important;
+	margin-right: calc(-50vw + 50%) !important;
+	left: 0 !important;
+	right: 0 !important;
+	margin-top: 0 !important;
+	margin-bottom: 0 !important;
+	padding: 0 !important;
+	box-sizing: border-box !important;
+	overflow-x: hidden !important;
+	background: #F8F9FA;
+	display: flex;
+	flex-direction: column;
+}
+
+.iaq-student-dashboard-layout,
+.iaq-student-dashboard.iaq-student-dashboard-layout,
+.iaq-portal-wrapper.iaq-student-dashboard-layout {
 	background: #F8F9FA;
 	color: #0f172a;
-	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-	margin: 0;
-	padding: 0;
-	border-radius: 12px;
-	overflow: hidden;
-	box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+	font-family: var(--iaq-fe-font-family);
+	margin: 0 !important;
+	padding: 0 !important;
+	width: 100% !important;
+	max-width: 100% !important;
+	min-height: 100vh;
+	min-height: 100dvh;
+	border: none !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+	box-sizing: border-box;
+	overflow-x: hidden;
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 auto;
+}
+
+/* In-Dashboard Direct Subview (CBT Hall & Scorecard review) */
+.iaq-student-dashboard-subview {
+	width: 100%;
+	min-height: 100vh;
+	min-height: 100dvh;
+	padding: 24px 36px;
+	box-sizing: border-box;
+	background: #F8F9FA;
+}
+
+@media (max-width: 768px) {
+	.iaq-student-dashboard-subview {
+		padding: 16px 12px;
+	}
+}
+
+/* Safe Area Inset Support */
+@supports (padding: max(0px)) {
+	.iaq-dash-topbar {
+		padding-left: max(24px, env(safe-area-inset-left));
+		padding-right: max(24px, env(safe-area-inset-right));
+		padding-top: max(12px, env(safe-area-inset-top));
+	}
+	.iaq-dash-main-area {
+		padding-left: max(28px, env(safe-area-inset-left));
+		padding-right: max(28px, env(safe-area-inset-right));
+		padding-bottom: max(32px, env(safe-area-inset-bottom));
+	}
+	.iaq-dash-sidebar {
+		padding-left: max(14px, env(safe-area-inset-left));
+		padding-bottom: max(20px, env(safe-area-inset-bottom));
+	}
 }
 
 /* Top Navigation Bar */
@@ -3532,12 +4434,18 @@
 /* App Body Layout */
 .iaq-dash-body-layout {
 	display: flex;
+	flex: 1 1 auto;
+	width: 100%;
 	min-height: calc(100vh - 65px);
+	min-height: calc(100dvh - 65px);
+	box-sizing: border-box;
 }
 
 /* Left Sidebar */
 .iaq-dash-sidebar {
 	width: 250px;
+	min-width: 250px;
+	max-width: 250px;
 	background: #ffffff;
 	border-right: 1px solid #e2e8f0;
 	padding: 20px 14px;
@@ -3545,6 +4453,7 @@
 	flex-direction: column;
 	justify-content: space-between;
 	flex-shrink: 0;
+	box-sizing: border-box;
 }
 
 .iaq-side-nav-menu {
@@ -3628,10 +4537,13 @@
 
 /* Main Content Workspace */
 .iaq-dash-main-area {
-	flex: 1;
-	padding: 26px 32px;
+	flex: 1 1 0%;
+	min-width: 0;
+	width: 100%;
+	padding: 26px 36px;
 	background: #F8F9FA;
 	overflow-x: hidden;
+	box-sizing: border-box;
 }
 
 .iaq-dashboard-view-pane {
@@ -3645,9 +4557,17 @@
 /* Hero Row: 2-Columns */
 .iaq-hero-two-column-row {
 	display: grid;
-	grid-template-columns: 2.3fr 1fr;
+	grid-template-columns: 2.2fr 1fr;
 	gap: 20px;
 	margin-bottom: 22px;
+	align-items: stretch;
+}
+
+@media (max-width: 1100px) {
+	.iaq-hero-two-column-row {
+		grid-template-columns: 1fr;
+		gap: 18px;
+	}
 }
 
 .iaq-hero-welcome-card {
@@ -3656,6 +4576,9 @@
 	border-radius: 12px;
 	padding: 24px;
 	box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
 }
 
 .iaq-welcome-top-intro {
@@ -3683,18 +4606,35 @@
 	font-weight: 800;
 	color: #0f172a;
 	letter-spacing: -0.3px;
+	line-height: var(--iaq-line-height-tight);
 }
 
 .iaq-welcome-user-subtitle {
 	margin: 0;
-	font-size: 13.5px;
+	font-size: 14px;
 	color: #64748b;
+	line-height: var(--iaq-line-height-snug);
 }
 
 .iaq-hero-kpi-pills-row {
 	display: grid;
-	grid-template-columns: repeat(4, 1fr);
+	grid-template-columns: repeat(4, minmax(0, 1fr));
 	gap: 12px;
+	width: 100%;
+}
+
+@media (max-width: 1200px) {
+	.iaq-hero-kpi-pills-row {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 10px;
+	}
+}
+
+@media (max-width: 600px) {
+	.iaq-hero-kpi-pills-row {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 8px;
+	}
 }
 
 .iaq-hero-kpi-pill {
@@ -3704,7 +4644,9 @@
 	padding: 12px 14px;
 	display: flex;
 	align-items: center;
-	gap: 12px;
+	gap: 10px;
+	min-width: 0;
+	box-sizing: border-box;
 }
 
 .iaq-kpi-pill-icon {
@@ -3725,26 +4667,36 @@
 .iaq-kpi-pill-info {
 	display: flex;
 	flex-direction: column;
+	min-width: 0;
+	flex: 1 1 auto;
 }
 
 .iaq-hero-kpi-pill .iaq-kpi-val {
 	font-size: 19px;
 	font-weight: 800;
 	color: #0f172a;
-	line-height: 1.1;
+	line-height: 1.15;
+	white-space: nowrap;
 }
 
 .iaq-hero-kpi-pill .iaq-kpi-label {
-	font-size: 11px;
+	font-size: 12.5px;
 	font-weight: 600;
-	color: #64748b;
+	color: #475569;
 	margin-top: 2px;
+	line-height: 1.35;
+	overflow-wrap: normal;
+	word-break: normal;
+	white-space: normal;
+	hyphens: none;
 }
 
 .iaq-kpi-best-tag {
-	font-size: 10px;
+	font-size: 11.5px;
 	color: #117E3A;
 	font-weight: 700;
+	line-height: 1.3;
+	white-space: nowrap;
 }
 
 /* Right Premium Card */
@@ -3826,6 +4778,13 @@
 	display: flex;
 	align-items: center;
 	gap: 16px;
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.iaq-in-progress-details {
+	flex: 1 1 auto;
+	min-width: 0;
 }
 
 .iaq-in-progress-clock-badge {
@@ -3840,18 +4799,24 @@
 }
 
 .iaq-in-progress-alert-label {
-	font-size: 11px;
+	font-size: 11.5px;
 	font-weight: 800;
 	color: #D97706;
 	letter-spacing: 0.6px;
 	text-transform: uppercase;
+	line-height: 1.3;
+	display: block;
+	margin-bottom: 3px;
 }
 
 .iaq-in-progress-quiz-title {
-	margin: 2px 0 4px 0;
+	margin: 0 0 6px 0;
 	font-size: 17px;
 	font-weight: 800;
 	color: #0f172a;
+	line-height: 1.35;
+	overflow-wrap: break-word;
+	word-wrap: break-word;
 }
 
 .iaq-in-progress-meta-row {
@@ -3859,7 +4824,9 @@
 	color: #475569;
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	flex-wrap: wrap;
+	gap: 6px 10px;
+	line-height: 1.4;
 }
 
 .iaq-meta-pipe {
@@ -3868,7 +4835,7 @@
 
 .iaq-time-rem-badge {
 	color: #dc2626;
-	font-weight: 600;
+	font-weight: 700;
 }
 
 .iaq-in-progress-right-cta {
@@ -3951,10 +4918,10 @@
 	text-decoration: underline !important;
 }
 
-/* Quick Preparation Actions: 4 Cards Row */
+/* Quick Preparation Actions: 3 Cards Row (Practice Sets, Mock Tests, Custom Test) */
 .iaq-quick-actions-row {
 	display: grid;
-	grid-template-columns: repeat(4, 1fr);
+	grid-template-columns: repeat(3, 1fr);
 	gap: 16px;
 }
 
@@ -3962,12 +4929,13 @@
 	background: #ffffff;
 	border: 1px solid #e2e8f0;
 	border-radius: 12px;
-	padding: 20px;
+	padding: 22px;
 	display: flex;
 	flex-direction: column;
 	justify-content: space-between;
 	box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 	transition: transform 0.15s ease, box-shadow 0.15s ease;
+	min-width: 0;
 }
 
 .iaq-qa-pill-card:hover {
@@ -3991,26 +4959,28 @@
 .iaq-qa-pill-card.is-teal .iaq-qa-badge-icon { background: #ccfbf1; color: #0f766e; }
 
 .iaq-qa-card-name {
-	margin: 0 0 6px 0;
-	font-size: 16px;
+	margin: 0 0 8px 0;
+	font-size: 16.5px;
 	font-weight: 800;
 	color: #0f172a;
+	line-height: 1.3;
+	overflow-wrap: break-word;
 }
 
 .iaq-qa-card-desc {
 	margin: 0 0 18px 0;
-	font-size: 12.5px;
+	font-size: 13.5px;
 	color: #64748b;
-	line-height: 1.4;
-	min-height: 35px;
+	line-height: 1.5;
+	flex: 1 1 auto;
 }
 
 .iaq-qa-action-pill {
 	display: block;
 	text-align: center;
-	padding: 8px 14px;
+	padding: 9px 16px;
 	border-radius: 6px;
-	font-size: 12.5px;
+	font-size: 13px;
 	font-weight: 700;
 	text-decoration: none !important;
 	transition: all 0.15s ease;
@@ -4039,22 +5009,25 @@
 	background: #ffffff;
 	border: 1px solid #e2e8f0;
 	border-radius: 10px;
-	padding: 14px 20px;
-	display: grid;
-	grid-template-columns: 2.8fr 1.6fr 1fr;
+	padding: 16px 20px;
+	display: flex;
 	align-items: center;
-	gap: 20px;
+	justify-content: space-between;
+	gap: 18px;
+	flex-wrap: wrap;
 }
 
 .iaq-continue-left-col {
 	display: flex;
 	align-items: center;
 	gap: 14px;
+	flex: 1 1 280px;
+	min-width: 0;
 }
 
 .iaq-item-icon-circle {
-	width: 38px;
-	height: 38px;
+	width: 40px;
+	height: 40px;
 	border-radius: 8px;
 	display: flex;
 	align-items: center;
@@ -4066,24 +5039,34 @@
 .iaq-item-icon-circle.is-light-green { background: #e8f5e9; color: #2e7d32; }
 .iaq-item-icon-circle.is-blue { background: #e0f2fe; color: #0284c7; }
 
+.iaq-continue-info-col {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
 .iaq-continue-item-title {
-	margin: 0 0 5px 0;
-	font-size: 14.5px;
+	margin: 0 0 6px 0;
+	font-size: 15px;
 	font-weight: 700;
+	line-height: 1.35;
 	color: #0f172a;
+	overflow-wrap: break-word;
+	word-wrap: break-word;
 }
 
 .iaq-continue-tag-pills {
 	display: flex;
 	align-items: center;
+	flex-wrap: wrap;
 	gap: 6px;
 }
 
 .iaq-tag-pill {
-	font-size: 10.5px;
+	font-size: 11.5px;
 	font-weight: 700;
-	padding: 2px 7px;
+	padding: 3px 8px;
 	border-radius: 4px;
+	line-height: 1.3;
 }
 
 .iaq-tag-pill.is-type-practice { background: #ffedd5; color: #c2410c; }
@@ -4091,9 +5074,15 @@
 .iaq-tag-pill.is-exam { background: #f1f5f9; color: #475569; }
 
 .iaq-continue-specs-meta {
-	font-size: 11.5px;
+	font-size: 12.5px;
 	color: #64748b;
-	margin-top: 4px;
+	margin-top: 5px;
+	line-height: 1.4;
+}
+
+.iaq-continue-progress-col {
+	flex: 0 1 200px;
+	min-width: 150px;
 }
 
 .iaq-progress-bar-wrap {
@@ -4118,8 +5107,10 @@
 .iaq-bar-fill.is-empty { background: transparent; }
 
 .iaq-bar-text {
-	font-size: 11.5px;
-	color: #64748b;
+	font-size: 12px;
+	font-weight: 600;
+	color: #475569;
+	line-height: 1.3;
 }
 
 .iaq-continue-action-col {
@@ -4127,6 +5118,7 @@
 	align-items: center;
 	justify-content: flex-end;
 	gap: 12px;
+	flex: 0 0 auto;
 }
 
 .iaq-badge-status-pill {
@@ -4223,10 +5215,10 @@
 
 .iaq-subject-acc-row {
 	display: grid;
-	grid-template-columns: 140px 1fr 45px 115px;
+	grid-template-columns: minmax(130px, 1.8fr) 2fr 48px minmax(105px, auto);
 	align-items: center;
 	gap: 12px;
-	padding: 6px 0;
+	padding: 8px 0;
 	border-bottom: 1px solid #f8fafc;
 }
 
@@ -4234,15 +5226,16 @@
 	display: flex;
 	align-items: center;
 	gap: 8px;
+	min-width: 0;
 }
 
 .iaq-subj-name-text {
-	font-size: 13px;
+	font-size: 13.5px;
 	font-weight: 600;
 	color: #1e293b;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
+	line-height: 1.35;
+	overflow-wrap: break-word;
+	word-wrap: break-word;
 }
 
 .iaq-subj-bar-col {
@@ -4382,16 +5375,33 @@
 	border-radius: 12px;
 	padding: 20px 24px;
 	display: grid;
-	grid-template-columns: 1.1fr 1.8fr 2.4fr;
+	grid-template-columns: auto minmax(180px, 1.2fr) minmax(220px, 1.5fr);
 	align-items: center;
 	gap: 24px;
 	box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+@media (max-width: 1100px) {
+	.iaq-streak-unified-card {
+		grid-template-columns: 1fr;
+		gap: 20px;
+		padding: 18px 20px;
+	}
+}
+
+@media (max-width: 768px) {
+	.iaq-streak-unified-card {
+		grid-template-columns: 1fr !important;
+		gap: 16px;
+		padding: 16px 14px;
+	}
 }
 
 .iaq-su-streak-part {
 	display: flex;
 	align-items: center;
 	gap: 14px;
+	min-width: 0;
 }
 
 .iaq-su-flame-circle {
@@ -4415,7 +5425,7 @@
 }
 
 .iaq-su-streak-unit {
-	font-size: 12px;
+	font-size: 12.5px;
 	font-weight: 800;
 	color: #9a3412;
 	text-transform: uppercase;
@@ -4424,8 +5434,9 @@
 }
 
 .iaq-su-streak-sub {
-	font-size: 11px;
+	font-size: 12px;
 	color: #ea580c;
+	line-height: 1.35;
 }
 
 .iaq-su-goal-part {
@@ -4904,7 +5915,9 @@ body.iaq-noscroll-mobile {
 	}
 
 	.iaq-kpi-label {
-		font-size: 11px;
+		font-size: 12px;
+		font-weight: 600;
+		line-height: 1.35;
 	}
 
 	.iaq-in-progress-banner {
@@ -4926,7 +5939,7 @@ body.iaq-noscroll-mobile {
 	.iaq-in-progress-meta-row {
 		flex-wrap: wrap;
 		gap: 4px 8px;
-		font-size: 11px;
+		font-size: 12px;
 	}
 
 	.iaq-in-progress-right-cta {
@@ -4961,8 +5974,9 @@ body.iaq-noscroll-mobile {
 	}
 
 	.iaq-qa-card-desc {
-		font-size: 11.5px;
+		font-size: 12.5px;
 		margin-bottom: 12px;
+		line-height: 1.45;
 	}
 
 	.iaq-continue-row-card {
@@ -5025,6 +6039,8 @@ body.iaq-noscroll-mobile {
 	}
 
 	.iaq-streak-unified-card {
+		grid-template-columns: 1fr !important;
+		gap: 16px;
 		padding: 16px 14px;
 	}
 
@@ -5132,11 +6148,13 @@ body.iaq-noscroll-mobile {
 	}
 
 	.iaq-kpi-val {
-		font-size: 15px;
+		font-size: 16px;
 	}
 
 	.iaq-kpi-label {
-		font-size: 10px;
+		font-size: 11.5px;
+		font-weight: 600;
+		line-height: 1.25;
 	}
 
 	.iaq-lf-card-art-col svg {
@@ -5151,7 +6169,8 @@ body.iaq-noscroll-mobile {
 	}
 
 	.iaq-day-col-label {
-		font-size: 10px;
+		font-size: 11px;
+		font-weight: 600;
 	}
 
 	.iaq-history-table {
@@ -5168,7 +6187,7 @@ body.iaq-noscroll-mobile {
 	max-width: 1200px;
 	margin: 0 auto;
 	box-sizing: border-box;
-	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+	font-family: var(--iaq-fe-font-family);
 	color: #0f172a;
 }
 
@@ -5251,108 +6270,375 @@ body.iaq-noscroll-mobile {
 	line-height: 1.6;
 }
 
-/* Landing Grid — 3 Hero Categories */
+/* Landing Grid — 3 Hero Categories (Premium Design) */
 .iaq-ps-landing-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-	gap: 24px;
-	margin-bottom: 32px;
+	grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+	gap: 26px;
+	margin-bottom: 36px;
 }
 
 .iaq-ps-hero-card {
+	position: relative;
 	background: #ffffff;
 	border: 1px solid #e2e8f0;
-	border-radius: 14px;
-	padding: 28px;
+	border-radius: 18px;
+	padding: 32px 28px 28px;
 	display: flex;
 	flex-direction: column;
-	gap: 20px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-	transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+	gap: 22px;
+	box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+	transition: all 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+	overflow: hidden;
+	min-width: 0;
+	overflow-wrap: break-word;
+	word-break: normal;
 }
 
+/* Sleek Top Colored Accent Bar */
+.iaq-ps-card-accent {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 4px;
+	transition: height 0.25s ease;
+}
+
+.iaq-ps-hero-card:hover .iaq-ps-card-accent {
+	height: 5px;
+}
+
+/* Card Themes & Subtle Background Gradients */
+.iaq-ps-card-book {
+	background: linear-gradient(180deg, #ffffff 0%, #f4fbf6 100%);
+}
+.iaq-ps-card-book .iaq-ps-card-accent {
+	background: linear-gradient(90deg, #117E3A 0%, #22c55e 100%);
+}
+
+.iaq-ps-card-subject {
+	background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%);
+}
+.iaq-ps-card-subject .iaq-ps-card-accent {
+	background: linear-gradient(90deg, #1d4ed8 0%, #3b82f6 100%);
+}
+
+.iaq-ps-card-exam {
+	background: linear-gradient(180deg, #ffffff 0%, #fffbf2 100%);
+}
+.iaq-ps-card-exam .iaq-ps-card-accent {
+	background: linear-gradient(90deg, #b45309 0%, #f59e0b 100%);
+}
+
+/* Card Hover Elevation */
 .iaq-ps-hero-card:hover {
-	transform: translateY(-3px);
-	box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
-	border-color: #cbd5e1;
+	transform: translateY(-6px);
 }
 
+.iaq-ps-card-book:hover {
+	border-color: #86efac;
+	box-shadow: 0 20px 35px -5px rgba(17, 126, 58, 0.14), 0 10px 15px -5px rgba(17, 126, 58, 0.06);
+}
+
+.iaq-ps-card-subject:hover {
+	border-color: #93c5fd;
+	box-shadow: 0 20px 35px -5px rgba(29, 78, 216, 0.14), 0 10px 15px -5px rgba(29, 78, 216, 0.06);
+}
+
+.iaq-ps-card-exam:hover {
+	border-color: #fde68a;
+	box-shadow: 0 20px 35px -5px rgba(180, 83, 9, 0.14), 0 10px 15px -5px rgba(180, 83, 9, 0.06);
+}
+
+/* Deluxe 3D Icon Badge */
 .iaq-ps-hero-icon-wrap {
-	width: 58px;
-	height: 58px;
-	border-radius: 12px;
+	width: 62px;
+	height: 62px;
+	border-radius: 16px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 30px;
+	flex-shrink: 0;
+	transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.iaq-ps-hero-icon-wrap .dashicons {
-	font-size: 30px;
+.iaq-ps-hero-card:hover .iaq-ps-hero-icon-wrap {
+	transform: scale(1.08) translateY(-2px);
+}
+
+.iaq-ps-hero-icon-wrap svg {
 	width: 30px;
 	height: 30px;
+	display: block;
+}
+
+.iaq-ps-icon-book {
+	background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%) !important;
+	color: #117E3A !important;
+	border: 1px solid rgba(17, 126, 58, 0.22) !important;
+	box-shadow: 0 8px 18px -2px rgba(17, 126, 58, 0.18) !important;
+}
+
+.iaq-ps-icon-subject {
+	background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+	color: #1d4ed8 !important;
+	border: 1px solid rgba(29, 78, 216, 0.22) !important;
+	box-shadow: 0 8px 18px -2px rgba(29, 78, 216, 0.18) !important;
+}
+
+.iaq-ps-icon-exam {
+	background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+	color: #b45309 !important;
+	border: 1px solid rgba(180, 83, 9, 0.22) !important;
+	box-shadow: 0 8px 18px -2px rgba(180, 83, 9, 0.18) !important;
 }
 
 .iaq-ps-hero-content {
 	flex: 1;
 	display: flex;
 	flex-direction: column;
+	min-width: 0;
 }
 
 .iaq-ps-hero-topline {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	margin-bottom: 10px;
+	margin-bottom: 12px;
+	flex-wrap: wrap;
+	gap: 8px;
 }
 
+/* Category Badges */
+.iaq-pill-cat-book {
+	background: #e8f5e9 !important;
+	color: #117E3A !important;
+	border: 1px solid rgba(17, 126, 58, 0.25) !important;
+	font-weight: 700 !important;
+	font-size: 11px !important;
+	padding: 4px 10px !important;
+	letter-spacing: 0.5px !important;
+	border-radius: 20px !important;
+	text-transform: uppercase !important;
+}
+
+.iaq-pill-cat-subject {
+	background: #eff6ff !important;
+	color: #1d4ed8 !important;
+	border: 1px solid rgba(29, 78, 216, 0.25) !important;
+	font-weight: 700 !important;
+	font-size: 11px !important;
+	padding: 4px 10px !important;
+	letter-spacing: 0.5px !important;
+	border-radius: 20px !important;
+	text-transform: uppercase !important;
+}
+
+.iaq-pill-cat-exam {
+	background: #fef3c7 !important;
+	color: #b45309 !important;
+	border: 1px solid rgba(180, 83, 9, 0.25) !important;
+	font-weight: 700 !important;
+	font-size: 11px !important;
+	padding: 4px 10px !important;
+	letter-spacing: 0.5px !important;
+	border-radius: 20px !important;
+	text-transform: uppercase !important;
+}
+
+/* Count Badge with Pulse Glow Dot */
 .iaq-ps-hero-count {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: #f1f5f9;
+	color: #475569;
+	padding: 3px 10px;
+	border-radius: 20px;
 	font-size: 12px;
 	font-weight: 700;
-	color: #64748b;
+}
+
+.iaq-ps-count-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	display: inline-block;
+}
+
+.iaq-ps-card-book .iaq-ps-count-dot {
+	background: #22c55e;
+	box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
+}
+
+.iaq-ps-card-subject .iaq-ps-count-dot {
+	background: #3b82f6;
+	box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+.iaq-ps-card-exam .iaq-ps-count-dot {
+	background: #f59e0b;
+	box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
 }
 
 .iaq-ps-hero-title {
-	font-size: 20px;
+	font-size: 21px;
 	font-weight: 800;
 	color: #0f172a;
 	margin: 0 0 10px 0;
-	line-height: 1.3;
+	line-height: 1.32;
+	letter-spacing: -0.2px;
+	overflow-wrap: break-word;
+	word-break: normal;
 }
 
 .iaq-ps-hero-desc {
-	font-size: 13px;
-	color: #64748b;
-	line-height: 1.6;
-	margin: 0 0 16px 0;
+	font-size: 13.5px;
+	color: #475569;
+	line-height: 1.65;
+	margin: 0 0 18px 0;
 	flex: 1;
+	overflow-wrap: break-word;
+	word-break: normal;
 }
 
 .iaq-ps-hero-features {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 8px;
-	margin-bottom: 20px;
+	margin-bottom: 24px;
 }
 
 .iaq-ps-feature-tag {
 	display: inline-flex;
 	align-items: center;
-	gap: 4px;
-	font-size: 11px;
+	gap: 6px;
+	font-size: 12px;
 	font-weight: 600;
 	color: #334155;
-	background: #f8fafc;
-	padding: 4px 8px;
-	border-radius: 6px;
+	background: #ffffff;
+	padding: 6px 11px;
+	border-radius: 8px;
 	border: 1px solid #e2e8f0;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+	line-height: 1.35;
+	transition: all 0.2s ease;
 }
 
-.iaq-ps-feature-tag .dashicons {
-	font-size: 13px;
+.iaq-ps-feature-tag:hover {
+	border-color: #cbd5e1;
+	background: #f8fafc;
+	transform: translateY(-1px);
+}
+
+.iaq-ps-feature-tag svg {
 	width: 13px;
 	height: 13px;
-	color: #117E3A;
+	flex-shrink: 0;
+	display: inline-block;
+}
+
+/* Premium Hero Action Buttons */
+.iaq-ps-hero-action {
+	margin-top: auto;
+	width: 100%;
+}
+
+.iaq-btn-hero {
+	width: 100% !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	gap: 10px !important;
+	padding: 14px 22px !important;
+	font-size: 15px !important;
+	font-weight: 700 !important;
+	letter-spacing: 0.2px !important;
+	border-radius: 12px !important;
+	color: #ffffff !important;
+	text-decoration: none !important;
+	border: none !important;
+	cursor: pointer !important;
+	box-sizing: border-box !important;
+	line-height: 1.4 !important;
+	position: relative !important;
+	overflow: hidden !important;
+	transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Subtle Glass Shimmer Sweep on Hover */
+.iaq-btn-hero::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: -120%;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+	transition: left 0.6s ease;
+}
+
+.iaq-btn-hero:hover::after {
+	left: 120%;
+}
+
+.iaq-btn-hero svg {
+	transition: transform 0.22s ease;
+	flex-shrink: 0;
+}
+
+.iaq-btn-hero:hover svg {
+	transform: translateX(5px);
+}
+
+/* Button Gradients & Elevation */
+.iaq-btn-hero-book,
+.iaq-btn-book {
+	background: linear-gradient(135deg, #117E3A 0%, #15803d 100%) !important;
+	color: #ffffff !important;
+	box-shadow: 0 4px 14px rgba(17, 126, 58, 0.3) !important;
+}
+
+.iaq-btn-hero-book:hover,
+.iaq-btn-book:hover {
+	background: linear-gradient(135deg, #0d632e 0%, #117E3A 100%) !important;
+	color: #ffffff !important;
+	transform: translateY(-2px) !important;
+	box-shadow: 0 8px 24px rgba(17, 126, 58, 0.45) !important;
+	text-decoration: none !important;
+}
+
+.iaq-btn-hero-subject,
+.iaq-btn-subject {
+	background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
+	color: #ffffff !important;
+	box-shadow: 0 4px 14px rgba(29, 78, 216, 0.3) !important;
+}
+
+.iaq-btn-hero-subject:hover,
+.iaq-btn-subject:hover {
+	background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%) !important;
+	color: #ffffff !important;
+	transform: translateY(-2px) !important;
+	box-shadow: 0 8px 24px rgba(29, 78, 216, 0.45) !important;
+	text-decoration: none !important;
+}
+
+.iaq-btn-hero-exam,
+.iaq-btn-exam {
+	background: linear-gradient(135deg, #b45309 0%, #d97706 100%) !important;
+	color: #ffffff !important;
+	box-shadow: 0 4px 14px rgba(180, 83, 9, 0.3) !important;
+}
+
+.iaq-btn-hero-exam:hover,
+.iaq-btn-exam:hover {
+	background: linear-gradient(135deg, #92400e 0%, #b45309 100%) !important;
+	color: #ffffff !important;
+	transform: translateY(-2px) !important;
+	box-shadow: 0 8px 24px rgba(180, 83, 9, 0.45) !important;
+	text-decoration: none !important;
 }
 
 /* Filter / Search Bar */
@@ -6020,7 +7306,7 @@ body.iaq-noscroll-mobile {
 	max-width: 1200px;
 	margin: 0 auto;
 	padding: 0 16px 48px;
-	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	font-family: var(--iaq-fe-font-family);
 	color: #1e293b;
 }
 
@@ -6117,27 +7403,32 @@ body.iaq-noscroll-mobile {
 
 /* Search Bar */
 .iaq-mt-search-bar {
-	margin-bottom: 32px;
+	margin-bottom: 24px;
 }
 
 .iaq-mt-search-form {
 	display: flex;
 	gap: 10px;
 	align-items: center;
+	flex-wrap: wrap;
 }
 
 .iaq-mt-search-input-wrap {
-	flex: 1;
+	flex: 1 1 auto;
+	min-width: 220px;
 	position: relative;
+	height: auto;
 }
 
-.iaq-mt-search-input-wrap .dashicons {
+.iaq-mt-search-input-wrap .dashicons,
+.iaq-mt-search-input-wrap svg {
 	position: absolute;
 	left: 14px;
 	top: 50%;
 	transform: translateY(-50%);
 	color: #94a3b8;
 	font-size: 18px;
+	pointer-events: none;
 }
 
 .iaq-mt-search-input {
@@ -6162,6 +7453,11 @@ body.iaq-noscroll-mobile {
 	border-radius: 10px;
 	font-size: 14px;
 	font-weight: 600;
+	flex: 0 0 auto;
+	white-space: nowrap;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 }
 
 /* Section Header */
@@ -6177,6 +7473,8 @@ body.iaq-noscroll-mobile {
 	display: flex;
 	align-items: center;
 	gap: 8px;
+	overflow-wrap: break-word;
+	word-break: normal;
 }
 
 .iaq-mt-section-header h2 .dashicons {
@@ -6188,12 +7486,14 @@ body.iaq-noscroll-mobile {
 	font-size: 14px;
 	color: #64748b;
 	margin: 0;
+	line-height: 1.5;
+	overflow-wrap: break-word;
 }
 
 /* Category Grid & Cards (10 Main Categories) */
 .iaq-mt-categories-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 	gap: 22px;
 }
 
@@ -6205,6 +7505,9 @@ body.iaq-noscroll-mobile {
 	display: flex;
 	flex-direction: column;
 	justify-content: space-between;
+	min-width: 0;
+	overflow-wrap: break-word;
+	word-break: normal;
 	transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 	box-shadow: 0 3px 12px rgba(0, 0, 0, 0.03);
 	position: relative;
@@ -6221,6 +7524,7 @@ body.iaq-noscroll-mobile {
 	justify-content: space-between;
 	align-items: flex-start;
 	margin-bottom: 14px;
+	gap: 10px;
 }
 
 .iaq-mt-cat-icon {
@@ -6233,6 +7537,7 @@ body.iaq-noscroll-mobile {
 	align-items: center;
 	justify-content: center;
 	font-size: 24px;
+	flex-shrink: 0;
 }
 
 .iaq-mt-cat-icon .dashicons {
@@ -6245,7 +7550,9 @@ body.iaq-noscroll-mobile {
 	font-size: 18px;
 	font-weight: 700;
 	margin: 0 0 8px 0;
-	line-height: 1.3;
+	line-height: 1.35;
+	overflow-wrap: break-word;
+	word-break: normal;
 }
 
 .iaq-mt-cat-title a {
@@ -6259,11 +7566,13 @@ body.iaq-noscroll-mobile {
 }
 
 .iaq-mt-cat-desc {
-	font-size: 13px;
+	font-size: 13.5px;
 	color: #64748b;
-	line-height: 1.5;
+	line-height: 1.55;
 	margin: 0 0 20px 0;
-	flex: 1;
+	flex: 1 1 auto;
+	overflow-wrap: break-word;
+	word-break: normal;
 }
 
 .iaq-mt-cat-footer {
@@ -6499,10 +7808,75 @@ body.iaq-noscroll-mobile {
 	font-weight: 600;
 }
 
+/* Subjects Grid in Mock Tests Module */
+.iaq-mt-subjects-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: 20px;
+	margin-bottom: 28px;
+}
+
+.iaq-mt-subject-card {
+	background: #ffffff;
+	border: 1px solid #e2e8f0;
+	border-radius: 12px;
+	padding: 22px;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+	transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+	text-decoration: none;
+	color: #0f172a;
+}
+
+.iaq-mt-subject-card:hover {
+	transform: translateY(-3px);
+	box-shadow: 0 8px 20px rgba(17, 126, 58, 0.1);
+	border-color: #86efac;
+}
+
+.iaq-mt-subject-top {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.iaq-mt-subject-icon {
+	width: 44px;
+	height: 44px;
+	border-radius: 10px;
+	background: #fef3c7;
+	color: #b45309;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.iaq-mt-sub-title {
+	font-size: 16px;
+	font-weight: 700;
+	margin: 0;
+	line-height: 1.4;
+	color: #0f172a;
+}
+
+.iaq-mt-sub-desc {
+	font-size: 13px;
+	color: #64748b;
+	line-height: 1.5;
+	margin: 0;
+	flex: 1;
+}
+
+.iaq-mt-subject-action {
+	margin-top: auto;
+}
+
 /* Mock Tests Grid & Individual Card (Card Component) */
 .iaq-mt-tests-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 	gap: 22px;
 }
 
@@ -6514,6 +7888,9 @@ body.iaq-noscroll-mobile {
 	display: flex;
 	flex-direction: column;
 	justify-content: space-between;
+	min-width: 0;
+	overflow-wrap: break-word;
+	word-break: normal;
 	transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 	position: relative;
@@ -6577,6 +7954,8 @@ body.iaq-noscroll-mobile {
 	font-weight: 700;
 	line-height: 1.35;
 	margin: 0 0 10px 0;
+	overflow-wrap: break-word;
+	word-break: normal;
 }
 
 .iaq-mock-title a {
@@ -6590,10 +7969,12 @@ body.iaq-noscroll-mobile {
 }
 
 .iaq-mock-desc {
-	font-size: 13px;
+	font-size: 13.5px;
 	color: #64748b;
-	line-height: 1.5;
+	line-height: 1.55;
 	margin: 0 0 16px 0;
+	overflow-wrap: break-word;
+	word-break: normal;
 }
 
 /* Specifications Grid */
@@ -6742,7 +8123,8 @@ body.iaq-noscroll-mobile {
 	.iaq-mt-title {
 		font-size: 24px;
 	}
-	.iaq-mt-specs-grid {
+	.iaq-mt-specs-grid,
+	.iaq-mock-specs-grid {
 		grid-template-columns: repeat(2, 1fr);
 		gap: 10px;
 	}
@@ -6764,13 +8146,81 @@ body.iaq-noscroll-mobile {
 	.iaq-mt-exams-grid {
 		grid-template-columns: 1fr;
 	}
+	.iaq-mt-search-bar {
+		margin-bottom: 20px;
+	}
 	.iaq-mt-search-form {
 		flex-direction: column;
-	}
-	.iaq-mt-search-form button {
+		gap: 10px;
 		width: 100%;
 	}
+	.iaq-mt-search-input-wrap {
+		width: 100%;
+		flex: 0 0 auto !important;
+		min-width: 0;
+		height: auto !important;
+		margin: 0;
+	}
+	.iaq-mt-search-input {
+		width: 100%;
+		box-sizing: border-box;
+	}
+	.iaq-mt-search-form button,
+	.iaq-mt-search-form .iaq-btn {
+		width: 100%;
+		margin: 0;
+	}
 }
+
+/* ==========================================================================
+   EXAMINATIONS CATALOG & SHARED CARD UTILITIES
+   ========================================================================== */
+.iaq-exam-catalog-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: 18px;
+}
+
+@media (max-width: 600px) {
+	.iaq-exam-catalog-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+.iaq-exam-portal-card {
+	background: #f8fafc;
+	border: 1px solid #e2e8f0;
+	border-radius: 12px;
+	padding: 20px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	min-width: 0;
+	overflow-wrap: break-word;
+	word-break: normal;
+	transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.iaq-exam-portal-card:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+	border-color: #cbd5e1;
+}
+
+.iaq-spin {
+	display: inline-block;
+	animation: iaq-spin 1s linear infinite;
+}
+
+@keyframes iaq-spin {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}
+
 
 
 

@@ -68,14 +68,30 @@ class IAQ_Plugin {
 	 */
 	public function run() {
 		add_action( 'init', array( $this, 'load_textdomain' ) );
+		add_action( 'init', array( $this, 'maybe_update_db' ), 5 );
 
 		// Always initialize frontend shortcodes, access control, and attempt handlers.
 		IAQ_Access_Control::init();
+		IAQ_Rest_Api::init();
 		$this->frontend->init();
 		$this->attempt->init();
 
 		if ( is_admin() ) {
 			$this->admin->init();
+		}
+	}
+
+	/**
+	 * Automatically create or upgrade database tables if version has changed.
+	 */
+	public function maybe_update_db() {
+		$installed_ver = get_option( 'iaq_db_version', '0' );
+		if ( version_compare( $installed_ver, IAQ_DB_VERSION, '<' ) ) {
+			if ( class_exists( 'IAQ_Database' ) ) {
+				IAQ_Database::create_tables();
+				IAQ_Database::seed_default_data();
+			}
+			update_option( 'iaq_db_version', IAQ_DB_VERSION );
 		}
 	}
 

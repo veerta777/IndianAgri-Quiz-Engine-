@@ -30,6 +30,12 @@ if ( empty( $scorecard ) || ! is_array( $scorecard ) ) {
 			<div style="font-size:13px;color:#64748b;margin-top:8px;">
 				<span><?php esc_html_e( 'Completed on', 'indianagri-quiz-engine' ); ?>: <?php echo esc_html( $scorecard['end_time'] ); ?></span>
 			</div>
+
+			<div class="iaq-scorecard-header-actions" style="margin-top:12px;">
+				<button type="button" class="iaq-btn-print" onclick="window.print();">
+					<span class="dashicons dashicons-printer"></span> <?php esc_html_e( 'Print Scorecard / Download PDF', 'indianagri-quiz-engine' ); ?>
+				</button>
+			</div>
 		</div>
 
 		<!-- Performance Metrics Grid -->
@@ -42,6 +48,12 @@ if ( empty( $scorecard ) || ! is_array( $scorecard ) ) {
 				<span class="iaq-stat-label"><?php esc_html_e( 'Percentage', 'indianagri-quiz-engine' ); ?></span>
 				<span class="iaq-stat-big"><?php echo esc_html( $scorecard['percentage'] ); ?>%</span>
 			</div>
+			<?php if ( isset( $scorecard['percentile'] ) && null !== $scorecard['percentile'] ) : ?>
+			<div class="iaq-stat-tile is-percentile">
+				<span class="iaq-stat-label"><?php esc_html_e( 'Percentile', 'indianagri-quiz-engine' ); ?></span>
+				<span class="iaq-stat-big"><?php echo esc_html( $scorecard['percentile'] ); ?><small>th %ile</small></span>
+			</div>
+			<?php endif; ?>
 			<div class="iaq-stat-tile is-accuracy">
 				<span class="iaq-stat-label"><?php esc_html_e( 'Correct / Total', 'indianagri-quiz-engine' ); ?></span>
 				<span class="iaq-stat-big"><?php echo esc_html( $scorecard['correct_answers'] ); ?> / <?php echo esc_html( $scorecard['total_questions'] ); ?></span>
@@ -52,7 +64,7 @@ if ( empty( $scorecard ) || ! is_array( $scorecard ) ) {
 			</div>
 		</div>
 
-		<!-- Accuracy Breakdown -->
+		<!-- Accuracy & Negative Marking Breakdown -->
 		<div class="iaq-breakdown-row">
 			<div class="iaq-breakdown-item is-correct">
 				<span class="iaq-bd-count"><?php echo esc_html( $scorecard['correct_answers'] ); ?></span>
@@ -66,6 +78,12 @@ if ( empty( $scorecard ) || ! is_array( $scorecard ) ) {
 				<span class="iaq-bd-count"><?php echo esc_html( $scorecard['unattempted_questions'] ); ?></span>
 				<span class="iaq-bd-label"><?php esc_html_e( 'Unattempted', 'indianagri-quiz-engine' ); ?></span>
 			</div>
+			<?php if ( ! empty( $scorecard['negative_deductions'] ) && (float) $scorecard['negative_deductions'] > 0 ) : ?>
+			<div class="iaq-breakdown-item is-negative-deduction">
+				<span class="iaq-bd-count">-<?php echo esc_html( $scorecard['negative_deductions'] ); ?></span>
+				<span class="iaq-bd-label"><?php esc_html_e( 'Negative Deductions', 'indianagri-quiz-engine' ); ?></span>
+			</div>
+			<?php endif; ?>
 		</div>
 
 		<!-- Subject & Topic Mastery Breakdown -->
@@ -218,12 +236,12 @@ if ( empty( $scorecard ) || ! is_array( $scorecard ) ) {
 		<?php endif; ?>
 
 		<!-- Actions -->
-		<div class="iaq-results-actions" style="margin-top: 30px;">
-			<button type="button" class="iaq-btn-action-primary" onclick="window.print();">
-				<span class="dashicons dashicons-printer"></span> <?php esc_html_e( 'Print Official Scorecard', 'indianagri-quiz-engine' ); ?>
+		<div class="iaq-results-actions" style="margin-top: 30px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+			<button type="button" class="iaq-btn-print" onclick="window.print();">
+				<span class="dashicons dashicons-printer"></span> <?php esc_html_e( 'Print Scorecard / Download PDF', 'indianagri-quiz-engine' ); ?>
 			</button>
-			<a href="<?php echo esc_url( function_exists( 'admin_url' ) ? admin_url( 'page=iaq-preview-student-list' ) : '#' ); ?>" class="iaq-btn-back-list">
-				&larr; <?php esc_html_e( 'Back to Mock Test Series', 'indianagri-quiz-engine' ); ?>
+			<a href="<?php echo esc_url( remove_query_arg( array( 'iaq_quiz_id', 'iaq_action', 'attempt_id' ), ( function_exists( 'get_permalink' ) && get_permalink() ? get_permalink() : '/' ) ) ); ?>" class="iaq-btn-action-primary" style="text-decoration:none;">
+				&larr; <?php esc_html_e( 'Back to Student Dashboard', 'indianagri-quiz-engine' ); ?>
 			</a>
 		</div>
 

@@ -122,9 +122,55 @@ class Test_Student_Dashboard {
 		assert( strpos( $dashboard_html, 'iaq-mastery-grid' ) !== false, 'Cumulative subject mastery grid rendered' );
 		assert( strpos( $dashboard_html, 'iaq-history-table' ) !== false, 'Examination attempt history table rendered' );
 		assert( strpos( $dashboard_html, 'Scorecard &amp; Solutions' ) !== false || strpos( $dashboard_html, 'Scorecard & Solutions' ) !== false, 'Action link to review scorecard rendered in history table' );
-		echo "  [PASS] Shortcode [iaq_student_dashboard] rendered complete student analytics dashboard\n";
 
-		// 8. Verify Empty State Handling for New Student (Zero Attempts)
+		// Verify All 12 Unified Dashboard Navigation View Panes
+		assert( strpos( $dashboard_html, 'class="iaq-student-portal iaq-portal-fullscreen"' ) !== false, 'Full-screen scoped portal container rendered' );
+		assert( strpos( $dashboard_html, 'id="iaq-pane-dashboard"' ) !== false, 'Home/Dashboard view pane rendered' );
+		assert( strpos( $dashboard_html, 'id="iaq-pane-practice-sets"' ) !== false, 'Practice Sets view pane rendered' );
+		assert( strpos( $dashboard_html, 'id="iaq-pane-mock-tests"' ) !== false, 'Mock Tests view pane rendered' );
+		assert( strpos( $dashboard_html, 'id="iaq-pane-examinations"' ) !== false, 'Examinations view pane rendered' );
+		assert( strpos( $dashboard_html, 'id="iaq-pane-history"' ) !== false, 'Attempt History view pane rendered' );
+		assert( strpos( $dashboard_html, 'id="iaq-pane-bookmarks"' ) !== false, 'Bookmarks view pane rendered' );
+		assert( strpos( $dashboard_html, 'id="iaq-pane-wrong-notebook"' ) !== false, 'Wrong Question Notebook view pane rendered' );
+		assert( strpos( $dashboard_html, 'id="iaq-pane-custom-test"' ) !== false, 'Custom Practice Test view pane rendered' );
+		assert( strpos( $dashboard_html, 'id="iaq-pane-leaderboard"' ) !== false, 'Leaderboard view pane rendered' );
+		assert( strpos( $dashboard_html, 'id="iaq-pane-study-streaks"' ) !== false, 'Study Streaks view pane rendered' );
+		assert( strpos( $dashboard_html, 'id="iaq-pane-subscriptions"' ) !== false, 'Subscriptions view pane rendered' );
+		assert( strpos( $dashboard_html, 'id="iaq-pane-profile"' ) !== false, 'Profile view pane rendered' );
+		assert( strpos( $dashboard_html, 'Historical Performance Trend Data Table' ) !== false, 'Screen reader accessible performance trend data table should be rendered' );
+		echo "  [PASS] All 12 Unified Portal View Panes rendered inside [iaq_student_dashboard]\n";
+
+		// Verify In-Portal CBT Examination Taking via ?iaq_quiz_id
+		$_GET['iaq_quiz_id'] = $quiz_id;
+		$exam_html = $frontend->render_student_dashboard( array() );
+		unset( $_GET['iaq_quiz_id'] );
+		assert( strpos( $exam_html, 'class="iaq-student-portal iaq-portal-fullscreen"' ) !== false, 'Full-screen scoped portal container rendered on exam subview' );
+		assert( strpos( $exam_html, 'iaq-examination-portal' ) !== false, 'CBT Examination Portal rendered in-dashboard' );
+		assert( strpos( $exam_html, 'iaq-exam-return-nav' ) !== false, 'Exam return navigation bar rendered in-dashboard' );
+		assert( strpos( $exam_html, 'iaq-exam-back-dashboard-btn' ) !== false, 'Return to Dashboard header button rendered in exam portal' );
+		assert( strpos( $exam_html, 'Back to Student Dashboard' ) !== false, 'Return to Student Dashboard CTA rendered' );
+		echo "  [PASS] Unified in-portal CBT Examination taking verified\n";
+
+		// Verify In-Portal Scorecard & Solutions Review via ?attempt_id
+		$completed_attempt_id = ! empty( $history[0]['id'] ) ? $history[0]['id'] : $active_session['attempt_id'];
+		$_GET['attempt_id'] = $completed_attempt_id;
+		$scorecard_html = $frontend->render_student_dashboard( array() );
+		unset( $_GET['attempt_id'] );
+		assert( strpos( $scorecard_html, 'class="iaq-student-portal iaq-portal-fullscreen"' ) !== false, 'Full-screen scoped portal container rendered on scorecard subview' );
+		assert( strpos( $scorecard_html, 'iaq-standalone-scorecard' ) !== false, 'Scorecard & Solutions Portal rendered in-dashboard' );
+		assert( strpos( $scorecard_html, 'iaq-exam-return-nav' ) !== false, 'Scorecard return navigation bar rendered in-dashboard' );
+		assert( strpos( $scorecard_html, 'Back to Student Dashboard' ) !== false, 'Return to Student Dashboard CTA rendered on scorecard' );
+		echo "  [PASS] Unified in-portal Scorecard & Solutions review verified\n";
+
+		// 8. Verify Performance Trend History Calculation
+		$trend = IAQ_Quiz_Attempt::get_user_performance_trend( $user_id, 6 );
+		assert( is_array( $trend ), 'Performance trend should be an array' );
+		assert( count( $trend ) > 0, 'Performance trend should return data points for completed attempts' );
+		assert( isset( $trend[0]['percentage'] ), 'Trend point should contain percentage' );
+		assert( isset( $trend[0]['label'] ), 'Trend point should contain date label' );
+		echo "  [PASS] Performance trend chronological aggregation verified\n";
+
+		// 9. Verify Empty State Handling for New Student (Zero Attempts & Zero Fakes)
 		$new_user_id = 999;
 		$new_stats = IAQ_Quiz_Attempt::get_user_dashboard_stats( $new_user_id );
 		assert( 0 === $new_stats['completed_attempts'], 'New student has 0 completed attempts' );
@@ -136,7 +182,19 @@ class Test_Student_Dashboard {
 
 		$new_mastery = IAQ_Quiz_Attempt::get_user_overall_subject_mastery( $new_user_id );
 		assert( empty( $new_mastery ), 'New student mastery diagnostics is empty' );
-		echo "  [PASS] Empty states graceful handling for new student verified\n";
+
+		// Switch current user to new student to test real empty state HTML
+		global $current_user_id;
+		$orig_uid = $current_user_id;
+		$current_user_id = $new_user_id;
+
+		$new_dashboard_html = $frontend->render_student_dashboard( array() );
+		$current_user_id = $orig_uid;
+
+		assert( strpos( $new_dashboard_html, 'No examination attempts found' ) !== false, 'Clean empty state rendered for attempt history' );
+		assert( strpos( $new_dashboard_html, '2026-10-11 07:34:40' ) === false, 'Zero fake sample dates rendered for new student' );
+		assert( strpos( $new_dashboard_html, 'No test attempts recorded yet' ) !== false, 'Clean empty state rendered for performance trend chart' );
+		echo "  [PASS] Empty states graceful handling and zero fake statistics verified\n";
 
 		// 9. Verify Guest Gate Protection When Not Logged In
 		// Temporarily simulate guest state

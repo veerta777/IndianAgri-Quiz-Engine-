@@ -35,6 +35,8 @@ IndianAgri Quiz Engine is engineered specifically for agricultural competitive e
 
 * `[iaq_quiz id="123"]`: Embeds the examination card and instructions for a specific quiz.
 * `[iaq_quiz_list type="mock" category="ICAR AIEEA"]`: Displays a responsive grid of available examinations.
+* `[iaq_practice_sets]`: Responsive portal for Practice Sets categorized by Books, Subjects, and Exams.
+* `[iaq_mock_tests]`: Hierarchical Mock Test portal with adaptive category browsing (Central, State, Banking, etc.).
 * `[iaq_student_dashboard]`: Student portal showing examination history, active tests, and active subscriptions.
 * `[iaq_quiz_results]`: Displays quiz scorecards, multi-subject analytics, and detailed answer keys.
 * `[iaq_subscription_plans]`: Displays responsive subscription pricing cards linked to WooCommerce checkout.

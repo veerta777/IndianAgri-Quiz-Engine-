@@ -12,6 +12,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 global $wpdb;
 $table_subs = IAQ_Database::get_table_name( 'user_subscriptions' );
 
+// Automatically sweep and mark completed subscriptions as expired and sync student statuses
+IAQ_Access_Control::sync_expired_subscriptions();
+
 $status_filter = isset( $_GET['status'] ) ? sanitize_key( $_GET['status'] ) : '';
 $where = '1=1';
 $params = array();
@@ -141,6 +144,11 @@ $plans = IAQ_Access_Control::get_plans( array( 'status' => 'active' ) );
 										<td>
 											<strong><?php echo esc_html( $user_label ); ?></strong>
 											<div style="font-size:11px;color:#64748b;">UID: <?php echo esc_html( $sub->user_id ); ?></div>
+											<?php if ( ! IAQ_Access_Control::is_student_active( $sub->user_id ) ) : ?>
+												<span class="iaq-badge" style="background:#fef2f2;color:#b91c1c;font-size:10px;padding:1px 6px;margin-top:3px;display:inline-block;border:1px solid #fecdd3;border-radius:999px;font-weight:600;"><?php esc_html_e( 'Access Deactivated', 'indianagri-quiz-engine' ); ?></span>
+											<?php else : ?>
+												<span class="iaq-badge" style="background:#f0fdf4;color:#166534;font-size:10px;padding:1px 6px;margin-top:3px;display:inline-block;border:1px solid #bbf7d0;border-radius:999px;font-weight:600;"><?php esc_html_e( 'Access Active', 'indianagri-quiz-engine' ); ?></span>
+											<?php endif; ?>
 										</td>
 										<td>
 											<strong><?php echo esc_html( $sub->plan_name ); ?></strong>

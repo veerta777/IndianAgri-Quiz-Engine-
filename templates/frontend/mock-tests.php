@@ -25,7 +25,7 @@ $page_url = function( $subview = '', $params = array() ) {
 	<div class="iaq-mt-banner">
 		<div class="iaq-mt-breadcrumbs">
 			<a href="<?php echo esc_url( $page_url() ); ?>" class="iaq-mt-bc-item">
-				<span class="dashicons dashicons-awards"></span> <?php esc_html_e( 'Mock Tests', 'indianagri-quiz-engine' ); ?>
+				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg> <?php esc_html_e( 'Mock Tests', 'indianagri-quiz-engine' ); ?>
 			</a>
 
 			<?php if ( ! empty( $category ) ) : ?>
@@ -124,7 +124,7 @@ $page_url = function( $subview = '', $params = array() ) {
 			<?php endif; ?>
 
 			<div class="iaq-mt-search-input-wrap">
-				<span class="dashicons dashicons-search"></span>
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
 				<input type="text" name="mt_search" value="<?php echo esc_attr( $search_term ); ?>" placeholder="<?php esc_attr_e( 'Search mock tests by exam, subject, or keyword...', 'indianagri-quiz-engine' ); ?>" class="iaq-mt-search-input">
 			</div>
 			<button type="submit" class="iaq-btn iaq-btn-primary iaq-btn-search"><?php esc_html_e( 'Search', 'indianagri-quiz-engine' ); ?></button>
@@ -138,7 +138,7 @@ $page_url = function( $subview = '', $params = array() ) {
 	<?php if ( 'landing' === $view ) : ?>
 		<div class="iaq-mt-categories-section">
 			<div class="iaq-mt-section-header">
-				<h2><span class="dashicons dashicons-category"></span> <?php esc_html_e( 'Choose Your Examination Category', 'indianagri-quiz-engine' ); ?></h2>
+				<h2><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#117E3A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:8px;flex-shrink:0;"><rect width="7" height="7" x="3" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="14" rx="1.5"/><rect width="7" height="7" x="3" y="14" rx="1.5"/></svg> <?php esc_html_e( 'Choose Your Examination Category', 'indianagri-quiz-engine' ); ?></h2>
 				<p><?php esc_html_e( 'Select from the 10 national and state agricultural examination streams below to access dedicated full-length mock tests.', 'indianagri-quiz-engine' ); ?></p>
 			</div>
 
@@ -148,7 +148,7 @@ $page_url = function( $subview = '', $params = array() ) {
 						<div class="iaq-mt-category-card">
 							<div class="iaq-mt-cat-header">
 								<div class="iaq-mt-cat-icon">
-									<span class="dashicons <?php echo esc_attr( ! empty( $cat->icon ) ? $cat->icon : 'dashicons-awards' ); ?>"></span>
+									<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
 								</div>
 								<?php if ( ! empty( $cat->badge_text ) ) : ?>
 									<span class="iaq-pill iaq-pill-category"><?php echo esc_html( $cat->badge_text ); ?></span>
@@ -169,7 +169,7 @@ $page_url = function( $subview = '', $params = array() ) {
 							<div class="iaq-mt-cat-footer">
 								<a href="<?php echo esc_url( $page_url( 'category', array( 'category_id' => $cat->id ) ) ); ?>" class="iaq-btn iaq-btn-primary iaq-btn-cat">
 									<span><?php esc_html_e( 'Explore Mock Tests', 'indianagri-quiz-engine' ); ?></span>
-									<span class="dashicons dashicons-arrow-right-alt"></span>
+									&rarr;
 								</a>
 							</div>
 						</div>
@@ -192,7 +192,7 @@ $page_url = function( $subview = '', $params = array() ) {
 			<!-- State-wise Browsing (Category 6) -->
 			<?php if ( ! empty( $hierarchy_cfg['has_states'] ) && ! empty( $states ) ) : ?>
 				<div class="iaq-mt-section-header">
-					<h2><span class="dashicons dashicons-admin-site-alt3"></span> <?php esc_html_e( 'Select Target State', 'indianagri-quiz-engine' ); ?></h2>
+					<h2><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#117E3A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:8px;flex-shrink:0;"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg> <?php esc_html_e( 'Select Target State', 'indianagri-quiz-engine' ); ?></h2>
 					<p><?php esc_html_e( 'Choose a state to access its Public Service Commission and Agriculture Department recruitment mock tests.', 'indianagri-quiz-engine' ); ?></p>
 				</div>
 				<div class="iaq-mt-states-grid">
@@ -208,13 +208,13 @@ $page_url = function( $subview = '', $params = array() ) {
 			<!-- University Entrance Browsing (Category 7) -->
 			<?php elseif ( ! empty( $hierarchy_cfg['has_universities'] ) && ! empty( $universities ) ) : ?>
 				<div class="iaq-mt-section-header">
-					<h2><span class="dashicons dashicons-building"></span> <?php esc_html_e( 'Select University Entrance Type', 'indianagri-quiz-engine' ); ?></h2>
+					<h2><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#117E3A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:8px;flex-shrink:0;"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg> <?php esc_html_e( 'Select University Entrance Type', 'indianagri-quiz-engine' ); ?></h2>
 					<p><?php esc_html_e( 'Choose State Agricultural Universities or entrance program level.', 'indianagri-quiz-engine' ); ?></p>
 				</div>
 				<div class="iaq-mt-universities-grid">
 					<?php foreach ( $universities as $un ) : ?>
 						<a href="<?php echo esc_url( $page_url( 'university', array( 'category_id' => $category->id, 'university_id' => $un->id ) ) ); ?>" class="iaq-mt-univ-card">
-							<span class="dashicons dashicons-welcome-learn-more"></span>
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#117E3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
 							<div class="iaq-mt-univ-name"><?php echo esc_html( $un->name ); ?></div>
 							<span class="iaq-mt-univ-arrow">&rarr;</span>
 						</a>
@@ -224,23 +224,38 @@ $page_url = function( $subview = '', $params = array() ) {
 			<!-- Subject-Wise Browsing (Category 8) -->
 			<?php elseif ( ! empty( $hierarchy_cfg['has_subjects'] ) && empty( $hierarchy_cfg['has_exams'] ) && ! empty( $subjects ) ) : ?>
 				<div class="iaq-mt-section-header">
-					<h2><span class="dashicons dashicons-category"></span> <?php esc_html_e( 'Select Agricultural Discipline', 'indianagri-quiz-engine' ); ?></h2>
-					<p><?php esc_html_e( 'Attempt full syllabus or chapter mock tests in your specialized discipline.', 'indianagri-quiz-engine' ); ?></p>
+					<h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><rect width="7" height="7" x="3" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="14" rx="1.5"/><rect width="7" height="7" x="3" y="14" rx="1.5"/></svg> <?php esc_html_e( 'Select Agricultural Discipline', 'indianagri-quiz-engine' ); ?></h2>
+					<p><?php esc_html_e( 'Attempt full syllabus or subject mock tests in your specialized discipline.', 'indianagri-quiz-engine' ); ?></p>
 				</div>
 				<div class="iaq-mt-subjects-grid">
 					<?php foreach ( $subjects as $sub ) : ?>
-						<a href="<?php echo esc_url( $page_url( 'subject', array( 'category_id' => $category->id, 'subject_id' => $sub->id ) ) ); ?>" class="iaq-mt-subject-card">
-							<div class="iaq-mt-sub-title"><?php echo esc_html( $sub->name ); ?></div>
-							<p class="iaq-mt-sub-desc"><?php echo esc_html( wp_trim_words( $sub->description, 10 ) ); ?></p>
-							<div class="iaq-mt-sub-cta"><?php esc_html_e( 'View Mock Tests &rarr;', 'indianagri-quiz-engine' ); ?></div>
-						</a>
+						<div class="iaq-mt-subject-card">
+							<div class="iaq-mt-subject-top">
+								<div class="iaq-mt-subject-icon">
+									<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+								</div>
+							</div>
+							<h3 class="iaq-mt-sub-title">
+								<a href="<?php echo esc_url( $page_url( 'subject', array( 'category_id' => $category->id, 'subject_id' => $sub->id ) ) ); ?>" style="color:#0f172a;text-decoration:none;">
+									<?php echo esc_html( $sub->name ); ?>
+								</a>
+							</h3>
+							<?php if ( ! empty( $sub->description ) ) : ?>
+								<p class="iaq-mt-sub-desc"><?php echo esc_html( wp_trim_words( $sub->description, 12 ) ); ?></p>
+							<?php endif; ?>
+							<div class="iaq-mt-subject-action">
+								<a href="<?php echo esc_url( $page_url( 'subject', array( 'category_id' => $category->id, 'subject_id' => $sub->id ) ) ); ?>" class="iaq-btn iaq-btn-primary iaq-btn-exam iaq-full-width">
+									<?php esc_html_e( 'View Mock Tests', 'indianagri-quiz-engine' ); ?> &rarr;
+								</a>
+							</div>
+						</div>
 					<?php endforeach; ?>
 				</div>
 
 			<!-- Examination-Based Browsing (Categories 1, 2, 3, 4, 5, 10) -->
 			<?php elseif ( ! empty( $exams ) ) : ?>
 				<div class="iaq-mt-section-header">
-					<h2><span class="dashicons dashicons-welcome-learn-more"></span> <?php echo esc_html( $hierarchy_cfg['drill_label'] ); ?></h2>
+					<h2><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#117E3A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:8px;flex-shrink:0;"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg> <?php echo esc_html( $hierarchy_cfg['drill_label'] ); ?></h2>
 					<p><?php esc_html_e( 'Select your target examination below to view its specific subjects, vacancies, or mock tests.', 'indianagri-quiz-engine' ); ?></p>
 				</div>
 				<div class="iaq-mt-exams-grid">
@@ -265,7 +280,7 @@ $page_url = function( $subview = '', $params = array() ) {
 			<!-- Directly Available Mock Tests (Category 9: General Agriculture or Flat Categories) -->
 			<?php else : ?>
 				<div class="iaq-mt-section-header">
-					<h2><span class="dashicons dashicons-awards"></span> <?php esc_html_e( 'Available Mock Tests', 'indianagri-quiz-engine' ); ?></h2>
+					<h2><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#117E3A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:8px;flex-shrink:0;"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg> <?php esc_html_e( 'Available Mock Tests', 'indianagri-quiz-engine' ); ?></h2>
 					<p><?php esc_html_e( 'Select a test below to begin your examination.', 'indianagri-quiz-engine' ); ?></p>
 				</div>
 				<?php if ( ! empty( $quizzes ) ) : ?>
@@ -278,7 +293,7 @@ $page_url = function( $subview = '', $params = array() ) {
 					</div>
 				<?php else : ?>
 					<div class="iaq-mt-empty-state">
-						<span class="dashicons dashicons-welcome-learn-more"></span>
+						<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
 						<h3><?php esc_html_e( 'No Mock Tests Published Yet', 'indianagri-quiz-engine' ); ?></h3>
 						<p><?php esc_html_e( 'Tests under this category will be published soon by the examination committee.', 'indianagri-quiz-engine' ); ?></p>
 					</div>
@@ -295,12 +310,12 @@ $page_url = function( $subview = '', $params = array() ) {
 			<!-- Sub-Exams (e.g. ASRB -> ARS and NET) -->
 			<?php if ( ! empty( $sub_exams ) ) : ?>
 				<div class="iaq-mt-section-header">
-					<h2><span class="dashicons dashicons-networking"></span> <?php esc_html_e( 'Select Stream / Sub-Examination', 'indianagri-quiz-engine' ); ?></h2>
+					<h2><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#117E3A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:8px;flex-shrink:0;"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><path d="M6 9v12"/><path d="M9 6h6"/><path d="M18 9v6"/></svg> <?php esc_html_e( 'Select Stream / Sub-Examination', 'indianagri-quiz-engine' ); ?></h2>
 				</div>
 				<div class="iaq-mt-subexams-grid">
 					<?php foreach ( $sub_exams as $se ) : ?>
 						<a href="<?php echo esc_url( $page_url( 'exam', array( 'category_id' => ! empty( $category ) ? $category->id : 0, 'exam_id' => $se->id ) ) ); ?>" class="iaq-mt-subexam-card">
-							<span class="dashicons dashicons-awards"></span>
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#117E3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
 							<strong><?php echo esc_html( $se->name ); ?></strong>
 							<span><?php esc_html_e( 'Explore &rarr;', 'indianagri-quiz-engine' ); ?></span>
 						</a>
@@ -311,13 +326,13 @@ $page_url = function( $subview = '', $params = array() ) {
 			<!-- Vacancies (e.g. UPSSSC -> Technical Assistant, Sugarcane Officer) -->
 			<?php if ( ! empty( $vacancies ) ) : ?>
 				<div class="iaq-mt-section-header">
-					<h2><span class="dashicons dashicons-groups"></span> <?php esc_html_e( 'Select Post / Vacancy', 'indianagri-quiz-engine' ); ?></h2>
-					<p><?php esc_html_e( 'Mock tests configured for specific recruitment posts.', 'indianagri-quiz-engine' ); ?></p>
+					<h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> <?php esc_html_e( 'Select Post / Vacancy', 'indianagri-quiz-engine' ); ?></h2>
+					<p><?php esc_html_e( 'Select a recruitment post to view its dedicated mock tests.', 'indianagri-quiz-engine' ); ?></p>
 				</div>
 				<div class="iaq-mt-vacancies-grid">
 					<?php foreach ( $vacancies as $vac ) : ?>
 						<a href="<?php echo esc_url( $page_url( 'vacancy', array( 'category_id' => ! empty( $category ) ? $category->id : 0, 'exam_id' => $exam->id, 'vacancy_id' => $vac->id ) ) ); ?>" class="iaq-mt-vacancy-card">
-							<span class="dashicons dashicons-businessman"></span>
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#117E3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
 							<div class="iaq-mt-vac-title"><?php echo esc_html( $vac->title ); ?></div>
 							<?php if ( ! empty( $vac->posts_count ) ) : ?>
 								<span class="iaq-pill iaq-pill-category"><?php printf( esc_html__( '%d Posts', 'indianagri-quiz-engine' ), (int) $vac->posts_count ); ?></span>
@@ -331,15 +346,48 @@ $page_url = function( $subview = '', $params = array() ) {
 			<!-- Assigned Subjects (e.g. ICAR AIEEA -> Agronomy, Soil Science, Horticulture) -->
 			<?php if ( ! empty( $exam_subjects ) ) : ?>
 				<div class="iaq-mt-section-header">
-					<h2><span class="dashicons dashicons-book"></span> <?php esc_html_e( 'Select Examination Subject / Discipline', 'indianagri-quiz-engine' ); ?></h2>
-					<p><?php esc_html_e( 'Choose a specialized subject to access its sequential mock test drills.', 'indianagri-quiz-engine' ); ?></p>
+					<h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg> <?php esc_html_e( 'Select a Subject under this Examination', 'indianagri-quiz-engine' ); ?></h2>
+					<p><?php esc_html_e( 'Choose a subject to view available full-length mock tests and question papers.', 'indianagri-quiz-engine' ); ?></p>
 				</div>
 				<div class="iaq-mt-subjects-grid">
 					<?php foreach ( $exam_subjects as $es ) : ?>
-						<a href="<?php echo esc_url( $page_url( 'exam_subject', array( 'category_id' => ! empty( $category ) ? $category->id : 0, 'exam_id' => $exam->id, 'subject_id' => $es->id ) ) ); ?>" class="iaq-mt-subject-card">
-							<div class="iaq-mt-sub-title"><?php echo esc_html( $es->name ); ?></div>
-							<div class="iaq-mt-sub-cta"><?php esc_html_e( 'Start Subject Mock Tests &rarr;', 'indianagri-quiz-engine' ); ?></div>
-						</a>
+						<?php
+						$mtests = IAQ_Mock_Tests::get_context_mock_tests( array( 'category_id' => ! empty( $category ) ? $category->id : 0, 'exam_id' => $exam->id, 'subject_id' => $es->id ) );
+						$mcount = is_array( $mtests ) ? count( $mtests ) : 0;
+						?>
+						<div class="iaq-mt-subject-card">
+							<div class="iaq-mt-subject-top">
+								<div class="iaq-mt-subject-icon">
+									<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+								</div>
+								<span class="iaq-pill" style="background:#f0fdf4;color:#117E3A;font-weight:700;">
+									<?php
+									printf(
+										esc_html( _n( '%d Mock Test Available', '%d Mock Tests Available', $mcount, 'indianagri-quiz-engine' ) ),
+										$mcount
+									);
+									?>
+								</span>
+							</div>
+
+							<h3 class="iaq-mt-sub-title">
+								<a href="<?php echo esc_url( $page_url( 'exam_subject', array( 'category_id' => ! empty( $category ) ? $category->id : 0, 'exam_id' => $exam->id, 'subject_id' => $es->id ) ) ); ?>" style="color:#0f172a;text-decoration:none;">
+									<?php echo esc_html( $es->name ); ?>
+								</a>
+							</h3>
+
+							<?php if ( ! empty( $es->description ) ) : ?>
+								<p class="iaq-mt-sub-desc">
+									<?php echo esc_html( wp_trim_words( $es->description, 16 ) ); ?>
+								</p>
+							<?php endif; ?>
+
+							<div class="iaq-mt-subject-action">
+								<a href="<?php echo esc_url( $page_url( 'exam_subject', array( 'category_id' => ! empty( $category ) ? $category->id : 0, 'exam_id' => $exam->id, 'subject_id' => $es->id ) ) ); ?>" class="iaq-btn iaq-btn-primary iaq-btn-exam iaq-full-width">
+									<?php esc_html_e( 'View Mock Tests', 'indianagri-quiz-engine' ); ?> &rarr;
+								</a>
+							</div>
+						</div>
 					<?php endforeach; ?>
 				</div>
 			<?php endif; ?>
@@ -347,8 +395,8 @@ $page_url = function( $subview = '', $params = array() ) {
 			<!-- Direct Mock Tests under this Exam (if no further sub-levels exist or direct tests attached) -->
 			<?php if ( empty( $sub_exams ) && empty( $vacancies ) && empty( $exam_subjects ) ) : ?>
 				<div class="iaq-mt-section-header">
-					<h2><span class="dashicons dashicons-welcome-learn-more"></span> <?php esc_html_e( 'Examination Mock Tests', 'indianagri-quiz-engine' ); ?></h2>
-					<p><?php esc_html_e( 'Sequential mock test papers restarting at Mock Test 1.', 'indianagri-quiz-engine' ); ?></p>
+					<h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> <?php esc_html_e( 'Examination Mock Tests', 'indianagri-quiz-engine' ); ?></h2>
+					<p><?php esc_html_e( 'Full-length mock test papers designed under real timed exam conditions.', 'indianagri-quiz-engine' ); ?></p>
 				</div>
 				<?php if ( ! empty( $quizzes ) ) : ?>
 					<div class="iaq-mt-tests-grid">
@@ -360,9 +408,9 @@ $page_url = function( $subview = '', $params = array() ) {
 					</div>
 				<?php else : ?>
 					<div class="iaq-mt-empty-state">
-						<span class="dashicons dashicons-welcome-learn-more"></span>
+						<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
 						<h3><?php esc_html_e( 'No Mock Tests Found for this Examination', 'indianagri-quiz-engine' ); ?></h3>
-						<p><?php esc_html_e( 'New test series will be available shortly.', 'indianagri-quiz-engine' ); ?></p>
+						<p><?php esc_html_e( 'No mock tests have been published for this examination yet.', 'indianagri-quiz-engine' ); ?></p>
 					</div>
 				<?php endif; ?>
 			<?php endif; ?>
@@ -374,8 +422,8 @@ $page_url = function( $subview = '', $params = array() ) {
 
 		<div class="iaq-mt-tests-list-view">
 			<div class="iaq-mt-section-header">
-				<h2><span class="dashicons dashicons-awards"></span> <?php esc_html_e( 'Available Mock Tests', 'indianagri-quiz-engine' ); ?></h2>
-				<p><?php esc_html_e( 'Tests are ordered sequentially as Mock Test 1, Mock Test 2... Practice under real timed exam conditions.', 'indianagri-quiz-engine' ); ?></p>
+				<h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg> <?php esc_html_e( 'Available Mock Tests', 'indianagri-quiz-engine' ); ?></h2>
+				<p><?php esc_html_e( 'Practice under real timed exam conditions with negative marking, bilingual interface, and scientific explanations.', 'indianagri-quiz-engine' ); ?></p>
 			</div>
 
 			<?php if ( ! empty( $quizzes ) ) : ?>
@@ -388,9 +436,9 @@ $page_url = function( $subview = '', $params = array() ) {
 				</div>
 			<?php else : ?>
 				<div class="iaq-mt-empty-state">
-					<span class="dashicons dashicons-welcome-learn-more"></span>
+					<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
 					<h3><?php esc_html_e( 'No Mock Tests Found in this Section', 'indianagri-quiz-engine' ); ?></h3>
-					<p><?php esc_html_e( 'Please check back soon or try selecting another examination category.', 'indianagri-quiz-engine' ); ?></p>
+					<p><?php esc_html_e( 'No mock tests are currently available in this section.', 'indianagri-quiz-engine' ); ?></p>
 					<a href="<?php echo esc_url( $page_url() ); ?>" class="iaq-btn iaq-btn-outline" style="margin-top:14px;">
 						&larr; <?php esc_html_e( 'Back to Mock Tests Dashboard', 'indianagri-quiz-engine' ); ?>
 					</a>

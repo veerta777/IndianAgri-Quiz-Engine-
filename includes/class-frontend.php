@@ -44,10 +44,19 @@ class IAQ_Frontend {
 	 * Register frontend stylesheet and quiz script.
 	 */
 	public function register_frontend_assets() {
+		wp_enqueue_style( 'dashicons' );
+
+		wp_register_style(
+			'iaq-google-fonts',
+			'https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800;900&display=swap',
+			array(),
+			null
+		);
+
 		wp_register_style(
 			'iaq-frontend-styles',
 			IAQ_PLUGIN_URL . 'assets/css/frontend.css',
-			array( 'dashicons' ),
+			array( 'dashicons', 'iaq-google-fonts' ),
 			IAQ_VERSION
 		);
 
@@ -495,14 +504,31 @@ class IAQ_Frontend {
 
 		$user_id = is_user_logged_in() ? get_current_user_id() : 0;
 
+		// Handle direct scorecard review inside student dashboard
+		if ( isset( $_GET['attempt_id'] ) && absint( $_GET['attempt_id'] ) > 0 ) {
+			$attempt_id   = absint( $_GET['attempt_id'] );
+			$back_url     = remove_query_arg( 'attempt_id' );
+			$results_html = $this->render_results_shortcode( array( 'id' => $attempt_id ) );
+			return '<div class="iaq-student-portal iaq-portal-fullscreen" id="iaq-student-portal"><div class="iaq-student-dashboard-subview"><div class="iaq-exam-return-nav" style="margin-bottom:16px;"><a href="' . esc_url( $back_url ) . '" class="iaq-btn iaq-btn-outline"><span class="dashicons dashicons-arrow-left-alt"></span> ' . esc_html__( 'Back to Student Dashboard', 'indianagri-quiz-engine' ) . '</a></div>' . $results_html . '</div></div>';
+		}
+
+		// Handle direct examination taking inside student dashboard
+		if ( isset( $_GET['iaq_quiz_id'] ) && absint( $_GET['iaq_quiz_id'] ) > 0 ) {
+			$q_id      = absint( $_GET['iaq_quiz_id'] );
+			$back_url  = remove_query_arg( array( 'iaq_quiz_id', 'iaq_action' ) );
+			$quiz_html = $this->render_quiz_shortcode( array( 'id' => $q_id ) );
+			return '<div class="iaq-student-portal iaq-portal-fullscreen" id="iaq-student-portal"><div class="iaq-student-dashboard-subview"><div class="iaq-exam-return-nav" style="margin-bottom:16px;"><a href="' . esc_url( $back_url ) . '" class="iaq-btn iaq-btn-outline"><span class="dashicons dashicons-arrow-left-alt"></span> ' . esc_html__( 'Back to Student Dashboard', 'indianagri-quiz-engine' ) . '</a></div>' . $quiz_html . '</div></div>';
+		}
+
 		$stats            = IAQ_Quiz_Attempt::get_user_dashboard_stats( $user_id );
 		$history          = $user_id > 0 ? IAQ_Quiz_Attempt::get_user_attempt_history( $user_id, $limit ) : array();
 		$active_attempt   = $user_id > 0 ? IAQ_Quiz_Attempt::get_user_active_attempt( $user_id ) : null;
 		$subject_mastery  = $user_id > 0 ? IAQ_Quiz_Attempt::get_user_overall_subject_mastery( $user_id ) : array();
 		$subscriptions    = $user_id > 0 ? IAQ_Access_Control::get_user_subscriptions( $user_id, 'active' ) : array();
 		$available_plans  = empty( $subscriptions ) ? IAQ_Access_Control::get_plans( array( 'status' => 'active' ) ) : array();
-		$continue_quizzes = IAQ_Quiz_Attempt::get_user_continue_practicing_quizzes( $user_id, 4 );
-		$quiz_counts      = IAQ_Quiz_Builder::get_published_quiz_counts();
+		$continue_quizzes  = IAQ_Quiz_Attempt::get_user_continue_practicing_quizzes( $user_id, 4 );
+		$quiz_counts       = IAQ_Quiz_Builder::get_published_quiz_counts();
+		$performance_trend = $user_id > 0 ? IAQ_Quiz_Attempt::get_user_performance_trend( $user_id, 6 ) : array();
 
 		// Additional Student Learning Features Datasets
 		$bookmarks           = $user_id > 0 ? IAQ_Bookmarks::get_user_bookmarks( $user_id, array( 'limit' => 20 ) ) : array();
@@ -519,6 +545,21 @@ class IAQ_Frontend {
 		$leaderboard_enabled = IAQ_Leaderboard::is_enabled();
 		$leaderboard_data    = $leaderboard_enabled ? IAQ_Leaderboard::get_leaderboard( array( 'limit' => 10, 'current_user' => $user_id ) ) : null;
 
+		// Render integrated modules into dashboard panes
+		$practice_sets_html      = $this->render_practice_sets_shortcode();
+		$mock_tests_html         = $this->render_mock_tests_shortcode();
+		$subscription_plans_html = $this->render_subscription_plans_shortcode();
+
+		// Determine initial active view pane
+		$active_tab = 'dashboard';
+		if ( isset( $_GET['iaq_ps_view'] ) || isset( $_GET['book_id'] ) || ( isset( $_GET['iaq_tab'] ) && 'practice-sets' === $_GET['iaq_tab'] ) ) {
+			$active_tab = 'practice-sets';
+		} elseif ( isset( $_GET['iaq_mt_view'] ) || isset( $_GET['category_id'] ) || isset( $_GET['exam_id'] ) || isset( $_GET['state_id'] ) || isset( $_GET['univ_id'] ) || isset( $_GET['vacancy_id'] ) || isset( $_GET['series_id'] ) || ( isset( $_GET['iaq_tab'] ) && 'mock-tests' === $_GET['iaq_tab'] ) ) {
+			$active_tab = 'mock-tests';
+		} elseif ( isset( $_GET['iaq_tab'] ) ) {
+			$active_tab = sanitize_key( $_GET['iaq_tab'] );
+		}
+
 		ob_start();
 		include IAQ_PLUGIN_DIR . 'templates/frontend/student-dashboard.php';
 		return ob_get_clean();
@@ -529,17 +570,52 @@ class IAQ_Frontend {
 	 *
 	 * @param int    $quiz_id Quiz ID.
 	 * @param string $action Optional action parameter (e.g. 'attempt').
+	 * @param string $base_url Optional base URL to append query arguments to.
 	 * @return string
 	 */
-	public static function get_quiz_url( $quiz_id, $action = '' ) {
+	public static function get_quiz_url( $quiz_id, $action = '', $base_url = '' ) {
 		$args = array( 'iaq_quiz_id' => absint( $quiz_id ) );
 		if ( ! empty( $action ) ) {
 			$args['iaq_action'] = sanitize_key( $action );
 		}
-		if ( isset( $_GET['page'] ) && 'iaq-preview-student-dashboard' === $_GET['page'] ) {
+
+		// Resolve base URL safely (handles AJAX and non-AJAX contexts)
+		if ( empty( $base_url ) ) {
+			if ( ! empty( $_POST['current_url'] ) ) {
+				$base_url = esc_url_raw( wp_unslash( $_POST['current_url'] ) );
+			} elseif ( ! empty( $_GET['current_url'] ) ) {
+				$base_url = esc_url_raw( wp_unslash( $_GET['current_url'] ) );
+			} elseif ( ( function_exists( 'wp_doing_ajax' ) && wp_doing_ajax() ) || ( defined( 'DOING_AJAX' ) && DOING_AJAX ) ) {
+				$referer = function_exists( 'wp_get_referer' ) ? wp_get_referer() : '';
+				if ( ! empty( $referer ) && false === strpos( $referer, 'admin-ajax.php' ) ) {
+					$base_url = $referer;
+				}
+			}
+		}
+
+		if ( empty( $base_url ) && function_exists( 'get_permalink' ) ) {
+			$permalink = get_permalink();
+			if ( ! empty( $permalink ) && false === strpos( $permalink, 'admin-ajax.php' ) ) {
+				$base_url = $permalink;
+			}
+		}
+
+		if ( empty( $base_url ) ) {
+			$base_url = function_exists( 'home_url' ) ? home_url( '/' ) : '/';
+		}
+
+		// Strip any fragment/hash so query args are not placed after the hash
+		if ( false !== strpos( $base_url, '#' ) ) {
+			$base_url = strtok( $base_url, '#' );
+		}
+
+		// Strip existing quiz/action/attempt parameters so they don't compound
+		$base_url = remove_query_arg( array( 'iaq_quiz_id', 'iaq_action', 'attempt_id' ), $base_url );
+
+		if ( ( isset( $_GET['page'] ) && 'iaq-preview-student-dashboard' === $_GET['page'] ) || ( false !== strpos( $base_url, 'iaq-preview-student-dashboard' ) ) ) {
 			$args['page'] = 'iaq-preview-student-quiz';
 		}
-		return apply_filters( 'iaq_quiz_url', add_query_arg( $args, get_permalink() ), $quiz_id, $action );
+		return apply_filters( 'iaq_quiz_url', add_query_arg( $args, $base_url ), $quiz_id, $action );
 	}
 
 	/**
@@ -551,8 +627,12 @@ class IAQ_Frontend {
 	 */
 	public static function get_quiz_list_url( $type = '', $category = '' ) {
 		$args = array();
-		if ( ! empty( $type ) ) {
-			$args['quiz_type'] = sanitize_key( $type );
+		if ( 'practice' === $type ) {
+			$args['iaq_tab'] = 'practice-sets';
+		} elseif ( 'mock' === $type ) {
+			$args['iaq_tab'] = 'mock-tests';
+		} else {
+			$args['iaq_tab'] = 'examinations';
 		}
 		if ( ! empty( $category ) ) {
 			$args['exam_category'] = sanitize_text_field( $category );
@@ -583,7 +663,7 @@ class IAQ_Frontend {
 	 * @return string
 	 */
 	public static function get_pricing_url() {
-		$args = array();
+		$args = array( 'iaq_tab' => 'subscriptions' );
 		if ( isset( $_GET['page'] ) && 'iaq-preview-student-dashboard' === $_GET['page'] ) {
 			$args['page'] = 'iaq-preview-subscription-plans';
 		}
@@ -690,10 +770,11 @@ class IAQ_Frontend {
 			wp_send_json_error( array( 'message' => $quiz_id->get_error_message() ) );
 		}
 
+		$current_url = ! empty( $_POST['current_url'] ) ? esc_url_raw( wp_unslash( $_POST['current_url'] ) ) : '';
 		wp_send_json_success(
 			array(
 				'quiz_id'      => $quiz_id,
-				'redirect_url' => self::get_quiz_url( $quiz_id, 'attempt' ),
+				'redirect_url' => self::get_quiz_url( $quiz_id, 'attempt', $current_url ),
 			)
 		);
 	}
@@ -753,10 +834,11 @@ class IAQ_Frontend {
 			wp_send_json_error( array( 'message' => $quiz_id->get_error_message() ) );
 		}
 
+		$current_url = ! empty( $_POST['current_url'] ) ? esc_url_raw( wp_unslash( $_POST['current_url'] ) ) : '';
 		wp_send_json_success(
 			array(
 				'quiz_id'      => $quiz_id,
-				'redirect_url' => self::get_quiz_url( $quiz_id, 'attempt' ),
+				'redirect_url' => self::get_quiz_url( $quiz_id, 'attempt', $current_url ),
 			)
 		);
 	}
@@ -777,10 +859,11 @@ class IAQ_Frontend {
 			wp_send_json_error( array( 'message' => $quiz_id->get_error_message() ) );
 		}
 
+		$current_url = ! empty( $_POST['current_url'] ) ? esc_url_raw( wp_unslash( $_POST['current_url'] ) ) : '';
 		wp_send_json_success(
 			array(
 				'quiz_id'      => $quiz_id,
-				'redirect_url' => self::get_quiz_url( $quiz_id, 'attempt' ),
+				'redirect_url' => self::get_quiz_url( $quiz_id, 'attempt', $current_url ),
 			)
 		);
 	}

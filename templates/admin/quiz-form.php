@@ -192,32 +192,7 @@ if ( ! empty( $settings['default_duration'] ) ) $default_duration = $settings['d
 					</div>
 				</div>
 
-				<!-- PYQ Details Card (Used when Quiz Type is Previous Year Paper) -->
-				<div class="iaq-card" id="iaq-pyq-details-card">
-					<div class="iaq-card-header">
-						<h2><span class="dashicons dashicons-media-document"></span> <?php esc_html_e( 'Previous-Year Paper (PYQ) Specifications', 'indianagri-quiz-engine' ); ?></h2>
-						<span class="iaq-card-help"><?php esc_html_e( 'Configure examination year, exam shift/session, and optional official paper PDF download.', 'indianagri-quiz-engine' ); ?></span>
-					</div>
-					<div class="iaq-card-body">
-						<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-							<div class="iaq-form-group">
-								<label for="pyq-year"><?php esc_html_e( 'Examination Year', 'indianagri-quiz-engine' ); ?></label>
-								<input type="number" min="1990" max="2035" name="pyq_year" id="pyq-year" class="iaq-input iaq-full-width" value="<?php echo esc_attr( $is_edit && ! empty( $quiz->pyq_year ) ? $quiz->pyq_year : date( 'Y' ) ); ?>" placeholder="e.g. 2023">
-								<span class="iaq-card-help"><?php esc_html_e( 'Year in which this official exam paper was conducted.', 'indianagri-quiz-engine' ); ?></span>
-							</div>
-							<div class="iaq-form-group">
-								<label for="pyq-session"><?php esc_html_e( 'Exam Session / Shift / Subject Sub-Stream', 'indianagri-quiz-engine' ); ?></label>
-								<input type="text" name="pyq_session" id="pyq-session" class="iaq-input iaq-full-width" value="<?php echo esc_attr( $is_edit && ! empty( $quiz->pyq_session ) ? $quiz->pyq_session : '' ); ?>" placeholder="e.g. Shift 1 / Morning Session / Agronomy Special">
-								<span class="iaq-card-help"><?php esc_html_e( 'Session, shift, or paper series code.', 'indianagri-quiz-engine' ); ?></span>
-							</div>
-						</div>
-						<div class="iaq-form-group" style="margin-top:14px;">
-							<label for="pyq-pdf-url"><?php esc_html_e( 'Official Question Paper PDF Attachment URL', 'indianagri-quiz-engine' ); ?></label>
-							<input type="url" name="pdf_attachment_url" id="pyq-pdf-url" class="iaq-input iaq-full-width" value="<?php echo esc_attr( $is_edit && ! empty( $quiz->pdf_attachment_url ) ? $quiz->pdf_attachment_url : '' ); ?>" placeholder="https://example.com/wp-content/uploads/pyq-2023.pdf">
-							<span class="iaq-card-help"><?php esc_html_e( 'Optional link to downloadable question paper or scanned key PDF.', 'indianagri-quiz-engine' ); ?></span>
-						</div>
-					</div>
-				</div>
+
 			</div>
 
 			<!-- SIDEBAR COLUMN -->

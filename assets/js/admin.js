@@ -248,5 +248,112 @@
 				}, 1500);
 			});
 		});
+
+		/* =========================================================================
+		 * 8. Taxonomy (Subjects & Topics) Interactive In-Place Editing
+		 * ========================================================================= */
+		// Edit Subject
+		$(document).on('click', '.iaq-edit-subject-btn', function (e) {
+			e.preventDefault();
+			var id = $(this).data('id') || $(this).attr('data-id');
+			var name = $(this).data('name') || $(this).attr('data-name') || '';
+			var slug = $(this).data('slug') || $(this).attr('data-slug') || '';
+			var desc = $(this).data('desc') || $(this).attr('data-desc') || '';
+
+			$('#subj-id').val(id);
+			$('#subj-name').val(name);
+			$('#subj-slug').val(slug);
+			$('#subj-desc').val(desc);
+
+			$('#iaq-subject-form-card .iaq-form-title-text').text('Edit Subject: ' + name);
+			$('#iaq-subject-submit-btn .iaq-btn-text').text('Update Subject');
+			$('#iaq-subject-cancel-btn').fadeIn(150);
+
+			var $card = $('#iaq-subject-form-card');
+			if ($card.length) {
+				$card.removeClass('iaq-form-highlight');
+				setTimeout(function () {
+					$card.addClass('iaq-form-highlight');
+				}, 20);
+				$('html, body').animate({
+					scrollTop: $card.offset().top - 30
+				}, 300);
+			}
+			$('#subj-name').focus();
+		});
+
+		// Cancel Subject Edit
+		$(document).on('click', '#iaq-subject-cancel-btn', function (e) {
+			e.preventDefault();
+			$('#subj-id').val('');
+			$('#subj-name').val('');
+			$('#subj-slug').val('');
+			$('#subj-desc').val('');
+
+			$('#iaq-subject-form-card .iaq-form-title-text').text('Add New Subject');
+			$('#iaq-subject-submit-btn .iaq-btn-text').text('Create Subject');
+			$('#iaq-subject-cancel-btn').hide();
+			$('#iaq-subject-form-card').removeClass('iaq-form-highlight');
+		});
+
+		// Edit Topic
+		$(document).on('click', '.iaq-edit-topic-btn', function (e) {
+			e.preventDefault();
+			var id = $(this).data('id') || $(this).attr('data-id');
+			var subjectId = $(this).data('subject-id') || $(this).attr('data-subject-id') || '';
+			var name = $(this).data('name') || $(this).attr('data-name') || '';
+			var slug = $(this).data('slug') || $(this).attr('data-slug') || '';
+
+			$('#topic-id').val(id);
+			if (subjectId) {
+				$('#topic-subject').val(subjectId);
+			}
+			$('#topic-name').val(name);
+			$('#topic-slug').val(slug);
+
+			$('#iaq-topic-form-card .iaq-form-title-text').text('Edit Topic: ' + name);
+			$('#iaq-topic-submit-btn .iaq-btn-text').text('Update Topic');
+			$('#iaq-topic-cancel-btn').fadeIn(150);
+
+			var $card = $('#iaq-topic-form-card');
+			if ($card.length) {
+				$card.removeClass('iaq-form-highlight');
+				setTimeout(function () {
+					$card.addClass('iaq-form-highlight');
+				}, 20);
+				$('html, body').animate({
+					scrollTop: $card.offset().top - 30
+				}, 300);
+			}
+			$('#topic-name').focus();
+		});
+
+		// Cancel Topic Edit
+		$(document).on('click', '#iaq-topic-cancel-btn', function (e) {
+			e.preventDefault();
+			$('#topic-id').val('');
+			$('#topic-subject').val('');
+			$('#topic-name').val('');
+			$('#topic-slug').val('');
+
+			$('#iaq-topic-form-card .iaq-form-title-text').text('Add New Topic');
+			$('#iaq-topic-submit-btn .iaq-btn-text').text('Create Topic');
+			$('#iaq-topic-cancel-btn').hide();
+			$('#iaq-topic-form-card').removeClass('iaq-form-highlight');
+		});
+
+		// Check if URL has edit params on initial load, auto-scroll and highlight
+		var urlParams = new URLSearchParams(window.location.search);
+		if (urlParams.has('edit_subject') && $('#iaq-subject-form-card').length) {
+			$('#iaq-subject-form-card').addClass('iaq-form-highlight');
+			$('html, body').animate({
+				scrollTop: $('#iaq-subject-form-card').offset().top - 30
+			}, 300);
+		} else if (urlParams.has('edit_topic') && $('#iaq-topic-form-card').length) {
+			$('#iaq-topic-form-card').addClass('iaq-form-highlight');
+			$('html, body').animate({
+				scrollTop: $('#iaq-topic-form-card').offset().top - 30
+			}, 300);
+		}
 	});
 })(jQuery);

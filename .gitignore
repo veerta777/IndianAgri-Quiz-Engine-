@@ -8,3 +8,7 @@ Thumbs.db
 *.log
 .vscode/
 .idea/
+backups/
+backup.php
+local-preview/test_bilingual_import.csv
+

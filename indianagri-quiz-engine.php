@@ -21,11 +21,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Plugin constants.
 if ( ! defined( 'IAQ_VERSION' ) ) {
-	define( 'IAQ_VERSION', '1.0.0' );
+	define( 'IAQ_VERSION', '1.1.0' );
 }
 
 if ( ! defined( 'IAQ_DB_VERSION' ) ) {
-	define( 'IAQ_DB_VERSION', '1.0.0' );
+	define( 'IAQ_DB_VERSION', '1.1.0' );
 }
 
 if ( ! defined( 'IAQ_PLUGIN_DIR' ) ) {
@@ -59,6 +59,7 @@ require_once IAQ_PLUGIN_DIR . 'includes/class-study-streaks.php';
 require_once IAQ_PLUGIN_DIR . 'includes/class-import-export.php';
 require_once IAQ_PLUGIN_DIR . 'includes/class-frontend.php';
 require_once IAQ_PLUGIN_DIR . 'includes/class-admin.php';
+require_once IAQ_PLUGIN_DIR . 'includes/class-rest-api.php';
 require_once IAQ_PLUGIN_DIR . 'includes/class-plugin.php';
 
 /**

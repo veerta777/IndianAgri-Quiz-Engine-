@@ -31,6 +31,7 @@ class Test_Mock_Tests {
 		self::test_content_type_isolation_and_archival();
 		self::test_access_control_and_attempt_enrichment();
 		self::test_frontend_shortcode_rendering();
+		self::test_mock_hierarchy_drilldown_and_bulk_import();
 
 		echo "Test_Mock_Tests: ALL PASS\n";
 	}
@@ -588,5 +589,167 @@ class Test_Mock_Tests {
 		}
 
 		echo "  [PASS] Shortcode [iaq_mock_tests] rendering, view routing, and legacy delegation verified.\n";
+	}
+
+	/**
+	 * 11. Mock Test Module 4-Level Admin Hierarchy Drill-Down & Bulk Import.
+	 * Level 1: Category (e.g. 1. ICAR Exams)
+	 * Level 2: Examinations under Category (ICAR JRF, ICAR SRF, ICAR NET)
+	 * Level 3: Subjects under Exam (Agronomy, Soil Science, etc.)
+	 * Level 4: Mock Tests (Mock Test 1, 2, 3...) with Bulk Import
+	 */
+	private static function test_mock_hierarchy_drilldown_and_bulk_import() {
+		// 1. Verify Category examinations retrieval and default hierarchy assurance
+		$all_cats = IAQ_Mock_Tests::get_categories();
+		$icar_cat_id = 1;
+		foreach ( $all_cats as $c ) {
+			if ( 'icar-exams' === $c->slug || false !== stripos( $c->name, 'ICAR' ) ) {
+				$icar_cat_id = (int) $c->id;
+				break;
+			}
+		}
+
+		$cat_1_exams = IAQ_Mock_Tests::get_category_examinations( $icar_cat_id );
+		if ( empty( $cat_1_exams ) ) {
+			throw new Exception( "Failed to retrieve examinations for Category {$icar_cat_id} (ICAR Exams)." );
+		}
+
+		$exam_names = wp_list_pluck( $cat_1_exams, 'name' );
+		$has_jrf = false;
+		$jrf_exam_id = 0;
+		foreach ( $cat_1_exams as $ex ) {
+			if ( false !== stripos( $ex->name, 'JRF' ) || 'ICAR-JRF' === $ex->code ) {
+				$has_jrf = true;
+				$jrf_exam_id = (int) $ex->id;
+				break;
+			}
+		}
+
+		if ( ! $has_jrf || ! $jrf_exam_id ) {
+			throw new Exception( 'ICAR JRF exam was not created/linked under Category 1.' );
+		}
+
+		// 2. Verify Level 3 Subjects under ICAR JRF
+		$jrf_subjects = IAQ_Practice_Sets::get_exam_subjects( $jrf_exam_id );
+		if ( empty( $jrf_subjects ) ) {
+			throw new Exception( 'No subjects assigned to ICAR JRF exam.' );
+		}
+
+		$agronomy_subject_id = 0;
+		foreach ( $jrf_subjects as $subj ) {
+			if ( false !== stripos( $subj->name, 'Agronomy' ) ) {
+				$agronomy_subject_id = (int) $subj->id;
+				break;
+			}
+		}
+
+		if ( ! $agronomy_subject_id ) {
+			// Find Agronomy from Question Bank and assign
+			$all_subs = IAQ_Question_Bank::get_subjects();
+			foreach ( $all_subs as $s ) {
+				if ( false !== stripos( $s->name, 'Agronomy' ) ) {
+					$agronomy_subject_id = (int) $s->id;
+					IAQ_Practice_Sets::assign_subject_to_exam( $jrf_exam_id, $agronomy_subject_id );
+					break;
+				}
+			}
+		}
+
+		if ( ! $agronomy_subject_id ) {
+			throw new Exception( 'Agronomy subject not found in system.' );
+		}
+
+		// 3. Verify Level 4: Create Mock Tests under ICAR JRF - Agronomy
+		$m1_id = IAQ_Quiz_Builder::save_quiz(
+			array(
+				'title'            => 'ICAR JRF Agronomy - Mock Test 1',
+				'quiz_type'        => 'mock',
+				'subject_id'       => $agronomy_subject_id,
+				'exam_category'    => 'ICAR JRF',
+				'duration_minutes' => 120,
+				'correct_marks'    => 4.00,
+				'negative_marks'   => 1.00,
+				'pass_percentage'  => 50.00,
+				'status'           => 'published',
+				'access_type'      => 'free',
+				'display_order'    => 1,
+			)
+		);
+
+		$m2_id = IAQ_Quiz_Builder::save_quiz(
+			array(
+				'title'            => 'ICAR JRF Agronomy - Mock Test 2',
+				'quiz_type'        => 'mock',
+				'subject_id'       => $agronomy_subject_id,
+				'exam_category'    => 'ICAR JRF',
+				'duration_minutes' => 120,
+				'correct_marks'    => 4.00,
+				'negative_marks'   => 1.00,
+				'pass_percentage'  => 50.00,
+				'status'           => 'published',
+				'access_type'      => 'paid',
+				'display_order'    => 2,
+			)
+		);
+
+		IAQ_Mock_Tests::attach_quiz_to_mock_context(
+			$m1_id,
+			array(
+				'category_id' => $icar_cat_id,
+				'exam_id'     => $jrf_exam_id,
+				'subject_id'  => $agronomy_subject_id,
+				'sort_order'  => 1,
+			)
+		);
+
+		IAQ_Mock_Tests::attach_quiz_to_mock_context(
+			$m2_id,
+			array(
+				'category_id' => $icar_cat_id,
+				'exam_id'     => $jrf_exam_id,
+				'subject_id'  => $agronomy_subject_id,
+				'sort_order'  => 2,
+			)
+		);
+
+		// 4. Retrieve mock tests in context
+		$context_mocks = IAQ_Mock_Tests::get_context_mock_tests(
+			array(
+				'category_id' => $icar_cat_id,
+				'exam_id'     => $jrf_exam_id,
+				'subject_id'  => $agronomy_subject_id,
+				'status'      => 'all',
+			)
+		);
+
+		if ( count( $context_mocks ) < 2 ) {
+			throw new Exception( sprintf( 'Expected at least 2 mock tests in Agronomy context, got %d.', count( $context_mocks ) ) );
+		}
+
+		if ( 1 !== (int) $context_mocks[0]->mock_test_number || 2 !== (int) $context_mocks[1]->mock_test_number ) {
+			throw new Exception( 'Mock tests dynamic numeric ordering (Mock Test 1, Mock Test 2) failed.' );
+		}
+
+		// 5. Verify Bulk Import into Mock Test 1
+		$csv_content = "question_text,question_text_hi,option_a,option_a_hi,option_b,option_b_hi,option_c,option_c_hi,option_d,option_d_hi,correct_option,explanation,explanation_hi,marks,negative_marks,difficulty,subject,topic\n";
+		$csv_content .= '"Which crop is known as the Queen of Cereals?","अनाजों की रानी किसे कहा जाता है?","Rice","चावल","Wheat","गेहूं","Maize","मक्का","Barley","जौ","C","Maize is known as queen of cereals.","मक्का अनाजों की रानी कहलाता है.",4.0,1.0,easy,"Agronomy","Cereal Crops"' . "\n";
+		$csv_content .= '"What is the seed rate of hybrid rice (kg/ha)?","संकर धान की बीज दर क्या है?","15","15","25","25","35","35","50","50","A","Standard hybrid rice seed rate is 15 kg/ha.","मानक बीज दर 15 किग्रा/हेक्टेयर है.",4.0,1.0,medium,"Agronomy","Rice Cultivation"' . "\n";
+
+		$tmp_file = tempnam( sys_get_temp_dir(), 'mock_test_csv_' );
+		file_put_contents( $tmp_file, $csv_content );
+
+		$import_res = IAQ_Import_Export::import_from_file( $tmp_file, $m1_id, null, 'agronomy_mock.csv' );
+		@unlink( $tmp_file );
+
+		if ( empty( $import_res['success'] ) || 2 !== (int) $import_res['imported'] ) {
+			throw new Exception( 'Bulk import of MCQs into Mock Test 1 failed.' );
+		}
+
+		$m1_updated = IAQ_Quiz_Builder::get_quiz( $m1_id );
+		if ( (int) $m1_updated->total_questions < 2 ) {
+			throw new Exception( 'Mock Test 1 question count did not update after bulk import.' );
+		}
+
+		echo "  [PASS] 4-Level Admin Hierarchy Drill-Down (Categories → ICAR JRF → Agronomy → Mock Test 1, 2) and Bulk Import verified.\n";
 	}
 }

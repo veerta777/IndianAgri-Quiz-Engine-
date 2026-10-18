@@ -38,7 +38,6 @@ $exam_categories = IAQ_Question_Bank::get_exam_categories();
 $count_all      = IAQ_Quiz_Builder::get_quiz_count();
 $count_practice = IAQ_Quiz_Builder::get_quiz_count( array( 'quiz_type' => 'practice' ) );
 $count_mock     = IAQ_Quiz_Builder::get_quiz_count( array( 'quiz_type' => 'mock' ) );
-$count_pyq      = IAQ_Quiz_Builder::get_quiz_count( array( 'quiz_type' => 'previous_year' ) );
 ?>
 
 <div class="wrap iaq-admin-wrap">
@@ -82,13 +81,6 @@ $count_pyq      = IAQ_Quiz_Builder::get_quiz_count( array( 'quiz_type' => 'previ
 			<div class="iaq-stat-content">
 				<span class="iaq-stat-label"><?php esc_html_e( 'Mock Tests', 'indianagri-quiz-engine' ); ?></span>
 				<span class="iaq-stat-value"><?php echo number_format_i18n( $count_mock ); ?></span>
-			</div>
-		</div>
-		<div class="iaq-stat-card">
-			<div class="iaq-stat-icon dashicons dashicons-archive" style="color: #7c3aed; background: #ede9fe;"></div>
-			<div class="iaq-stat-content">
-				<span class="iaq-stat-label"><?php esc_html_e( 'Previous Year Papers', 'indianagri-quiz-engine' ); ?></span>
-				<span class="iaq-stat-value"><?php echo number_format_i18n( $count_pyq ); ?></span>
 			</div>
 		</div>
 	</div>

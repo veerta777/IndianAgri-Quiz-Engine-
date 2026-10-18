@@ -26,6 +26,11 @@ if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 		</div>
 
 		<div class="iaq-topbar-controls">
+			<!-- Return to Dashboard Control -->
+			<button type="button" class="iaq-btn-exam-back" id="iaq-exam-back-dashboard-btn" title="<?php esc_attr_e( 'Pause & Return to Dashboard', 'indianagri-quiz-engine' ); ?>">
+				<span class="dashicons dashicons-arrow-left-alt"></span> <span class="iaq-btn-text"><?php esc_html_e( 'Dashboard', 'indianagri-quiz-engine' ); ?></span>
+			</button>
+
 			<!-- Timer Clock -->
 			<div class="iaq-timer-clock-badge" id="iaq-timer-container">
 				<span class="dashicons dashicons-clock iaq-timer-icon"></span>
@@ -74,6 +79,11 @@ if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 
 			<!-- Options List -->
 			<div class="iaq-options-container" id="iaq-options-list">
+				<!-- Injected dynamically via JS -->
+			</div>
+
+			<!-- Immediate Feedback & Scientific Explanation (Practice Mode) -->
+			<div class="iaq-immediate-feedback-box" id="iaq-immediate-feedback-box" style="display:none;" role="region" aria-live="polite">
 				<!-- Injected dynamically via JS -->
 			</div>
 
@@ -293,14 +303,14 @@ if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 			<button type="button" class="iaq-btn-action-primary" id="iaq-res-review-btn">
 				<span class="dashicons dashicons-search"></span> <?php esc_html_e( 'Review Detailed Solutions & Explanations', 'indianagri-quiz-engine' ); ?>
 			</button>
-			<button type="button" class="iaq-btn-action-secondary" id="iaq-res-print-btn">
-				<span class="dashicons dashicons-printer"></span> <?php esc_html_e( 'Print Official Scorecard', 'indianagri-quiz-engine' ); ?>
+			<button type="button" class="iaq-btn-print" id="iaq-res-print-btn">
+				<span class="dashicons dashicons-printer"></span> <?php esc_html_e( 'Print Scorecard / Download PDF', 'indianagri-quiz-engine' ); ?>
 			</button>
 			<button type="button" class="iaq-btn-retake" id="iaq-res-retake-btn">
 				<span class="dashicons dashicons-redo"></span> <?php esc_html_e( 'Retake Test', 'indianagri-quiz-engine' ); ?>
 			</button>
-			<a href="<?php echo esc_url( function_exists( 'admin_url' ) ? admin_url( 'page=iaq-preview-student-list' ) : '#' ); ?>" class="iaq-btn-back-list">
-				&larr; <?php esc_html_e( 'Back to Mock Test Series', 'indianagri-quiz-engine' ); ?>
+			<a href="<?php echo esc_url( remove_query_arg( array( 'iaq_quiz_id', 'iaq_action', 'attempt_id' ), ( function_exists( 'get_permalink' ) && get_permalink() ? get_permalink() : '/' ) ) ); ?>" class="iaq-btn-back-list">
+				&larr; <?php esc_html_e( 'Back to Student Dashboard', 'indianagri-quiz-engine' ); ?>
 			</a>
 		</div>
 	</div>
@@ -317,12 +327,12 @@ if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 				<h2 class="iaq-solutions-heading"><?php esc_html_e( 'Detailed Solutions & Explanations', 'indianagri-quiz-engine' ); ?></h2>
 				<p class="iaq-solutions-subheading" id="iaq-sol-quiz-title"></p>
 			</div>
-			<div class="iaq-solutions-header-actions">
+			<div class="iaq-solutions-header-actions" style="display: flex; gap: 8px; align-items: center;">
+				<button type="button" class="iaq-btn-print" id="iaq-sol-print-btn">
+					<span class="dashicons dashicons-printer"></span> <?php esc_html_e( 'Print Solutions / Download PDF', 'indianagri-quiz-engine' ); ?>
+				</button>
 				<button type="button" class="iaq-btn-action-secondary" id="iaq-sol-back-btn">
 					&larr; <?php esc_html_e( 'Return to Scorecard', 'indianagri-quiz-engine' ); ?>
-				</button>
-				<button type="button" class="iaq-btn-action-secondary" id="iaq-sol-print-btn">
-					<span class="dashicons dashicons-printer"></span> <?php esc_html_e( 'Print Solutions', 'indianagri-quiz-engine' ); ?>
 				</button>
 			</div>
 		</div>
@@ -349,9 +359,12 @@ if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 		</div>
 
 		<!-- Bottom Navigation Bar -->
-		<div class="iaq-solutions-footer">
+		<div class="iaq-solutions-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
 			<button type="button" class="iaq-btn-action-secondary" id="iaq-sol-bottom-back-btn">
 				&larr; <?php esc_html_e( 'Return to Scorecard', 'indianagri-quiz-engine' ); ?>
+			</button>
+			<button type="button" class="iaq-btn-print" id="iaq-sol-bottom-print-btn">
+				<span class="dashicons dashicons-printer"></span> <?php esc_html_e( 'Print Solutions / Download PDF', 'indianagri-quiz-engine' ); ?>
 			</button>
 		</div>
 

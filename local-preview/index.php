@@ -16,7 +16,26 @@ define( 'IAQ_PLUGIN_DIR', dirname( __DIR__ ) . '/' );
 define( 'IAQ_PLUGIN_URL', '/' );
 define( 'IAQ_PLUGIN_BASENAME', 'indianagri-quiz-engine/indianagri-quiz-engine.php' );
 
+$parsed_path = parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH );
+$real_file   = dirname( __DIR__ ) . $parsed_path;
+if ( is_file( $real_file ) && preg_match( '/\.(?:css|js|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/i', $parsed_path ) ) {
+	return false;
+}
+
 $data_file = __DIR__ . '/data.json';
+
+// Normalize query parameters if admin.php was prepended in query string.
+if ( isset( $_GET['admin_php?page'] ) ) {
+	$_GET['page'] = $_GET['admin_php?page'];
+	unset( $_GET['admin_php?page'] );
+}
+foreach ( $_GET as $k => $v ) {
+	if ( strpos( $k, 'admin_php?' ) === 0 ) {
+		$real_k = substr( $k, strlen( 'admin_php?' ) );
+		$_GET[ $real_k ] = $v;
+		unset( $_GET[ $k ] );
+	}
+}
 
 /**
  * File-backed Persistent Mock WPDB.
@@ -117,12 +136,35 @@ class Local_Persistent_WPDB {
 			$args = $args[0];
 		}
 		foreach ( $args as $arg ) {
-			$val = is_numeric( $arg ) ? $arg : "'" . addslashes( (string) $arg ) . "'";
-			$pos = strpos( $query, '%d' );
-			if ( false === $pos ) $pos = strpos( $query, '%s' );
-			if ( false === $pos ) $pos = strpos( $query, '%f' );
-			if ( false !== $pos ) {
-				$query = substr_replace( $query, $val, $pos, 2 );
+			$positions = array();
+			$pos_d = strpos( $query, '%d' );
+			if ( false !== $pos_d ) {
+				$positions[ $pos_d ] = '%d';
+			}
+			$pos_s = strpos( $query, '%s' );
+			if ( false !== $pos_s ) {
+				$positions[ $pos_s ] = '%s';
+			}
+			$pos_f = strpos( $query, '%f' );
+			if ( false !== $pos_f ) {
+				$positions[ $pos_f ] = '%f';
+			}
+
+			if ( ! empty( $positions ) ) {
+				ksort( $positions );
+				reset( $positions );
+				$first_pos = key( $positions );
+				$type      = current( $positions );
+
+				if ( '%d' === $type ) {
+					$val = (int) $arg;
+				} elseif ( '%f' === $type ) {
+					$val = (float) $arg;
+				} else {
+					$val = "'" . addslashes( (string) $arg ) . "'";
+				}
+
+				$query = substr_replace( $query, (string) $val, $first_pos, 2 );
 			}
 		}
 		return $query;
@@ -244,7 +286,7 @@ class Local_Persistent_WPDB {
 		}
 
 		// Subjects query
-		if ( strpos( $query, 'wp_iaq_subjects' ) !== false && strpos( $query, 'SELECT s.*' ) !== false ) {
+		if ( strpos( $query, 'wp_iaq_subjects' ) !== false && strpos( $query, 'SELECT s.*' ) !== false && strpos( $query, 'wp_iaq_exam_subjects' ) === false ) {
 			$subjects = array();
 			foreach ( $this->data['tables']['wp_iaq_subjects'] as $s ) {
 				$obj = (object) $s;
@@ -373,7 +415,7 @@ class Local_Persistent_WPDB {
 
 		// Quiz counts query
 		if ( strpos( $query, 'wp_iaq_quizzes' ) !== false && strpos( $query, 'COUNT(id) as count_val' ) !== false ) {
-			$counts = array( 'practice' => 0, 'mock' => 0, 'previous_year' => 0 );
+			$counts = array( 'practice' => 0, 'mock' => 0 );
 			foreach ( $this->data['tables']['wp_iaq_quizzes'] as $qz ) {
 				$st = isset( $qz['status'] ) ? $qz['status'] : 'published';
 				$qt = isset( $qz['quiz_type'] ) ? $qz['quiz_type'] : 'practice';
@@ -967,6 +1009,8 @@ class Local_Persistent_WPDB {
 				if ( $exam_match && $vac_eid !== $exam_match ) continue;
 				if ( $status_match && isset( $vac['status'] ) && $vac['status'] !== $status_match ) continue;
 				$clone = (object) $vac;
+				$clone->exam_id = $vac_eid;
+				$clone->examination_id = $vac_eid;
 				$clone->exam_name = ( $vac_eid && isset( $this->data['tables']['wp_iaq_examinations'][ $vac_eid ] ) ) ? $this->data['tables']['wp_iaq_examinations'][ $vac_eid ]['name'] : '';
 				$list[] = $clone;
 			}
@@ -1208,8 +1252,12 @@ class Local_Persistent_WPDB {
 			}
 			if ( preg_match( "/WHERE (?:a\.)?id = (\d+)/", $query, $m ) ) {
 				$id = (int) $m[1];
+				$req_uid = preg_match( "/(?:AND|and) (?:a\.)?user_id = (\d+)/", $query, $um ) ? (int) $um[1] : 0;
 				if ( isset( $this->data['tables']['wp_iaq_quiz_attempts'][ $id ] ) ) {
 					$att = (object) $this->data['tables']['wp_iaq_quiz_attempts'][ $id ];
+					if ( $req_uid > 0 && (int) $att->user_id !== $req_uid ) {
+						return null;
+					}
 					if ( isset( $this->data['tables']['wp_iaq_quizzes'][ $att->quiz_id ] ) ) {
 						$qz = $this->data['tables']['wp_iaq_quizzes'][ $att->quiz_id ];
 						$att->duration_minutes  = isset( $qz['duration_minutes'] ) ? $qz['duration_minutes'] : 0;
@@ -1276,6 +1324,9 @@ class Local_Persistent_WPDB {
 			if ( strpos( $query, 'wp_iaq_user_subscriptions' ) !== false ) {
 				return isset( $this->data['tables']['wp_iaq_user_subscriptions'][ $id ] ) ? (object) $this->data['tables']['wp_iaq_user_subscriptions'][ $id ] : null;
 			}
+			if ( strpos( $query, 'wp_iaq_attempt_answers' ) !== false ) {
+				return isset( $this->data['tables']['wp_iaq_attempt_answers'][ $id ] ) ? (object) $this->data['tables']['wp_iaq_attempt_answers'][ $id ] : null;
+			}
 		}
 
 		if ( strpos( $query, 'wp_iaq_examinations' ) !== false && preg_match( "/WHERE (?:code = )'([^']+)'/", $query, $m ) ) {
@@ -1304,12 +1355,31 @@ class Local_Persistent_WPDB {
 		if ( strpos( $query, 'wp_iaq_mock_categories' ) !== false ) {
 			if ( preg_match( "/WHERE (?:id = )(\d+)/", $query, $m ) ) {
 				$cid = (int) $m[1];
-				return isset( $this->data['tables']['wp_iaq_mock_categories'][ $cid ] ) ? (object) $this->data['tables']['wp_iaq_mock_categories'][ $cid ] : null;
+				if ( isset( $this->data['tables']['wp_iaq_mock_categories'][ $cid ] ) ) {
+					$c = (object) $this->data['tables']['wp_iaq_mock_categories'][ $cid ];
+					$c->description   = isset( $c->description ) ? $c->description : '';
+					$c->code          = isset( $c->code ) ? $c->code : '';
+					$c->badge_text    = isset( $c->badge_text ) ? $c->badge_text : '';
+					$c->icon          = isset( $c->icon ) ? $c->icon : 'dashicons-awards';
+					$c->display_order = isset( $c->display_order ) ? (int) $c->display_order : 1;
+					$c->status        = isset( $c->status ) ? $c->status : 'active';
+					return $c;
+				}
+				return null;
 			}
 			if ( preg_match( "/WHERE (?:slug = )'([^']+)'/", $query, $m ) ) {
 				$sl = $m[1];
 				foreach ( $this->data['tables']['wp_iaq_mock_categories'] as $cat ) {
-					if ( isset( $cat['slug'] ) && $cat['slug'] === $sl ) return (object) $cat;
+					if ( isset( $cat['slug'] ) && $cat['slug'] === $sl ) {
+						$c = (object) $cat;
+						$c->description   = isset( $c->description ) ? $c->description : '';
+						$c->code          = isset( $c->code ) ? $c->code : '';
+						$c->badge_text    = isset( $c->badge_text ) ? $c->badge_text : '';
+						$c->icon          = isset( $c->icon ) ? $c->icon : 'dashicons-awards';
+						$c->display_order = isset( $c->display_order ) ? (int) $c->display_order : 1;
+						$c->status        = isset( $c->status ) ? $c->status : 'active';
+						return $c;
+					}
 				}
 			}
 		}
@@ -1318,7 +1388,19 @@ class Local_Persistent_WPDB {
 		if ( strpos( $query, 'wp_iaq_mock_states_universities' ) !== false ) {
 			if ( preg_match( "/WHERE (?:id = )(\d+)/", $query, $m ) ) {
 				$suid = (int) $m[1];
-				return isset( $this->data['tables']['wp_iaq_mock_states_universities'][ $suid ] ) ? (object) $this->data['tables']['wp_iaq_mock_states_universities'][ $suid ] : null;
+				if ( isset( $this->data['tables']['wp_iaq_mock_states_universities'][ $suid ] ) ) {
+					$su_raw = $this->data['tables']['wp_iaq_mock_states_universities'][ $suid ];
+					$su_type = isset( $su_raw['entity_type'] ) ? $su_raw['entity_type'] : ( isset( $su_raw['type'] ) ? $su_raw['type'] : 'state' );
+					$clone = (object) $su_raw;
+					$clone->type = $su_type;
+					$clone->entity_type = $su_type;
+					$clone->code = isset( $clone->code ) ? $clone->code : '';
+					$clone->description = isset( $clone->description ) ? $clone->description : '';
+					$clone->display_order = isset( $clone->display_order ) ? (int) $clone->display_order : 1;
+					$clone->status = isset( $clone->status ) ? $clone->status : 'active';
+					return $clone;
+				}
+				return null;
 			}
 		}
 
@@ -1326,7 +1408,20 @@ class Local_Persistent_WPDB {
 		if ( strpos( $query, 'wp_iaq_mock_vacancies' ) !== false ) {
 			if ( preg_match( "/WHERE (?:id = )(\d+)/", $query, $m ) ) {
 				$vid = (int) $m[1];
-				return isset( $this->data['tables']['wp_iaq_mock_vacancies'][ $vid ] ) ? (object) $this->data['tables']['wp_iaq_mock_vacancies'][ $vid ] : null;
+				if ( isset( $this->data['tables']['wp_iaq_mock_vacancies'][ $vid ] ) ) {
+					$v_raw = $this->data['tables']['wp_iaq_mock_vacancies'][ $vid ];
+					$v_eid = ! empty( $v_raw['examination_id'] ) ? (int) $v_raw['examination_id'] : ( ! empty( $v_raw['exam_id'] ) ? (int) $v_raw['exam_id'] : 0 );
+					$clone = (object) $v_raw;
+					$clone->exam_id = $v_eid;
+					$clone->examination_id = $v_eid;
+					$clone->posts_count = isset( $clone->posts_count ) ? (int) $clone->posts_count : 0;
+					$clone->advertisement_no = isset( $clone->advertisement_no ) ? $clone->advertisement_no : '';
+					$clone->description = isset( $clone->description ) ? $clone->description : '';
+					$clone->display_order = isset( $clone->display_order ) ? (int) $clone->display_order : 1;
+					$clone->status = isset( $clone->status ) ? $clone->status : 'active';
+					return $clone;
+				}
+				return null;
 			}
 		}
 
@@ -1334,7 +1429,20 @@ class Local_Persistent_WPDB {
 		if ( strpos( $query, 'wp_iaq_mock_series' ) !== false ) {
 			if ( preg_match( "/WHERE (?:id = )(\d+)/", $query, $m ) ) {
 				$seid = (int) $m[1];
-				return isset( $this->data['tables']['wp_iaq_mock_series'][ $seid ] ) ? (object) $this->data['tables']['wp_iaq_mock_series'][ $seid ] : null;
+				if ( isset( $this->data['tables']['wp_iaq_mock_series'][ $seid ] ) ) {
+					$s_raw = $this->data['tables']['wp_iaq_mock_series'][ $seid ];
+					$eid = ! empty( $s_raw['exam_id'] ) ? (int) $s_raw['exam_id'] : ( ! empty( $s_raw['examination_id'] ) ? (int) $s_raw['examination_id'] : 0 );
+					$clone = (object) $s_raw;
+					$clone->exam_id = $eid;
+					$clone->examination_id = $eid;
+					$clone->description = isset( $clone->description ) ? $clone->description : '';
+					$clone->total_tests = isset( $clone->total_tests ) ? (int) $clone->total_tests : 10;
+					$clone->access_type = isset( $clone->access_type ) ? $clone->access_type : 'free';
+					$clone->display_order = isset( $clone->display_order ) ? (int) $clone->display_order : 1;
+					$clone->status = isset( $clone->status ) ? $clone->status : 'published';
+					return $clone;
+				}
+				return null;
 			}
 		}
 
@@ -1342,6 +1450,35 @@ class Local_Persistent_WPDB {
 	}
 
 	public function get_var( $query ) {
+		// SHOW TABLES LIKE query
+		if ( stripos( $query, 'SHOW TABLES LIKE' ) !== false ) {
+			if ( preg_match( "/SHOW TABLES LIKE ['\"]?%?([^'%\"\s]+)%?['\"]?/i", $query, $m ) ) {
+				$tbl = $m[1];
+				return isset( $this->data['tables'][ $tbl ] ) ? $tbl : null;
+			}
+			return null;
+		}
+
+		// Questions duplicate lookup
+		if ( strpos( $query, 'wp_iaq_questions' ) !== false && strpos( $query, 'SELECT id FROM' ) !== false && strpos( $query, 'question_text =' ) !== false ) {
+			$subj_id = preg_match( "/subject_id\s*=\s*(\d+)/", $query, $sm ) ? (int) $sm[1] : 0;
+			if ( preg_match( "/question_text\s*=\s*'((?:[^'\\\\]|\\\\.)*)'/", $query, $qm ) ) {
+				$qtext = stripslashes( $qm[1] );
+				$clean_target = preg_replace( '/\s+/u', ' ', trim( wp_strip_all_tags( $qtext ) ) );
+				foreach ( $this->data['tables']['wp_iaq_questions'] as $q ) {
+					$q_obj = (object) $q;
+					if ( $subj_id > 0 && isset( $q_obj->subject_id ) && (int) $q_obj->subject_id !== $subj_id ) {
+						continue;
+					}
+					$existing_clean = preg_replace( '/\s+/u', ' ', trim( wp_strip_all_tags( isset( $q_obj->question_text ) ? $q_obj->question_text : '' ) ) );
+					if ( $existing_clean === $clean_target ) {
+						return (int) $q_obj->id;
+					}
+				}
+			}
+			return null;
+		}
+
 		if ( strpos( $query, 'COUNT(*)' ) !== false ) {
 			if ( strpos( $query, 'wp_iaq_quizzes' ) !== false ) {
 				return count( $this->data['tables']['wp_iaq_quizzes'] );
@@ -1593,6 +1730,7 @@ function delete_option( $option ) {
 
 function delete_transient( $t ) { return true; }
 function current_user_can( $c ) { return true; }
+function user_can( $user, $capability ) { return true; }
 
 function get_user_meta( $user_id, $key = '', $single = false ) {
 	global $wpdb;
@@ -1699,7 +1837,7 @@ function get_userdata( $user_id ) {
 function get_user_by( $field, $value ) {
 	return get_userdata( 1 );
 }
-function current_time( $t ) { return ( 'timestamp' === $t ) ? time() : gmdate( 'Y-m-d H:i:s' ); }
+function current_time( $t, $gmt = 0 ) { return ( 'timestamp' === $t ) ? time() : ( $gmt ? gmdate( 'Y-m-d H:i:s' ) : date( 'Y-m-d H:i:s' ) ); }
 function sanitize_text_field( $s ) { return trim( strip_tags( (string) $s ) ); }
 function sanitize_textarea_field( $s ) { return trim( strip_tags( (string) $s ) ); }
 function sanitize_title( $t ) {
@@ -1723,6 +1861,7 @@ function esc_attr__( $t, $d = 'default' ) { return esc_attr( $t ); }
 function esc_attr_e( $t, $d = 'default' ) { echo esc_attr( $t ); }
 function __( $t, $d = 'default' ) { return $t; }
 function _e( $t, $d = 'default' ) { echo $t; }
+function _n( $single, $plural, $number, $domain = 'default' ) { return 1 === (int) $number ? $single : $plural; }
 function sanitize_html_class( $c, $f = '' ) {
 	$s = preg_replace( '/[^A-Za-z0-9_-]/', '', (string) $c );
 	return '' === $s ? $f : $s;
@@ -1782,6 +1921,8 @@ function wp_nonce_url( $actionurl, $action = -1, $name = '_wpnonce' ) {
 	return add_query_arg( $name, md5( $action ), $actionurl );
 }
 function admin_url( $path = '' ) {
+	$path = ltrim( $path, '/' );
+	$path = preg_replace( '#^admin\.php\??#i', '', $path );
 	return '/' . ( $path ? '?' . ltrim( $path, '?' ) : '' );
 }
 function home_url( $path = '' ) {
@@ -2133,7 +2274,7 @@ $current_page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : 'iaq-qu
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>IndianAgri Quiz Engine — Local Development Sandbox</title>
 	<!-- Dashicons & Google Fonts -->
-	<link rel="stylesheet" href="https://s.w.org/wp-includes/css/dashicons.min.css">
+	<link rel="stylesheet" href="https://unpkg.com/@icon/dashicons/dashicons.css">
 	<link rel="stylesheet" href="/assets/css/admin.css?v=<?php echo time(); ?>">
 	<link rel="stylesheet" href="/assets/css/frontend.css?v=<?php echo time(); ?>">
 	<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -2180,6 +2321,8 @@ $current_page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : 'iaq-qu
 			flex-wrap: wrap;
 			gap: 12px;
 			box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+			max-width: 100%;
+			box-sizing: border-box;
 		}
 		.iaq-sandbox-brand {
 			display: flex;
@@ -2229,6 +2372,7 @@ $current_page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : 'iaq-qu
 			padding: 0 20px;
 		}
 		.iaq-sandbox-container.is-fullwidth {
+			width: 100%;
 			max-width: 100%;
 			margin: 0;
 			padding: 0;
@@ -2251,6 +2395,7 @@ $current_page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : 'iaq-qu
 <body>
 
 	<!-- Top Navigation Bar -->
+	<?php if ( ! ( isset( $_GET['fullscreen'] ) && '1' === $_GET['fullscreen'] ) ) : ?>
 	<header class="iaq-sandbox-bar">
 		<div class="iaq-sandbox-brand">
 			<div class="iaq-sandbox-brand-dot"></div>
@@ -2323,6 +2468,7 @@ $current_page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : 'iaq-qu
 			</a>
 		</nav>
 	</header>
+	<?php endif; ?>
 
 	<!-- Main Workspace -->
 	<main class="iaq-sandbox-container <?php echo 'iaq-preview-student-dashboard' === $current_page ? 'is-fullwidth' : ''; ?>">
@@ -2443,9 +2589,11 @@ $current_page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : 'iaq-qu
 				<?php
 				break;
 			case 'iaq-preview-student-dashboard':
-				$cur_view = isset( $_GET['student_view'] ) ? sanitize_key( $_GET['student_view'] ) : 'default';
+				$cur_view      = isset( $_GET['student_view'] ) ? sanitize_key( $_GET['student_view'] ) : 'default';
+				$is_fullscreen = isset( $_GET['fullscreen'] ) && '1' === $_GET['fullscreen'];
+				if ( ! $is_fullscreen ) :
 				?>
-				<div style="background:#0f172a;color:#cbd5e1;padding:8px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1e293b;flex-wrap:wrap;gap:8px;">
+				<div style="background:#0f172a;color:#cbd5e1;padding:8px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1e293b;flex-wrap:wrap;gap:8px;max-width:100%;box-sizing:border-box;">
 					<div style="display:flex;align-items:center;gap:8px;">
 						<span class="iaq-pill iaq-pill-category" style="margin:0;font-size:11px;">Sandbox Environment</span>
 						<span style="font-size:12px;color:#94a3b8;">Shortcode: <code>[iaq_student_dashboard]</code></span>
@@ -2464,9 +2612,24 @@ $current_page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : 'iaq-qu
 						<a href="/?page=iaq-preview-student-dashboard&student_view=guest" style="font-size:11px;font-weight:700;text-decoration:none;padding:4px 8px;border-radius:5px;background:<?php echo 'guest' === $cur_view ? '#117E3A;color:#fff;' : '#1e293b;color:#94a3b8;'; ?>">
 							Logged-Out Guest
 						</a>
+						<a href="/?page=iaq-preview-student-dashboard&fullscreen=1<?php echo 'default' !== $cur_view ? '&student_view=' . esc_attr( $cur_view ) : ''; ?>" style="font-size:11px;font-weight:700;text-decoration:none;padding:4px 10px;border-radius:5px;background:#0284c7;color:#fff;display:inline-flex;align-items:center;gap:4px;margin-left:6px;">
+							<span>⛶</span> Full Screen Mode
+						</a>
 					</div>
 				</div>
+				<?php endif; ?>
 				<?php echo $frontend_controller->render_student_dashboard( array() ); ?>
+				<?php if ( $is_fullscreen ) : ?>
+				<div style="position:fixed;bottom:16px;right:16px;z-index:999999;display:flex;align-items:center;gap:10px;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);padding:6px 14px;border-radius:30px;border:1px solid rgba(255,255,255,0.2);box-shadow:0 8px 24px rgba(0,0,0,0.3);">
+					<span style="color:#22c55e;font-size:11px;font-weight:800;letter-spacing:0.5px;">● FULL SCREEN</span>
+					<span style="color:#64748b;font-size:12px;">|</span>
+					<a href="/?page=iaq-preview-student-dashboard&fullscreen=1&student_view=default" style="font-size:11px;font-weight:700;color:<?php echo 'default' === $cur_view ? '#ffffff' : '#94a3b8'; ?>;text-decoration:none;">Virendra</a>
+					<a href="/?page=iaq-preview-student-dashboard&fullscreen=1&student_view=subscribed" style="font-size:11px;font-weight:700;color:<?php echo 'subscribed' === $cur_view ? '#ffffff' : '#94a3b8'; ?>;text-decoration:none;">Premium</a>
+					<a href="/?page=iaq-preview-student-dashboard&fullscreen=1&student_view=guest" style="font-size:11px;font-weight:700;color:<?php echo 'guest' === $cur_view ? '#ffffff' : '#94a3b8'; ?>;text-decoration:none;">Guest</a>
+					<span style="color:#64748b;font-size:12px;">|</span>
+					<a href="/?page=iaq-preview-student-dashboard<?php echo 'default' !== $cur_view ? '&student_view=' . esc_attr( $cur_view ) : ''; ?>" style="font-size:11px;font-weight:700;color:#38bdf8;text-decoration:none;">Exit Fullscreen ✕</a>
+				</div>
+				<?php endif; ?>
 				<?php
 				break;
 			case 'iaq-preview-subscription-plans':

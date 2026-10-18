@@ -21,6 +21,7 @@ class Test_Practice_Sets {
 		self::test_archival_and_unpublished_filtering();
 		self::test_access_control_gating();
 		self::test_frontend_shortcode_rendering();
+		self::test_exam_subject_practice_set_creation_and_import();
 
 		echo "Test_Practice_Sets: ALL PASS\n";
 	}
@@ -465,4 +466,87 @@ class Test_Practice_Sets {
 
 		echo "  [PASS] Shortcode [iaq_practice_sets] rendering, views, and legacy delegation verified.\n";
 	}
+
+	/**
+	 * 9. Exam-Subject Practice Set 1-Click creation and Bulk Import verified.
+	 */
+	private static function test_exam_subject_practice_set_creation_and_import() {
+		$exams    = IAQ_Examinations::get_examinations();
+		$subjects = IAQ_Question_Bank::get_subjects();
+		$exam_id  = $exams[0]->id;
+		$subj_id  = $subjects[0]->id;
+
+		// Create quiz directly configured for Exam-Subject
+		$set_title = 'ICAR Bulk Import Test Set';
+		$quiz_id   = IAQ_Quiz_Builder::save_quiz(
+			array(
+				'title'            => $set_title,
+				'quiz_type'        => 'practice',
+				'exam_category'    => $exams[0]->name,
+				'subject_id'       => $subj_id,
+				'duration_minutes' => 25,
+				'correct_marks'    => 2.0,
+				'negative_marks'   => 0.5,
+				'status'           => 'published',
+				'access_type'      => 'free',
+				'display_order'    => 5,
+			)
+		);
+
+		if ( ! $quiz_id || is_wp_error( $quiz_id ) ) {
+			throw new Exception( 'Failed to create exam-subject practice set.' );
+		}
+
+		// Assign to exam-subject
+		IAQ_Practice_Sets::assign_quiz_to_exam_subject( $exam_id, $subj_id, $quiz_id, 5 );
+
+		// Verify retrieval
+		$assigned = IAQ_Practice_Sets::get_exam_subject_quizzes( $exam_id, $subj_id );
+		$found    = false;
+		foreach ( $assigned as $a ) {
+			if ( (int) $a->id === (int) $quiz_id ) {
+				$found = true;
+				break;
+			}
+		}
+		if ( ! $found ) {
+			throw new Exception( 'Newly assigned exam-subject practice set not found in assigned quizzes query.' );
+		}
+
+		// Bulk import sample JSON question into this quiz
+		$sample_json = json_encode(
+			array(
+				array(
+					'question_text' => 'What is the optimal sowing depth for wheat crop?',
+					'option_a'      => '2-3 cm',
+					'option_b'      => '4-5 cm',
+					'option_c'      => '8-10 cm',
+					'option_d'      => '12-15 cm',
+					'correct_option'=> 'B',
+					'explanation'   => 'Optimal depth for semi-dwarf wheat varieties is 4-5 cm depending on coleoptile length.',
+					'marks'         => 2.0,
+					'negative_marks'=> 0.5,
+				),
+			)
+		);
+
+		$tmp_file = tempnam( sys_get_temp_dir(), 'iaq_test_esq_' ) . '.json';
+		file_put_contents( $tmp_file, $sample_json );
+
+		$res = IAQ_Import_Export::import_from_file( $tmp_file, $quiz_id, null, 'wheat_test.json' );
+		@unlink( $tmp_file );
+
+		if ( empty( $res['success'] ) || 1 !== (int) $res['imported'] ) {
+			throw new Exception( 'Failed to bulk import question into exam-subject practice set: ' . ( isset( $res['message'] ) ? $res['message'] : '' ) );
+		}
+
+		// Verify quiz total questions updated
+		$updated_quiz = IAQ_Quiz_Builder::get_quiz( $quiz_id );
+		if ( 1 !== (int) $updated_quiz->total_questions ) {
+			throw new Exception( 'Quiz total_questions was not incremented to 1 after bulk import.' );
+		}
+
+		echo "  [PASS] Exam-Subject Practice Set 1-Click creation and Bulk Import verified.\n";
+	}
 }
+
