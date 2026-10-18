@@ -6,7 +6,12 @@ import '../constants/app_styles.dart';
 /// App theme definitions for Light and Dark modes.
 class AppTheme {
   static ThemeData get lightTheme {
-    final baseTextTheme = GoogleFonts.poppinsTextTheme();
+    TextTheme baseTextTheme;
+    try {
+      baseTextTheme = GoogleFonts.poppinsTextTheme();
+    } catch (_) {
+      baseTextTheme = ThemeData.light().textTheme;
+    }
 
     return ThemeData(
       useMaterial3: true,
@@ -81,7 +86,12 @@ class AppTheme {
   }
 
   static ThemeData get darkTheme {
-    final baseTextTheme = GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme);
+    TextTheme baseTextTheme;
+    try {
+      baseTextTheme = GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme);
+    } catch (_) {
+      baseTextTheme = ThemeData.dark().textTheme;
+    }
 
     return ThemeData(
       useMaterial3: true,

@@ -41,9 +41,12 @@ jobs:
               c = f.read()
           if 'android.permission.INTERNET' not in c:
               c = c.replace('<application', '<uses-permission android:name=\"android.permission.INTERNET\" />\n    <uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\" />\n    <application')
-              with open('android/app/src/main/AndroidManifest.xml', 'w') as f:
-                  f.write(c)
+          if 'usesCleartextTraffic' not in c:
+              c = c.replace('<application', '<application android:usesCleartextTraffic=\"true\"')
+          with open('android/app/src/main/AndroidManifest.xml', 'w') as f:
+              f.write(c)
           "
+
 
       - name: Fetch Flutter Dependencies
         working-directory: ./indianagri_mobile
