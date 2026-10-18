@@ -5,7 +5,7 @@ on:
     branches:
       - main
       - master
-  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+  workflow_dispatch:
 
 jobs:
   build-apk:
@@ -28,13 +28,20 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Re-generate Official Android Scaffolding
+        working-directory: ./indianagri_mobile
+        run: |
+          rm -rf android
+          flutter create --org com.indianagriexam --project-name indianagri_mobile --platforms=android .
+          sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />' android/app/src/main/AndroidManifest.xml
+
       - name: Fetch Flutter Dependencies
         working-directory: ./indianagri_mobile
         run: flutter pub get
 
       - name: Build Android Release APK
         working-directory: ./indianagri_mobile
-        run: flutter build apk --release
+        run: flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK as GitHub Artifact
         uses: actions/upload-artifact@v4
