@@ -7,6 +7,9 @@ on:
       - master
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-apk:
     name: Build Release APK
@@ -57,3 +60,19 @@ jobs:
           path: indianagri_mobile/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Prepare APK for Direct Download
+        run: cp indianagri_mobile/build/app/outputs/flutter-apk/app-release.apk IndianAgriExam.apk
+
+      - name: Publish Direct APK to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: v1.0.0
+          name: IndianAgriExam Mobile App (Latest)
+          body: |
+            Official Mobile Application for IndianAgriExam.com.
+
+            ### 📲 Direct Download:
+            Tap or click **IndianAgriExam.apk** below to download directly to your phone.
+          files: IndianAgriExam.apk
