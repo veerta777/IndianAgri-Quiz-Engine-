@@ -7,6 +7,7 @@ import '../../../core/widgets/language_toggle.dart';
 import '../../auth/auth_provider.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../subscriptions/screens/subscription_plans_screen.dart';
+import '../../../core/services/app_update_service.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -166,9 +167,20 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   const Divider(height: 1),
                   ListTile(
-                    leading: const Icon(Icons.info_outline, color: AppColors.textSecondaryLight),
-                    title: const Text('App Version'),
-                    trailing: const Text('1.0.0 (Build 1)', style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 13)),
+                    leading: const Icon(Icons.system_update_alt, color: AppColors.primary),
+                    title: const Text('App Updates & Release Notes'),
+                    subtitle: const Text('v1.0.0 • Tap to check for latest updates', style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight)),
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySubtle,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text('Check', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                    ),
+                    onTap: () {
+                      AppUpdateService.showUpdateDialog(context, forceShow: true);
+                    },
                   ),
                   const Divider(height: 1),
                   ListTile(

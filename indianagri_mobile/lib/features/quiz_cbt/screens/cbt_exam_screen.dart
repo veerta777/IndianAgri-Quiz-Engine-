@@ -381,18 +381,42 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
         ? q['question_text_hi'].toString()
         : q['question_text'].toString();
 
-    final optA = (isHindi && q['option_a_hi'] != null && q['option_a_hi'].toString().isNotEmpty)
-        ? q['option_a_hi'].toString()
-        : q['option_a'].toString();
-    final optB = (isHindi && q['option_b_hi'] != null && q['option_b_hi'].toString().isNotEmpty)
-        ? q['option_b_hi'].toString()
-        : q['option_b'].toString();
-    final optC = (isHindi && q['option_c_hi'] != null && q['option_c_hi'].toString().isNotEmpty)
-        ? q['option_c_hi'].toString()
-        : q['option_c'].toString();
-    final optD = (isHindi && q['option_d_hi'] != null && q['option_d_hi'].toString().isNotEmpty)
-        ? q['option_d_hi'].toString()
-        : q['option_d'].toString();
+    // Dynamic options parsing with fallback
+    final rawOptions = q['options'];
+    final List<Map<String, dynamic>> optionsList = [];
+
+    if (rawOptions is List && rawOptions.isNotEmpty) {
+      for (final o in rawOptions) {
+        if (o is Map<String, dynamic>) {
+          optionsList.add(o);
+        } else if (o is Map) {
+          optionsList.add(Map<String, dynamic>.from(o));
+        }
+      }
+    } else {
+      optionsList.addAll([
+        {
+          'key': 'A',
+          'text': q['option_a']?.toString() ?? '',
+          if (q['option_a_hi'] != null) 'text_hi': q['option_a_hi'],
+        },
+        {
+          'key': 'B',
+          'text': q['option_b']?.toString() ?? '',
+          if (q['option_b_hi'] != null) 'text_hi': q['option_b_hi'],
+        },
+        {
+          'key': 'C',
+          'text': q['option_c']?.toString() ?? '',
+          if (q['option_c_hi'] != null) 'text_hi': q['option_c_hi'],
+        },
+        {
+          'key': 'D',
+          'text': q['option_d']?.toString() ?? '',
+          if (q['option_d_hi'] != null) 'text_hi': q['option_d_hi'],
+        },
+      ]);
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -460,17 +484,27 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Option A
-                    _buildOptionCard('A', optA, selectedOpt, fb, isLocked),
-                    const SizedBox(height: 10),
-                    // Option B
-                    _buildOptionCard('B', optB, selectedOpt, fb, isLocked),
-                    const SizedBox(height: 10),
-                    // Option C
-                    _buildOptionCard('C', optC, selectedOpt, fb, isLocked),
-                    const SizedBox(height: 10),
-                    // Option D
-                    _buildOptionCard('D', optD, selectedOpt, fb, isLocked),
+                    // Options List (Dynamically rendered with sequential visual labels A/B/C/D)
+                    ...List.generate(optionsList.length, (idx) {
+                      final opt = optionsList[idx];
+                      final displayLabel = (idx < 26) ? String.fromCharCode(65 + idx) : '${idx + 1}';
+                      final optionKey = opt['key']?.toString() ?? displayLabel;
+                      final optText = (isHindi && opt['text_hi'] != null && opt['text_hi'].toString().isNotEmpty)
+                          ? opt['text_hi'].toString()
+                          : (opt['text']?.toString() ?? '');
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _buildOptionCard(
+                          displayLabel,
+                          optionKey,
+                          optText,
+                          selectedOpt,
+                          fb,
+                          isLocked,
+                        ),
+                      );
+                    }),
 
                     // Immediate Feedback Card (for Practice Sets)
                     if (fb != null) ...[
@@ -550,19 +584,20 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
   }
 
   Widget _buildOptionCard(
-    String key,
+    String displayLabel,
+    String optionKey,
     String text,
     String? selectedKey,
     Map<String, dynamic>? feedback,
     bool isLocked,
   ) {
-    final isSelected = selectedKey == key;
+    final isSelected = selectedKey == optionKey;
     bool isCorrectOption = false;
     bool isIncorrectSelection = false;
 
     if (feedback != null) {
       final correctOpt = feedback['correct_option']?.toString();
-      if (correctOpt == key) {
+      if (correctOpt == optionKey) {
         isCorrectOption = true;
       }
       if (isSelected && feedback['is_correct'] != true) {
@@ -585,7 +620,7 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
     }
 
     return InkWell(
-      onTap: isLocked ? null : () => _selectOption(key),
+      onTap: isLocked ? null : () => _selectOption(optionKey),
       borderRadius: AppStyles.borderRadiusM,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -612,7 +647,7 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
               ),
               child: Center(
                 child: Text(
-                  key,
+                  displayLabel,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 13,

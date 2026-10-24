@@ -27,8 +27,15 @@ class IAQ_Access_Control {
 			wp_schedule_event( time(), 'hourly', 'iaq_hourly_subscription_sweep' );
 		}
 
+		// WooCommerce Product Edit page direct plan linking.
+		add_action( 'woocommerce_product_options_general_product_data', array( __CLASS__, 'add_wc_product_subscription_field' ) );
+		add_action( 'woocommerce_process_product_meta', array( __CLASS__, 'save_wc_product_subscription_field' ) );
+
 		// Real-time synchronization upon student login.
 		add_action( 'wp_login', array( __CLASS__, 'on_user_login' ), 10, 2 );
+
+		// WooCommerce Order Thank You page subscription confirmation banner.
+		add_action( 'woocommerce_thankyou', array( __CLASS__, 'render_order_thankyou_subscription_banner' ), 5 );
 	}
 
 	/**
@@ -146,20 +153,27 @@ class IAQ_Access_Control {
 		$currency      = ! empty( $data['currency'] ) ? sanitize_text_field( $data['currency'] ) : 'INR';
 		$duration_val  = ! empty( $data['duration_value'] ) ? absint( $data['duration_value'] ) : 1;
 		$duration_unit = ! empty( $data['duration_unit'] ) && in_array( $data['duration_unit'], array( 'days', 'months', 'years' ), true ) ? $data['duration_unit'] : 'months';
-		$access_type   = ! empty( $data['access_type'] ) && in_array( $data['access_type'], array( 'all_access', 'exam_specific' ), true ) ? $data['access_type'] : 'all_access';
+		
+		// Support both access_type and access_scope (from admin template)
+		$raw_access = ! empty( $data['access_type'] ) ? $data['access_type'] : ( ! empty( $data['access_scope'] ) ? $data['access_scope'] : 'all_access' );
+		if ( 'specific_exams' === $raw_access ) {
+			$raw_access = 'exam_specific';
+		}
+		$access_type   = in_array( $raw_access, array( 'all_access', 'exam_specific' ), true ) ? $raw_access : 'all_access';
 		$wc_product_id = ! empty( $data['wc_product_id'] ) ? absint( $data['wc_product_id'] ) : null;
 		$is_featured   = ! empty( $data['is_featured'] ) ? 1 : 0;
 		$display_order = isset( $data['display_order'] ) ? intval( $data['display_order'] ) : 0;
 		$features      = ! empty( $data['features'] ) ? sanitize_textarea_field( $data['features'] ) : '';
 		$status        = ! empty( $data['status'] ) && in_array( $data['status'], array( 'active', 'inactive', 'archived' ), true ) ? $data['status'] : 'active';
 
-		// Handle included examination categories/IDs
+		// Handle included examination categories/IDs (support included_exam_ids and included_categories alias)
+		$raw_included = ! empty( $data['included_exam_ids'] ) ? $data['included_exam_ids'] : ( ! empty( $data['included_categories'] ) ? $data['included_categories'] : '' );
 		$included_exam_ids = '';
-		if ( 'exam_specific' === $access_type && ! empty( $data['included_exam_ids'] ) ) {
-			if ( is_array( $data['included_exam_ids'] ) ) {
-				$included_exam_ids = implode( ',', array_map( 'sanitize_text_field', $data['included_exam_ids'] ) );
+		if ( 'exam_specific' === $access_type && ! empty( $raw_included ) ) {
+			if ( is_array( $raw_included ) ) {
+				$included_exam_ids = implode( ',', array_map( 'sanitize_text_field', $raw_included ) );
 			} else {
-				$included_exam_ids = sanitize_text_field( $data['included_exam_ids'] );
+				$included_exam_ids = sanitize_text_field( $raw_included );
 			}
 		}
 
@@ -318,6 +332,7 @@ class IAQ_Access_Control {
 
 		$inserted_id = (int) $wpdb->insert_id;
 		if ( $inserted_id > 0 ) {
+			self::clear_subscription_cache( (int) $user_id );
 			self::sync_student_deactivation_status( (int) $user_id );
 		}
 
@@ -365,6 +380,7 @@ class IAQ_Access_Control {
 		);
 
 		if ( $sub && ! empty( $sub->user_id ) ) {
+			self::clear_subscription_cache( (int) $sub->user_id );
 			self::sync_student_deactivation_status( (int) $sub->user_id );
 		}
 
@@ -425,17 +441,27 @@ class IAQ_Access_Control {
 	}
 
 	/**
+	 * Invalidate active subscriptions cache (safe no-op for backward compatibility).
+	 *
+	 * @param int $user_id Optional user ID.
+	 */
+	public static function clear_subscription_cache( $user_id = 0 ) {
+		// Clean real-time query interface - no stale cache maintained.
+	}
+
+	/**
 	 * Retrieve all active subscriptions for a student.
 	 *
 	 * @param int $user_id WordPress User ID.
 	 * @return array
 	 */
 	public static function get_user_active_subscriptions( $user_id ) {
-		global $wpdb;
-
+		$user_id = (int) $user_id;
 		if ( empty( $user_id ) ) {
 			return array();
 		}
+
+		global $wpdb;
 
 		$table_subs = IAQ_Database::get_table_name( 'user_subscriptions' );
 		$now        = current_time( 'mysql' );
@@ -542,7 +568,69 @@ class IAQ_Access_Control {
 			// Examination-specific subscription
 			if ( 'exam_specific' === $sub->access_type_snapshot && ! empty( $sub->included_exam_ids_snapshot ) ) {
 				$allowed_exams = array_map( 'trim', explode( ',', $sub->included_exam_ids_snapshot ) );
-				if ( in_array( $quiz->exam_category, $allowed_exams, true ) ) {
+
+				// Collect direct exam identifiers
+				$quiz_exam_identifiers = array();
+				if ( ! empty( $quiz->exam_category ) ) {
+					$quiz_exam_identifiers[] = (string) $quiz->exam_category;
+				}
+				if ( ! empty( $quiz->examination_id ) ) {
+					$quiz_exam_identifiers[] = (string) $quiz->examination_id;
+				}
+
+				// If it's a practice set, check exam associations in exam_subject_quizzes and books
+				if ( isset( $quiz->quiz_type ) && 'practice' === $quiz->quiz_type ) {
+					global $wpdb;
+					$table_esq   = IAQ_Database::get_table_name( 'exam_subject_quizzes' );
+					$table_exams = IAQ_Database::get_table_name( 'examinations' );
+					$table_bq    = IAQ_Database::get_table_name( 'book_quizzes' );
+					$table_books = IAQ_Database::get_table_name( 'books' );
+
+					// Check exam_subject_quizzes
+					$esq_exams = $wpdb->get_results(
+						$wpdb->prepare(
+							"SELECT e.id, e.name, e.code, e.slug 
+							 FROM {$table_esq} esq
+							 INNER JOIN {$table_exams} e ON esq.exam_id = e.id
+							 WHERE esq.quiz_id = %d",
+							$quiz->id
+						)
+					);
+					if ( ! empty( $esq_exams ) ) {
+						foreach ( $esq_exams as $ex ) {
+							$quiz_exam_identifiers[] = (string) $ex->id;
+							$quiz_exam_identifiers[] = (string) $ex->code;
+							$quiz_exam_identifiers[] = (string) $ex->slug;
+							$quiz_exam_identifiers[] = (string) $ex->name;
+						}
+					}
+
+					// Check parent book's examination_id
+					$book_exams = $wpdb->get_results(
+						$wpdb->prepare(
+							"SELECT b.examination_id, e.id, e.name, e.code, e.slug
+							 FROM {$table_bq} bq
+							 INNER JOIN {$table_books} b ON bq.book_id = b.id
+							 LEFT JOIN {$table_exams} e ON b.examination_id = e.id
+							 WHERE bq.quiz_id = %d",
+							$quiz->id
+						)
+					);
+					if ( ! empty( $book_exams ) ) {
+						foreach ( $book_exams as $bex ) {
+							if ( ! empty( $bex->examination_id ) ) {
+								$quiz_exam_identifiers[] = (string) $bex->examination_id;
+							}
+							if ( ! empty( $bex->code ) ) {
+								$quiz_exam_identifiers[] = (string) $bex->code;
+								$quiz_exam_identifiers[] = (string) $bex->slug;
+								$quiz_exam_identifiers[] = (string) $bex->name;
+							}
+						}
+					}
+				}
+
+				if ( ! empty( array_intersect( $allowed_exams, $quiz_exam_identifiers ) ) ) {
 					return array(
 						'allowed' => true,
 						'reason'  => sprintf( __( 'Unlocked via %s (Active until %s)', 'indianagri-quiz-engine' ), $sub->plan_name_snapshot, $sub->expiry_date ),
@@ -576,6 +664,34 @@ class IAQ_Access_Control {
 
 		$user_id = $order->get_user_id();
 		if ( ! $user_id ) {
+			// Resolve or auto-create student account via order billing email
+			$billing_email = sanitize_email( $order->get_billing_email() );
+			if ( ! empty( $billing_email ) ) {
+				$existing_user = get_user_by( 'email', $billing_email );
+				if ( $existing_user ) {
+					$user_id = (int) $existing_user->ID;
+					$order->set_customer_id( $user_id );
+					$order->save();
+				} else {
+					$username = sanitize_user( current( explode( '@', $billing_email ) ) );
+					if ( empty( $username ) || username_exists( $username ) ) {
+						$username .= '_' . wp_rand( 100, 999 );
+					}
+					$password = wp_generate_password( 12, false );
+					$new_uid  = wp_create_user( $username, $password, $billing_email );
+					if ( ! is_wp_error( $new_uid ) ) {
+						$user_id = (int) $new_uid;
+						$order->set_customer_id( $user_id );
+						$order->save();
+						if ( function_exists( 'wp_new_user_notification' ) ) {
+							wp_new_user_notification( $user_id, null, 'both' );
+						}
+					}
+				}
+			}
+		}
+
+		if ( ! $user_id ) {
 			return;
 		}
 
@@ -589,12 +705,35 @@ class IAQ_Access_Control {
 
 		$provisioned = 0;
 		foreach ( $order->get_items() as $item ) {
-			$product_id = $item->get_product_id();
+			$product_id   = is_callable( array( $item, 'get_product_id' ) ) ? $item->get_product_id() : 0;
+			$variation_id = is_callable( array( $item, 'get_variation_id' ) ) ? $item->get_variation_id() : 0;
 
-			// Match plan mapped to this WC product ID
-			$plan = $wpdb->get_row(
-				$wpdb->prepare( "SELECT * FROM {$table_plans} WHERE wc_product_id = %d AND status = 'active'", $product_id )
-			);
+			// Match plan mapped to this WC product ID or variation ID
+			$plan = null;
+			if ( ! empty( $variation_id ) ) {
+				$plan = $wpdb->get_row(
+					$wpdb->prepare( "SELECT * FROM {$table_plans} WHERE wc_product_id = %d AND status = 'active'", $variation_id )
+				);
+			}
+			if ( ! $plan && ! empty( $product_id ) ) {
+				$plan = $wpdb->get_row(
+					$wpdb->prepare( "SELECT * FROM {$table_plans} WHERE wc_product_id = %d AND status = 'active'", $product_id )
+				);
+			}
+
+			// Fallback: check WooCommerce product meta _iaq_linked_plan_id
+			if ( ! $plan ) {
+				$meta_plan_id = 0;
+				if ( ! empty( $variation_id ) ) {
+					$meta_plan_id = absint( get_post_meta( $variation_id, '_iaq_linked_plan_id', true ) );
+				}
+				if ( ! $meta_plan_id && ! empty( $product_id ) ) {
+					$meta_plan_id = absint( get_post_meta( $product_id, '_iaq_linked_plan_id', true ) );
+				}
+				if ( $meta_plan_id > 0 ) {
+					$plan = self::get_plan( $meta_plan_id );
+				}
+			}
 
 			if ( $plan ) {
 				self::grant_subscription(
@@ -612,6 +751,266 @@ class IAQ_Access_Control {
 			$order->add_order_note( sprintf( __( 'IndianAgri Quiz Engine: Granted %d active subscription plan(s) to student.', 'indianagri-quiz-engine' ), $provisioned ) );
 			$order->save();
 		}
+	}
+
+	/**
+	 * Render Quiz Engine subscription plan selector inside WooCommerce Product edit screen.
+	 */
+	public static function add_wc_product_subscription_field() {
+		global $post;
+		if ( ! $post || empty( $post->ID ) ) {
+			return;
+		}
+
+		$plans = self::get_plans( array( 'status' => 'active' ) );
+		$options = array(
+			'' => __( '— No Quiz Subscription Linked —', 'indianagri-quiz-engine' ),
+		);
+		$current_plan_id = '';
+
+		foreach ( $plans as $p ) {
+			$options[ $p->id ] = sprintf( '%s (₹%s, %d %s)', $p->name, number_format( (float) $p->price, 0 ), $p->duration_value, ucfirst( $p->duration_unit ) );
+			if ( (int) $p->wc_product_id === (int) $post->ID ) {
+				$current_plan_id = (string) $p->id;
+			}
+		}
+
+		if ( empty( $current_plan_id ) ) {
+			$saved_meta = get_post_meta( $post->ID, '_iaq_linked_plan_id', true );
+			if ( ! empty( $saved_meta ) ) {
+				$current_plan_id = (string) $saved_meta;
+			}
+		}
+
+		echo '<div class="options_group show_if_simple show_if_variable">';
+		woocommerce_wp_select(
+			array(
+				'id'          => '_iaq_linked_plan_id',
+				'label'       => __( 'IndianAgri Quiz Plan', 'indianagri-quiz-engine' ),
+				'description' => __( 'Select the Quiz Engine subscription plan granted to students when purchasing this product.', 'indianagri-quiz-engine' ),
+				'desc_tip'    => true,
+				'value'       => $current_plan_id,
+				'options'     => $options,
+			)
+		);
+		echo '</div>';
+	}
+
+	/**
+	 * Save Quiz Engine subscription plan setting on WooCommerce Product edit screen.
+	 *
+	 * @param int $post_id Product post ID.
+	 */
+	public static function save_wc_product_subscription_field( $post_id ) {
+		if ( ! isset( $_POST['_iaq_linked_plan_id'] ) ) {
+			return;
+		}
+
+		global $wpdb;
+		$table_plans = IAQ_Database::get_table_name( 'subscription_plans' );
+		$selected_plan_id = absint( $_POST['_iaq_linked_plan_id'] );
+
+		update_post_meta( $post_id, '_iaq_linked_plan_id', $selected_plan_id );
+
+		// Clear old plan that pointed to this product if changed
+		$wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$table_plans} SET wc_product_id = NULL WHERE wc_product_id = %d AND id != %d",
+				$post_id,
+				$selected_plan_id
+			)
+		);
+
+		// Link new plan
+		if ( $selected_plan_id > 0 ) {
+			$wpdb->update(
+				$table_plans,
+				array( 'wc_product_id' => $post_id ),
+				array( 'id' => $selected_plan_id ),
+				array( '%d' ),
+				array( '%d' )
+			);
+		}
+	}
+
+	/**
+	 * Display a subscription activation banner on WooCommerce order received / thank you page.
+	 *
+	 * @param int $order_id WooCommerce order ID.
+	 */
+	public static function render_order_thankyou_subscription_banner( $order_id ) {
+		if ( ! $order_id || ! function_exists( 'wc_get_order' ) ) {
+			return;
+		}
+
+		$order = wc_get_order( $order_id );
+		if ( ! $order ) {
+			return;
+		}
+
+		// Ensure order activation is evaluated in real-time
+		self::handle_wc_order_activated( $order_id );
+
+		$has_quiz_plan = false;
+		global $wpdb;
+		$table_plans = IAQ_Database::get_table_name( 'subscription_plans' );
+
+		foreach ( $order->get_items() as $item ) {
+			$product_id   = $item->get_product_id();
+			$variation_id = $item->get_variation_id();
+			$plan = null;
+			if ( $variation_id ) {
+				$plan = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM {$table_plans} WHERE wc_product_id = %d AND status = 'active'", $variation_id ) );
+			}
+			if ( ! $plan && $product_id ) {
+				$plan = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM {$table_plans} WHERE wc_product_id = %d AND status = 'active'", $product_id ) );
+			}
+			if ( ! $plan && $product_id ) {
+				$meta_pid = absint( get_post_meta( $product_id, '_iaq_linked_plan_id', true ) );
+				if ( $meta_pid > 0 ) {
+					$plan = true;
+				}
+			}
+			if ( $plan ) {
+				$has_quiz_plan = true;
+				break;
+			}
+		}
+
+		if ( ! $has_quiz_plan ) {
+			return;
+		}
+
+		$is_logged_in  = is_user_logged_in();
+		$practice_url  = home_url( '/practice-quiz/' );
+		$dashboard_url = self::get_student_dashboard_url();
+		?>
+		<div style="background:#ecfdf5;border:2px solid #10b981;border-radius:12px;padding:24px;margin:20px 0 30px 0;text-align:center;">
+			<div style="font-size:36px;margin-bottom:8px;">🎓 ✅</div>
+			<h2 style="color:#065f46;margin:0 0 8px 0;font-size:22px;font-weight:700;">
+				<?php esc_html_e( 'Your Quiz Subscription is Activated!', 'indianagri-quiz-engine' ); ?>
+			</h2>
+			<p style="color:#047857;font-size:15px;margin:0 0 18px 0;max-width:600px;margin-left:auto;margin-right:auto;">
+				<?php esc_html_e( 'Your payment was successful and your full access to all agricultural mock tests, practice sets, and solutions is unlocked.', 'indianagri-quiz-engine' ); ?>
+			</p>
+			<?php if ( ! $is_logged_in ) : ?>
+				<p style="color:#b45309;background:#fef3c7;padding:10px 16px;border-radius:8px;font-size:14px;display:inline-block;margin:0 0 16px 0;">
+					⚠️ <?php printf( esc_html__( 'Please log in with your email (%s) to start taking your examinations.', 'indianagri-quiz-engine' ), esc_html( $order->get_billing_email() ) ); ?>
+				</p>
+				<div>
+					<a href="<?php echo esc_url( wp_login_url( $practice_url ) ); ?>" style="display:inline-block;background:#117E3A;color:#fff;padding:12px 28px;border-radius:8px;font-weight:700;text-decoration:none;font-size:15px;box-shadow:0 4px 6px -1px rgba(17,126,58,0.25);">
+						<?php esc_html_e( 'Log In & Start Practicing', 'indianagri-quiz-engine' ); ?> &rarr;
+					</a>
+				</div>
+			<?php else : ?>
+				<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;align-items:center;">
+					<a href="<?php echo esc_url( $practice_url ); ?>" style="display:inline-block;background:#117E3A;color:#fff;padding:13px 28px;border-radius:8px;font-weight:700;text-decoration:none;font-size:15px;box-shadow:0 4px 6px -1px rgba(17,126,58,0.25);">
+						<?php esc_html_e( 'Start Practicing Quizzes Now', 'indianagri-quiz-engine' ); ?> &rarr;
+					</a>
+					<a href="<?php echo esc_url( $dashboard_url ); ?>" style="display:inline-block;background:#0f172a;color:#fff;padding:13px 24px;border-radius:8px;font-weight:700;text-decoration:none;font-size:15px;">
+						<?php esc_html_e( 'Student Dashboard', 'indianagri-quiz-engine' ); ?>
+					</a>
+				</div>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Retrieve or automatically create the public Student Dashboard page URL.
+	 *
+	 * Guaranteed never to return a 404!
+	 *
+	 * @return string Public URL to student dashboard.
+	 */
+	public static function get_student_dashboard_url() {
+		// 1. Check if a custom dashboard URL is explicitly configured
+		$configured_url = get_option( 'iaq_student_dashboard_url', '' );
+		if ( ! empty( $configured_url ) ) {
+			return esc_url( $configured_url );
+		}
+
+		// 2. Search for any published page containing the shortcode [iaq_student_dashboard]
+		global $wpdb;
+		$page_id = $wpdb->get_var(
+			"SELECT ID FROM {$wpdb->posts} 
+			 WHERE post_type = 'page' 
+			   AND post_status = 'publish' 
+			   AND post_content LIKE '%[iaq_student_dashboard%' 
+			 ORDER BY ID ASC LIMIT 1"
+		);
+
+		if ( $page_id ) {
+			return get_permalink( (int) $page_id );
+		}
+
+		// 3. Search for existing page by common slugs ('student-dashboard', 'dashboard', 'my-dashboard')
+		foreach ( array( 'student-dashboard', 'dashboard', 'my-dashboard' ) as $slug ) {
+			$page = get_page_by_path( $slug );
+			if ( $page && 'publish' === $page->post_status ) {
+				// Make sure our shortcode is inside this page
+				if ( false === strpos( $page->post_content, '[iaq_student_dashboard]' ) ) {
+					wp_update_post(
+						array(
+							'ID'           => $page->ID,
+							'post_content' => $page->post_content . "\n\n" . '[iaq_student_dashboard]',
+						)
+					);
+				}
+				return get_permalink( $page->ID );
+			}
+		}
+
+		// 4. Automatically create the "Student Dashboard" page if none of the above exist
+		return self::ensure_student_dashboard_page();
+	}
+
+	/**
+	 * Automatically create the Student Dashboard page with shortcode if missing.
+	 *
+	 * @return string URL of created page.
+	 */
+	public static function ensure_student_dashboard_page() {
+		global $wpdb;
+		$existing_id = $wpdb->get_var(
+			"SELECT ID FROM {$wpdb->posts} 
+			 WHERE post_type = 'page' 
+			   AND post_status = 'publish' 
+			   AND (post_name = 'student-dashboard' OR post_content LIKE '%[iaq_student_dashboard%')
+			 LIMIT 1"
+		);
+
+		if ( $existing_id ) {
+			return get_permalink( (int) $existing_id );
+		}
+
+		$new_page_id = wp_insert_post(
+			array(
+				'post_title'     => 'Student Dashboard',
+				'post_name'      => 'student-dashboard',
+				'post_content'   => '<!-- wp:shortcode -->[iaq_student_dashboard]<!-- /wp:shortcode -->',
+				'post_status'    => 'publish',
+				'post_type'      => 'page',
+				'comment_status' => 'closed',
+			)
+		);
+
+		if ( $new_page_id && ! is_wp_error( $new_page_id ) ) {
+			if ( function_exists( 'flush_rewrite_rules' ) ) {
+				flush_rewrite_rules( false );
+			}
+			return get_permalink( (int) $new_page_id );
+		}
+
+		// Fallback: WooCommerce My Account page or site root
+		if ( function_exists( 'wc_get_page_permalink' ) ) {
+			$myaccount_url = wc_get_page_permalink( 'myaccount' );
+			if ( ! empty( $myaccount_url ) ) {
+				return $myaccount_url;
+			}
+		}
+
+		return home_url( '/' );
 	}
 
 	/**
@@ -673,6 +1072,7 @@ class IAQ_Access_Control {
 
 		// Evaluate student account active state for all affected students.
 		foreach ( array_keys( $affected_user_ids ) as $uid ) {
+			self::clear_subscription_cache( (int) $uid );
 			self::sync_student_deactivation_status( (int) $uid );
 		}
 

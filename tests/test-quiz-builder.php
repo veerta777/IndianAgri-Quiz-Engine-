@@ -149,7 +149,31 @@ class Test_Quiz_Builder {
 		$list_html = $frontend->render_quiz_list_shortcode( array() );
 		assert( strpos( $list_html, 'iaq-quiz-grid' ) !== false, "Quiz grid missing in list shortcode" );
 		assert( strpos( $list_html, 'ICAR JRF Agronomy Full Mock Test 01' ) !== false, "Quiz card missing in list shortcode" );
-		echo "  [PASS] Shortcode [iaq_quiz_list] rendered responsive quiz grid correctly.\n";
+		// 5b. Test Default Randomize Question Order and Option Order
+		$default_practice_id = IAQ_Quiz_Builder::save_quiz(
+			array(
+				'title'     => 'Default Practice Set Random Order Check',
+				'quiz_type' => 'practice',
+			)
+		);
+		assert( ! is_wp_error( $default_practice_id ), 'Default practice set creation failed' );
+		$def_practice = IAQ_Quiz_Builder::get_quiz( $default_practice_id );
+		assert( (int) $def_practice->shuffle_questions === 1, 'Practice set should default shuffle_questions to 1' );
+		assert( (int) $def_practice->shuffle_options === 1, 'Practice set should default shuffle_options to 1' );
+		IAQ_Quiz_Builder::delete_quiz( $default_practice_id );
+
+		$default_mcq_id = IAQ_Quiz_Builder::save_quiz(
+			array(
+				'title'     => 'Default MCQ Quiz Random Order Check',
+				'quiz_type' => 'mock',
+			)
+		);
+		assert( ! is_wp_error( $default_mcq_id ), 'Default MCQ creation failed' );
+		$def_mcq = IAQ_Quiz_Builder::get_quiz( $default_mcq_id );
+		assert( (int) $def_mcq->shuffle_questions === 1, 'MCQ Quiz should default shuffle_questions to 1' );
+		assert( (int) $def_mcq->shuffle_options === 1, 'MCQ Quiz should default shuffle_options to 1' );
+		IAQ_Quiz_Builder::delete_quiz( $default_mcq_id );
+		echo "  [PASS] Default Randomize Question Order and Option Order (A/B/C/D) verified.\n";
 
 		// 6. Test Quiz Deletion & Cascade Clean-up
 		$del_res = IAQ_Quiz_Builder::delete_quiz( $quiz_id );

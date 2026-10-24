@@ -63,4 +63,17 @@ class SecureStorage {
     final prefs = await _instance;
     return prefs.getString(_keyLanguage);
   }
+
+  // Server Base URL Management
+  static const String _keyBaseUrl = 'iaq_custom_base_url';
+
+  static Future<void> saveBaseUrl(String url) async {
+    final prefs = await _instance;
+    await prefs.setString(_keyBaseUrl, url);
+  }
+
+  static Future<String?> getBaseUrl() async {
+    final prefs = await _instance;
+    return prefs.getString(_keyBaseUrl);
+  }
 }

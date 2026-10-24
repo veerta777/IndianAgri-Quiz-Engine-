@@ -172,8 +172,8 @@ CREATE TABLE {$table_quizzes} (
   correct_marks decimal(5,2) NOT NULL DEFAULT 1.00,
   negative_marks decimal(5,2) NOT NULL DEFAULT 0.25,
   pass_percentage decimal(5,2) NOT NULL DEFAULT 40.00,
-  shuffle_questions tinyint(1) NOT NULL DEFAULT 0,
-  shuffle_options tinyint(1) NOT NULL DEFAULT 0,
+  shuffle_questions tinyint(1) NOT NULL DEFAULT 1,
+  shuffle_options tinyint(1) NOT NULL DEFAULT 1,
   max_attempts int(11) NOT NULL DEFAULT 0,
   access_type enum('free','paid') NOT NULL DEFAULT 'free',
   wc_product_id bigint(20) unsigned DEFAULT NULL,
@@ -195,7 +195,10 @@ CREATE TABLE {$table_quizzes} (
   KEY idx_quiz_type (quiz_type),
   KEY idx_access_type (access_type),
   KEY idx_wc_product (wc_product_id),
-  KEY idx_status (status)
+  KEY idx_status (status),
+  KEY idx_exam_cat (exam_category),
+  KEY idx_subject_id (subject_id),
+  KEY idx_status_type (status, quiz_type)
 ) {$charset_collate};
 
 CREATE TABLE {$table_quiz_questions} (
@@ -302,7 +305,8 @@ CREATE TABLE {$table_user_subscriptions} (
   KEY idx_plan_id (plan_id),
   KEY idx_wc_order (wc_order_id),
   KEY idx_status (status),
-  KEY idx_expiry (expiry_date)
+  KEY idx_expiry (expiry_date),
+  KEY idx_user_status_exp (user_id, status, expiry_date)
 ) {$charset_collate};
 
 CREATE TABLE {$table_bookmarks} (
@@ -510,6 +514,15 @@ CREATE TABLE {$table_mock_test_relations} (
 		}
 
 		dbDelta( $sql );
+
+		// Migrate existing practice sets and books to paid access by default
+		$table_quizzes = self::get_table_name( 'quizzes' );
+		$table_books   = self::get_table_name( 'books' );
+		$wpdb->query( "UPDATE {$table_quizzes} SET access_type = 'paid' WHERE quiz_type = 'practice' AND (access_type = 'free' OR access_type IS NULL OR access_type = '')" );
+		$wpdb->query( "UPDATE {$table_books} SET access_type = 'paid' WHERE access_type = 'free' OR access_type IS NULL OR access_type = ''" );
+		// Ensure all practice sets have randomize question order and option order enabled by default.
+		$wpdb->query( "UPDATE {$table_quizzes} SET shuffle_questions = 1 WHERE shuffle_questions = 0 AND quiz_type = 'practice'" );
+		$wpdb->query( "UPDATE {$table_quizzes} SET shuffle_options = 1 WHERE shuffle_options = 0 AND quiz_type = 'practice'" );
 
 		update_option( 'iaq_db_version', IAQ_DB_VERSION );
 	}
@@ -723,7 +736,7 @@ CREATE TABLE {$table_mock_test_relations} (
 					'slug'            => 'competitive-book-of-agriculture',
 					'author'          => 'Nem Raj Sundha',
 					'description'     => 'Comprehensive handbook covering General Agriculture, Agronomy, Soil Science, Genetics and allied subjects for ICAR, JRF, and State PSCs.',
-					'access_type'     => 'free',
+					'access_type'     => 'paid',
 					'display_order'   => 1,
 					'status'          => 'published',
 				),
@@ -732,7 +745,7 @@ CREATE TABLE {$table_mock_test_relations} (
 					'slug'            => 'fundamentals-of-agriculture',
 					'author'          => 'Dr. Arun Katyayan',
 					'description'     => 'In-depth conceptual study reference for Agronomy, Soil Science, Agricultural Extension, and Crop Physiology.',
-					'access_type'     => 'free',
+					'access_type'     => 'paid',
 					'display_order'   => 2,
 					'status'          => 'published',
 				),

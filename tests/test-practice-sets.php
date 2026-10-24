@@ -414,12 +414,53 @@ class Test_Practice_Sets {
 		$paid_q_id = IAQ_Quiz_Builder::save_quiz(
 			array(
 				'title'       => 'Premium VIP Practice Set',
+				'quiz_type'   => 'practice',
 				'access_type' => 'paid',
 				'status'      => 'published',
 			)
 		);
 		if ( IAQ_Access_Control::can_attempt_quiz( 9999, $paid_q_id ) ) {
 			throw new Exception( 'Paid quiz was not blocked for unsubscribed student.' );
+		}
+
+		// Ensure start_or_resume_attempt rejects unsubscribed student
+		$attempt_res = IAQ_Quiz_Attempt::start_or_resume_attempt( $paid_q_id, 9999 );
+		if ( ! is_wp_error( $attempt_res ) || 'access_denied' !== $attempt_res->get_error_code() ) {
+			throw new Exception( 'Expected access_denied WP_Error for unsubscribed student attempting practice set.' );
+		}
+
+		// Verify practice set list queries enrich is_locked and can_attempt flags correctly
+		$test_book_id = IAQ_Practice_Sets::save_book(
+			array(
+				'title'       => 'Test Subscription Book',
+				'status'      => 'published',
+				'access_type' => 'paid',
+			)
+		);
+		IAQ_Practice_Sets::assign_quiz_to_book( $test_book_id, $paid_q_id, 1 );
+
+		// For unsubscribed student (ID 9999), is_locked must be true
+		$unsub_sets = IAQ_Practice_Sets::get_book_practice_sets( $test_book_id, 9999 );
+		if ( empty( $unsub_sets ) ) {
+			throw new Exception( 'Failed to retrieve book practice sets for unsubscribed student.' );
+		}
+		if ( ! $unsub_sets[0]->is_locked || $unsub_sets[0]->can_attempt ) {
+			throw new Exception( 'Practice set row should have is_locked=true and can_attempt=false for unsubscribed student.' );
+		}
+
+		// Grant All-Access subscription to student 9999
+		$all_access_plan = IAQ_Access_Control::get_plan_by_code( 'monthly-all-access' );
+		if ( $all_access_plan ) {
+			IAQ_Access_Control::grant_subscription( 9999, $all_access_plan->id, null, 'Practice Set Test Grant' );
+
+			// Now is_locked must be false and can_attempt must be true
+			$sub_sets = IAQ_Practice_Sets::get_book_practice_sets( $test_book_id, 9999 );
+			if ( $sub_sets[0]->is_locked || ! $sub_sets[0]->can_attempt ) {
+				throw new Exception( 'Practice set row should be unlocked for active All-Access subscriber.' );
+			}
+			if ( ! IAQ_Access_Control::can_attempt_quiz( 9999, $paid_q_id ) ) {
+				throw new Exception( 'Subscribed student should be allowed to attempt practice set.' );
+			}
 		}
 
 		echo "  [PASS] Server-side access control paywall gating verified across practice sets.\n";
@@ -444,6 +485,12 @@ class Test_Practice_Sets {
 		$books_html = $frontend->render_practice_sets_shortcode( array( 'view' => 'books' ) );
 		if ( false === strpos( $books_html, 'iaq-ps-books-grid' ) && false === strpos( $books_html, 'iaq-ps-empty-state' ) ) {
 			throw new Exception( 'Books catalog grid missing from books view.' );
+		}
+
+		// 2b. View "book" without book_id must always fall back to books catalog (never auto-open a single book)
+		$book_fallback_html = $frontend->render_practice_sets_shortcode( array( 'view' => 'book' ) );
+		if ( false === strpos( $book_fallback_html, 'iaq-ps-books-grid' ) && false === strpos( $book_fallback_html, 'iaq-ps-empty-state' ) ) {
+			throw new Exception( 'View without book_id must fall back to available books catalog.' );
 		}
 
 		// 3. Subjects Catalog View

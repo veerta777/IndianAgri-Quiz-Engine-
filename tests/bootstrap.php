@@ -202,6 +202,7 @@ class Mock_WC_Order_Item {
 	public $product_id;
 	public function __construct( $product_id ) { $this->product_id = $product_id; }
 	public function get_product_id() { return $this->product_id; }
+	public function get_variation_id() { return 0; }
 }
 
 if ( ! function_exists( 'wc_get_order' ) ) {
@@ -266,6 +267,10 @@ function esc_url( $url ) {
 
 function esc_url_raw( $url ) {
 	return (string) $url;
+}
+
+function esc_js( $str ) {
+	return addcslashes( (string) $str, "\\'\"&\n\r<>" );
 }
 
 function wp_rand( $min = 0, $max = 0 ) {
@@ -504,6 +509,14 @@ function do_action( $tag, ...$args ) {
 		}
 	}
 	return true;
+}
+
+function add_filter( $tag, $callback, $priority = 10, $accepted_args = 1 ) {
+	return add_action( $tag, $callback, $priority, $accepted_args );
+}
+
+function wp_doing_ajax() {
+	return false;
 }
 
 function dbDelta( $sql ) {
@@ -835,7 +848,7 @@ class Mock_WPDB {
 		$results = array();
 
 		// Handle questions query in mock
-		if ( strpos( $query, $this->prefix . 'iaq_questions' ) !== false && strpos( $query, 'SELECT q.*' ) !== false ) {
+		if ( strpos( $query, $this->prefix . 'iaq_quiz_questions' ) === false && strpos( $query, $this->prefix . 'iaq_questions' ) !== false && strpos( $query, 'SELECT q.*' ) !== false ) {
 			foreach ( $this->tables[ $this->prefix . 'iaq_questions' ] as $q ) {
 				$subj = isset( $this->tables[ $this->prefix . 'iaq_subjects' ][ $q->subject_id ] ) ? $this->tables[ $this->prefix . 'iaq_subjects' ][ $q->subject_id ]->name : '';
 				$top  = ( $q->topic_id && isset( $this->tables[ $this->prefix . 'iaq_topics' ][ $q->topic_id ] ) ) ? $this->tables[ $this->prefix . 'iaq_topics' ][ $q->topic_id ]->name : '';
@@ -846,6 +859,34 @@ class Mock_WPDB {
 				$results[] = $clone;
 			}
 			return array_reverse( $results );
+		}
+
+		// Handle quiz questions query
+		if ( strpos( $query, $this->prefix . 'iaq_quiz_questions' ) !== false && strpos( $query, 'qq.quiz_id' ) !== false ) {
+			if ( preg_match( "/qq\.quiz_id = (\d+)/", $query, $qm ) ) {
+				$qid = (int) $qm[1];
+				$list = array();
+				foreach ( $this->tables[ $this->prefix . 'iaq_quiz_questions' ] as $qq ) {
+					if ( (int) $qq->quiz_id === $qid ) {
+						$question_id = (int) $qq->question_id;
+						if ( isset( $this->tables[ $this->prefix . 'iaq_questions' ][ $question_id ] ) ) {
+							$q_obj = clone $this->tables[ $this->prefix . 'iaq_questions' ][ $question_id ];
+							$q_obj->link_id = $qq->id;
+							$q_obj->question_order = isset( $qq->question_order ) ? (int) $qq->question_order : 0;
+							$q_obj->custom_marks = isset( $qq->custom_marks ) ? $qq->custom_marks : null;
+							$q_obj->custom_negative_marks = isset( $qq->custom_negative_marks ) ? $qq->custom_negative_marks : null;
+							$q_obj->subject_name = ( ! empty( $q_obj->subject_id ) && isset( $this->tables[ $this->prefix . 'iaq_subjects' ][ $q_obj->subject_id ] ) ) ? $this->tables[ $this->prefix . 'iaq_subjects' ][ $q_obj->subject_id ]->name : '';
+							$q_obj->topic_name = ( ! empty( $q_obj->topic_id ) && isset( $this->tables[ $this->prefix . 'iaq_topics' ][ $q_obj->topic_id ] ) ) ? $this->tables[ $this->prefix . 'iaq_topics' ][ $q_obj->topic_id ]->name : '';
+							$list[] = $q_obj;
+						}
+					}
+				}
+				usort( $list, function( $a, $b ) {
+					if ( $a->question_order !== $b->question_order ) return $a->question_order <=> $b->question_order;
+					return (int) $a->id <=> (int) $b->id;
+				} );
+				return $list;
+			}
 		}
 
 		// Handle subjects query
@@ -2196,6 +2237,30 @@ class Mock_WPDB {
 				foreach ( $this->tables[ $this->prefix . 'iaq_exam_subjects' ] as $es ) {
 					if ( (int) $es->exam_id === $eid && (int) $es->subject_id === $sid ) {
 						return $es->id;
+					}
+				}
+				return null;
+			}
+		}
+
+		// Quiz questions get_var
+		if ( strpos( $query, $this->prefix . 'iaq_quiz_questions' ) !== false ) {
+			if ( preg_match( "/MAX\(question_order\) FROM [^\s]+ WHERE quiz_id = (\d+)/", $query, $m ) ) {
+				$qid = (int) $m[1];
+				$max = 0;
+				foreach ( $this->tables[ $this->prefix . 'iaq_quiz_questions' ] as $qq ) {
+					if ( (int) $qq->quiz_id === $qid && (int) $qq->question_order > $max ) {
+						$max = (int) $qq->question_order;
+					}
+				}
+				return $max;
+			}
+			if ( preg_match( "/WHERE quiz_id = (\d+) AND question_id = (\d+)/", $query, $m ) ) {
+				$qid = (int) $m[1];
+				$question_id = (int) $m[2];
+				foreach ( $this->tables[ $this->prefix . 'iaq_quiz_questions' ] as $qq ) {
+					if ( (int) $qq->quiz_id === $qid && (int) $qq->question_id === $question_id ) {
+						return $qq->id;
 					}
 				}
 				return null;

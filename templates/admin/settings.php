@@ -33,8 +33,17 @@ $leaderboard_name_type     = isset( $settings['leaderboard_name_type'] ) ? $sett
 $leaderboard_limit         = isset( $settings['leaderboard_limit'] ) ? (int) $settings['leaderboard_limit'] : 10;
 $custom_practice_max       = isset( $settings['custom_practice_max_questions'] ) ? (int) $settings['custom_practice_max_questions'] : (int) get_option( 'iaq_custom_practice_max_questions', 50 );
 $bulk_import_max           = isset( $settings['bulk_import_max_limit'] ) ? (int) $settings['bulk_import_max_limit'] : (int) get_option( 'iaq_bulk_import_max_limit', 200 );
-$recommendations_weak      = isset( $settings['recommendations_focus_weak_areas'] ) ? (int) $settings['recommendations_focus_weak_areas'] : 1;
 $streak_qualifying         = isset( $settings['streak_qualifying_activity'] ) ? $settings['streak_qualifying_activity'] : 'quiz_completed';
+
+// Mobile Application Updates & Version Control
+$app_latest_version        = isset( $settings['app_latest_version'] ) ? $settings['app_latest_version'] : get_option( 'iaq_app_latest_version', '1.1.0' );
+$app_min_version           = isset( $settings['app_min_version'] ) ? $settings['app_min_version'] : get_option( 'iaq_app_min_version', '1.0.0' );
+$app_force_update          = isset( $settings['app_force_update'] ) ? (int) $settings['app_force_update'] : (int) get_option( 'iaq_app_force_update', 0 );
+$app_update_title          = isset( $settings['app_update_title'] ) ? $settings['app_update_title'] : get_option( 'iaq_app_update_title', __( 'Exciting New Update Available!', 'indianagri-quiz-engine' ) );
+$app_update_message        = isset( $settings['app_update_message'] ) ? $settings['app_update_message'] : get_option( 'iaq_app_update_message', __( 'We have updated the IndianAgri mobile app with new Subject-Wise Practice Sets (Set 1, 2, 3), revamped Examination pathways, and enhanced exam speed.', 'indianagri-quiz-engine' ) );
+$app_release_notes         = isset( $settings['app_release_notes'] ) ? $settings['app_release_notes'] : get_option( 'iaq_app_release_notes', "• New Subject-wise Practice Sets (Set 1, 2, 3)\n• Revamped Practice by Books & Examinations\n• Ultra-fast CBT quiz timer and instant review\n• Enhanced login stability and offline crash prevention" );
+$app_update_url            = isset( $settings['app_update_url'] ) ? $settings['app_update_url'] : get_option( 'iaq_app_update_url', 'https://indianagriexam.com/mobile-app/' );
+$app_update_date           = isset( $settings['app_update_date'] ) ? $settings['app_update_date'] : get_option( 'iaq_app_update_date', current_time( 'Y-m-d' ) );
 ?>
 
 <div class="wrap iaq-admin-wrap">
@@ -134,6 +143,7 @@ $streak_qualifying         = isset( $settings['streak_qualifying_activity'] ) ? 
 				<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
 					<div class="iaq-form-group">
 						<label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+							<input type="hidden" name="default_shuffle_questions" value="0">
 							<input type="checkbox" name="default_shuffle_questions" value="1" <?php checked( $default_shuffle_questions, 1 ); ?>>
 							<strong><?php esc_html_e( 'Enable Question Shuffling by Default', 'indianagri-quiz-engine' ); ?></strong>
 						</label>
@@ -141,6 +151,7 @@ $streak_qualifying         = isset( $settings['streak_qualifying_activity'] ) ? 
 
 					<div class="iaq-form-group">
 						<label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+							<input type="hidden" name="default_shuffle_options" value="0">
 							<input type="checkbox" name="default_shuffle_options" value="1" <?php checked( $default_shuffle_options, 1 ); ?>>
 							<strong><?php esc_html_e( 'Enable Option Shuffling (A/B/C/D) by Default', 'indianagri-quiz-engine' ); ?></strong>
 						</label>
@@ -226,6 +237,67 @@ $streak_qualifying         = isset( $settings['streak_qualifying_activity'] ) ? 
 							<option value="quiz_completed" <?php selected( $streak_qualifying, 'quiz_completed' ); ?>><?php esc_html_e( 'Completing any published Quiz, Mock Test, or Custom Drill', 'indianagri-quiz-engine' ); ?></option>
 						</select>
 					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Mobile Application Updates & Release Management -->
+		<div class="iaq-card" style="margin-bottom: 24px;">
+			<div class="iaq-card-header">
+				<h2><span class="dashicons dashicons-smartphone"></span> <?php esc_html_e( 'Mobile Application Updates & Release Management', 'indianagri-quiz-engine' ); ?></h2>
+				<span class="iaq-card-help"><?php esc_html_e( 'Broadcast update alerts, release notes, and mandatory upgrade requirements to the Flutter mobile app.', 'indianagri-quiz-engine' ); ?></span>
+			</div>
+			<div class="iaq-card-body">
+				<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:16px;">
+					<div class="iaq-form-group">
+						<label for="iaq-app-latest-ver"><strong><?php esc_html_e( 'Latest App Version', 'indianagri-quiz-engine' ); ?></strong></label>
+						<input type="text" name="app_latest_version" id="iaq-app-latest-ver" class="iaq-input iaq-full-width" value="<?php echo esc_attr( $app_latest_version ); ?>" placeholder="1.1.0" required>
+						<span class="iaq-card-help"><?php esc_html_e( 'Apps running a lower version will see an update alert.', 'indianagri-quiz-engine' ); ?></span>
+					</div>
+
+					<div class="iaq-form-group">
+						<label for="iaq-app-min-ver"><strong><?php esc_html_e( 'Minimum Supported Version', 'indianagri-quiz-engine' ); ?></strong></label>
+						<input type="text" name="app_min_version" id="iaq-app-min-ver" class="iaq-input iaq-full-width" value="<?php echo esc_attr( $app_min_version ); ?>" placeholder="1.0.0" required>
+						<span class="iaq-card-help"><?php esc_html_e( 'Apps below this version will be forced to upgrade immediately.', 'indianagri-quiz-engine' ); ?></span>
+					</div>
+
+					<div class="iaq-form-group">
+						<label for="iaq-app-update-date"><strong><?php esc_html_e( 'Release Date', 'indianagri-quiz-engine' ); ?></strong></label>
+						<input type="date" name="app_update_date" id="iaq-app-update-date" class="iaq-input iaq-full-width" value="<?php echo esc_attr( $app_update_date ); ?>">
+						<span class="iaq-card-help"><?php esc_html_e( 'Published date displayed in update dialogs.', 'indianagri-quiz-engine' ); ?></span>
+					</div>
+				</div>
+
+				<div class="iaq-form-group" style="margin-top:16px;">
+					<label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+						<input type="checkbox" name="app_force_update" value="1" <?php checked( $app_force_update, 1 ); ?>>
+						<strong style="color:#b91c1c;"><?php esc_html_e( 'Force Immediate Update (Non-Dismissible Barrier)', 'indianagri-quiz-engine' ); ?></strong>
+					</label>
+					<span class="iaq-card-help" style="margin-left:26px;display:block;">
+						<?php esc_html_e( 'When enabled, students cannot dismiss the update screen until they install the latest APK / update.', 'indianagri-quiz-engine' ); ?>
+					</span>
+				</div>
+
+				<div class="iaq-form-group" style="margin-top:16px;">
+					<label for="iaq-app-update-title"><strong><?php esc_html_e( 'Update Headline / Title', 'indianagri-quiz-engine' ); ?></strong></label>
+					<input type="text" name="app_update_title" id="iaq-app-update-title" class="iaq-input iaq-full-width" value="<?php echo esc_attr( $app_update_title ); ?>" placeholder="Exciting New Update Available!">
+				</div>
+
+				<div class="iaq-form-group" style="margin-top:16px;">
+					<label for="iaq-app-update-msg"><strong><?php esc_html_e( 'Update Message / Description', 'indianagri-quiz-engine' ); ?></strong></label>
+					<textarea name="app_update_message" id="iaq-app-update-msg" rows="2" class="iaq-textarea iaq-full-width" placeholder="Brief explanation of why candidates should update..."><?php echo esc_textarea( $app_update_message ); ?></textarea>
+				</div>
+
+				<div class="iaq-form-group" style="margin-top:16px;">
+					<label for="iaq-app-release-notes"><strong><?php esc_html_e( 'Release Notes / What\'s New (One item per line)', 'indianagri-quiz-engine' ); ?></strong></label>
+					<textarea name="app_release_notes" id="iaq-app-release-notes" rows="4" class="iaq-textarea iaq-full-width" placeholder="• Item 1&#10;• Item 2&#10;• Item 3"><?php echo esc_textarea( $app_release_notes ); ?></textarea>
+					<span class="iaq-card-help"><?php esc_html_e( 'Each line will be rendered as a bullet point with a feature checkmark in the mobile app.', 'indianagri-quiz-engine' ); ?></span>
+				</div>
+
+				<div class="iaq-form-group" style="margin-top:16px;">
+					<label for="iaq-app-update-url"><strong><?php esc_html_e( 'APK / Google Play Store Update Download URL', 'indianagri-quiz-engine' ); ?></strong></label>
+					<input type="url" name="app_update_url" id="iaq-app-update-url" class="iaq-input iaq-full-width" value="<?php echo esc_attr( $app_update_url ); ?>" placeholder="https://play.google.com/store/apps/details?id=... or https://indianagriexam.com/app/">
+					<span class="iaq-card-help"><?php esc_html_e( 'The "Update Now" button in the mobile app redirects to this download link.', 'indianagri-quiz-engine' ); ?></span>
 				</div>
 			</div>
 		</div>

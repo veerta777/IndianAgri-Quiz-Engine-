@@ -418,6 +418,17 @@ class IAQ_Rest_Api {
 				'permission_callback' => array( __CLASS__, 'require_authenticated_student' ),
 			)
 		);
+
+		// --- 9. Mobile App Version & Update Information ---
+		register_rest_route(
+			self::NAMESPACE,
+			'/app/version',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( __CLASS__, 'get_app_version_info' ),
+				'permission_callback' => '__return_true',
+			)
+		);
 	}
 
 	/* =========================================================================
@@ -1487,6 +1498,62 @@ class IAQ_Rest_Api {
 				'price'        => (float) $plan->price,
 				'currency'     => $plan->currency,
 				'checkout_url' => $checkout_url,
+			)
+		);
+	}
+
+	/**
+	 * Get application update and version information.
+	 *
+	 * @param WP_REST_Request $request REST request.
+	 * @return WP_REST_Response
+	 */
+	public static function get_app_version_info( $request ) {
+		$client_version = sanitize_text_field( $request->get_param( 'current_version' ) );
+		if ( empty( $client_version ) ) {
+			$client_version = '1.0.0';
+		}
+
+		$latest_version = get_option( 'iaq_app_latest_version', '1.1.0' );
+		$min_version    = get_option( 'iaq_app_min_version', '1.0.0' );
+		$force_update   = (bool) get_option( 'iaq_app_force_update', 0 );
+		$update_title   = get_option( 'iaq_app_update_title', __( 'Exciting New Update Available!', 'indianagri-quiz-engine' ) );
+		$update_message = get_option( 'iaq_app_update_message', __( 'We have updated the IndianAgri mobile app with new Subject-Wise Practice Sets (Set 1, 2, 3), revamped Examination pathways, and enhanced exam speed.', 'indianagri-quiz-engine' ) );
+		$release_notes  = get_option( 'iaq_app_release_notes', "• New Subject-wise Practice Sets (Set 1, 2, 3)\n• Revamped Practice by Books & Examinations\n• Ultra-fast CBT quiz timer and instant review\n• Enhanced login stability and offline crash prevention" );
+		$update_url     = get_option( 'iaq_app_update_url', 'https://indianagriexam.com/mobile-app/' );
+		$published_at   = get_option( 'iaq_app_update_date', date( 'Y-m-d' ) );
+
+		// Parse release notes into list of strings if string
+		$notes_array = array();
+		if ( is_string( $release_notes ) ) {
+			$lines = explode( "\n", $release_notes );
+			foreach ( $lines as $line ) {
+				$line = trim( $line, " \t\n\r\0\x0B•-*" );
+				if ( ! empty( $line ) ) {
+					$notes_array[] = $line;
+				}
+			}
+		} elseif ( is_array( $release_notes ) ) {
+			$notes_array = $release_notes;
+		}
+
+		// Check if update is available
+		$is_update_available = version_compare( $client_version, $latest_version, '<' );
+		$is_force_update     = $force_update || version_compare( $client_version, $min_version, '<' );
+
+		return rest_ensure_response(
+			array(
+				'success'               => true,
+				'current_version'       => $client_version,
+				'latest_version'        => $latest_version,
+				'min_supported_version' => $min_version,
+				'is_update_available'   => (bool) $is_update_available,
+				'is_force_update'       => (bool) $is_force_update,
+				'title'                 => $update_title,
+				'message'               => $update_message,
+				'release_notes'         => $notes_array,
+				'update_url'            => $update_url,
+				'published_at'          => $published_at,
 			)
 		);
 	}

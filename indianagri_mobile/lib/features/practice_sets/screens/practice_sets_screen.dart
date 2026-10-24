@@ -6,6 +6,7 @@ import '../../../core/constants/app_styles.dart';
 import '../../../core/widgets/language_toggle.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../quiz_cbt/screens/quiz_instructions_screen.dart';
+import '../../subscriptions/screens/subscription_plans_screen.dart';
 
 class PracticeSetsScreen extends StatefulWidget {
   final int initialTab;
@@ -418,54 +419,111 @@ class _GenericSetsListScreenState extends State<GenericSetsListScreen> {
         final title = item['title'] ?? 'Practice Set ${index + 1}';
         final totalQ = item['total_questions'] ?? 0;
         final duration = item['duration_minutes'] ?? 0;
+        final isLocked = item['is_locked'] == true;
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(14),
-          decoration: AppStyles.cardDecoration(context),
-          child: Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: const BoxDecoration(
-                  color: AppColors.primarySubtle,
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    '${index + 1}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+        return InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => QuizInstructionsScreen(quizId: quizId),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(14),
+            decoration: AppStyles.cardDecoration(context),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: isLocked ? AppColors.accent.withOpacity(0.12) : AppColors.primarySubtle,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: isLocked
+                        ? const Icon(Icons.lock, size: 18, color: AppColors.accent)
+                        : Text(
+                            '${index + 1}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+                          ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    const SizedBox(height: 3),
-                    Text('$totalQ Questions • $duration Mins', style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 12)),
-                  ],
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isLocked)
+                            Container(
+                              margin: const EdgeInsets.only(left: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.accent.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: AppColors.accent.withOpacity(0.3)),
+                              ),
+                              child: const Text(
+                                'LOCKED',
+                                style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.accent),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text('$totalQ Questions • $duration Mins', style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 12)),
+                    ],
+                  ),
                 ),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => QuizInstructionsScreen(quizId: quizId),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    if (isLocked) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const SubscriptionPlansScreen(),
+                        ),
+                      );
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => QuizInstructionsScreen(quizId: quizId),
+                        ),
+                      );
+                    }
+                  },
+                  icon: Icon(
+                    isLocked ? Icons.lock_open : Icons.play_arrow,
+                    size: 14,
+                    color: Colors.white,
+                  ),
+                  label: Text(
+                    isLocked ? 'Unlock' : 'Start',
+                    style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isLocked ? AppColors.accent : AppColors.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
                 ),
-                child: const Text('Start', style: TextStyle(fontSize: 12, color: Colors.white)),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

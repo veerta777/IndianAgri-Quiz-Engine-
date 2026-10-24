@@ -59,8 +59,23 @@ $all_exams = class_exists( 'IAQ_Examinations' ) ? IAQ_Examinations::get_examinat
 								<input type="number" step="1" min="0" name="price" id="plan-price" class="iaq-input iaq-full-width" value="<?php echo esc_attr( $edit_plan ? $edit_plan->price : '29' ); ?>" required>
 							</div>
 							<div class="iaq-form-group">
-								<label for="plan-wc-id"><?php esc_html_e( 'WooCommerce Product ID', 'indianagri-quiz-engine' ); ?></label>
-								<input type="number" name="wc_product_id" id="plan-wc-id" class="iaq-input iaq-full-width" value="<?php echo esc_attr( $edit_plan && ! empty( $edit_plan->wc_product_id ) ? $edit_plan->wc_product_id : '' ); ?>" placeholder="e.g. 101">
+								<label for="plan-wc-id"><?php esc_html_e( 'WooCommerce Product', 'indianagri-quiz-engine' ); ?></label>
+								<?php
+								$wc_prods = function_exists( 'wc_get_products' ) ? wc_get_products( array( 'limit' => 150, 'status' => 'publish', 'orderby' => 'name', 'order' => 'ASC' ) ) : array();
+								$selected_wc_id = $edit_plan && ! empty( $edit_plan->wc_product_id ) ? (int) $edit_plan->wc_product_id : 0;
+								?>
+								<?php if ( ! empty( $wc_prods ) ) : ?>
+									<select name="wc_product_id" id="plan-wc-id" class="iaq-select iaq-full-width">
+										<option value=""><?php esc_html_e( '— Select Product —', 'indianagri-quiz-engine' ); ?></option>
+										<?php foreach ( $wc_prods as $wp_p ) : ?>
+											<option value="<?php echo esc_attr( $wp_p->get_id() ); ?>" <?php selected( $selected_wc_id, $wp_p->get_id() ); ?>>
+												#<?php echo esc_html( $wp_p->get_id() ); ?> - <?php echo esc_html( $wp_p->get_name() ); ?> (₹<?php echo esc_html( $wp_p->get_price() ); ?>)
+											</option>
+										<?php endforeach; ?>
+									</select>
+								<?php else : ?>
+									<input type="number" name="wc_product_id" id="plan-wc-id" class="iaq-input iaq-full-width" value="<?php echo esc_attr( $selected_wc_id ? $selected_wc_id : '' ); ?>" placeholder="<?php esc_attr_e( 'e.g. 101', 'indianagri-quiz-engine' ); ?>">
+								<?php endif; ?>
 							</div>
 						</div>
 
@@ -79,13 +94,23 @@ $all_exams = class_exists( 'IAQ_Examinations' ) ? IAQ_Examinations::get_examinat
 							</div>
 						</div>
 
+						<?php
+						$current_scope = 'all_access';
+						if ( $edit_plan ) {
+							$current_scope = ! empty( $edit_plan->access_type ) ? ( 'exam_specific' === $edit_plan->access_type ? 'specific_exams' : $edit_plan->access_type ) : ( ! empty( $edit_plan->access_scope ) ? $edit_plan->access_scope : 'all_access' );
+						}
+						$current_included = '';
+						if ( $edit_plan ) {
+							$current_included = ! empty( $edit_plan->included_exam_ids ) ? $edit_plan->included_exam_ids : ( ! empty( $edit_plan->included_categories ) ? $edit_plan->included_categories : '' );
+						}
+						?>
 						<div class="iaq-form-group">
 							<label for="plan-scope"><?php esc_html_e( 'Access Entitlement Scope', 'indianagri-quiz-engine' ); ?></label>
 							<select name="access_scope" id="plan-scope" class="iaq-select iaq-full-width">
-								<option value="all_access" <?php selected( $edit_plan ? $edit_plan->access_scope : 'all_access', 'all_access' ); ?>>
+								<option value="all_access" <?php selected( $current_scope, 'all_access' ); ?>>
 									<?php esc_html_e( 'All-Access (Unlocks ALL Agricultural Exams & Quizzes)', 'indianagri-quiz-engine' ); ?>
 								</option>
-								<option value="specific_exams" <?php selected( $edit_plan ? $edit_plan->access_scope : '', 'specific_exams' ); ?>>
+								<option value="specific_exams" <?php selected( $current_scope, 'specific_exams' ); ?>>
 									<?php esc_html_e( 'Examination-Specific (Only selected exam categories)', 'indianagri-quiz-engine' ); ?>
 								</option>
 							</select>
@@ -93,7 +118,7 @@ $all_exams = class_exists( 'IAQ_Examinations' ) ? IAQ_Examinations::get_examinat
 
 						<div class="iaq-form-group" id="iaq-included-exams-group">
 							<label for="plan-included"><?php esc_html_e( 'Included Examination Categories', 'indianagri-quiz-engine' ); ?></label>
-							<textarea name="included_categories" id="plan-included" rows="2" class="iaq-textarea iaq-full-width" placeholder="<?php esc_attr_e( 'Comma-separated (e.g. ICAR JRF/SRF, UPCATET PG, CUET PG Agriculture)', 'indianagri-quiz-engine' ); ?>"><?php echo esc_textarea( $edit_plan ? $edit_plan->included_categories : '' ); ?></textarea>
+							<textarea name="included_categories" id="plan-included" rows="2" class="iaq-textarea iaq-full-width" placeholder="<?php esc_attr_e( 'Comma-separated (e.g. ICAR JRF/SRF, UPCATET PG, CUET PG Agriculture)', 'indianagri-quiz-engine' ); ?>"><?php echo esc_textarea( $current_included ); ?></textarea>
 							<span class="iaq-card-help"><?php esc_html_e( 'Required when Access Scope is Examination-Specific.', 'indianagri-quiz-engine' ); ?></span>
 						</div>
 

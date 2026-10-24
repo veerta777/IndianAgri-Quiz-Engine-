@@ -32,6 +32,7 @@ class Test_Rest_Api {
 		self::test_mock_test_key_concealment_on_rest();
 		self::test_learning_features_endpoints();
 		self::test_subscriptions_endpoints();
+		self::test_app_version_endpoint();
 
 		echo "Test_Rest_Api: ALL PASS\n\n";
 	}
@@ -56,6 +57,7 @@ class Test_Rest_Api {
 			'/iaq/v1/learning/leaderboard',
 			'/iaq/v1/subscriptions/plans',
 			'/iaq/v1/subscriptions/checkout-url',
+			'/iaq/v1/app/version',
 		);
 
 		foreach ( $expected_routes as $route ) {
@@ -420,5 +422,23 @@ class Test_Rest_Api {
 		assert( strpos( $data_checkout['checkout_url'], 'add-to-cart=999' ) !== false, 'Checkout URL missing WooCommerce cart param' );
 
 		echo "  [PASS] Subscription plans and WooCommerce checkout redirection verified\n";
+	}
+
+	private static function test_app_version_endpoint() {
+		// Test app version information with current client version 1.0.0
+		$req = new WP_REST_Request( 'GET', '/iaq/v1/app/version' );
+		$req->set_param( 'current_version', '1.0.0' );
+		$res = IAQ_Rest_Api::get_app_version_info( $req );
+		assert( ! is_wp_error( $res ), 'App version endpoint returned error' );
+		$data = $res->get_data();
+
+		assert( $data['success'] === true, 'App version endpoint success flag false' );
+		assert( ! empty( $data['latest_version'] ), 'Latest version is empty' );
+		assert( ! empty( $data['update_url'] ), 'Update URL is empty' );
+		assert( is_array( $data['release_notes'] ), 'Release notes should be an array' );
+		assert( isset( $data['is_update_available'] ), 'is_update_available flag missing' );
+		assert( isset( $data['is_force_update'] ), 'is_force_update flag missing' );
+
+		echo "  [PASS] Mobile App Version & Update Information REST endpoint verified\n";
 	}
 }

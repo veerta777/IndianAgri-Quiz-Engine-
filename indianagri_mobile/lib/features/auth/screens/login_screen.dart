@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../core/api/api_endpoints.dart';
+import '../../../core/storage/secure_storage.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_styles.dart';
 import '../../../core/widgets/app_button.dart';
@@ -32,6 +34,9 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Dismiss keyboard
+    FocusScope.of(context).unfocus();
+
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final success = await auth.login(
       _usernameController.text.trim(),
@@ -46,13 +51,111 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (_) => const DashboardScreen()),
       );
     } else if (auth.errorMessage != null) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(auth.errorMessage!),
+          content: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white, size: 22),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  auth.errorMessage!,
+                  style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 13.5),
+                ),
+              ),
+            ],
+          ),
           backgroundColor: AppColors.incorrectRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'DISMISS',
+            textColor: Colors.white,
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+          ),
         ),
       );
     }
+  }
+
+  void _showServerConfigDialog() {
+    final urlController = TextEditingController(text: ApiEndpoints.activeBaseUrl);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: const [
+            Icon(Icons.dns_outlined, color: AppColors.primary),
+            SizedBox(width: 8),
+            Text('Server Endpoint', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Select or enter the REST API base URL for your IndianAgriExam backend:',
+              style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: urlController,
+              decoration: const InputDecoration(
+                labelText: 'Base URL',
+                hintText: 'https://indianagriexam.com/wp-json/iaq/v1',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ActionChip(
+                  label: const Text('Production', style: TextStyle(fontSize: 11)),
+                  onPressed: () {
+                    urlController.text = ApiEndpoints.baseUrl;
+                  },
+                ),
+                ActionChip(
+                  label: const Text('Local (Emulator)', style: TextStyle(fontSize: 11)),
+                  onPressed: () {
+                    urlController.text = ApiEndpoints.localSandboxUrl;
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () async {
+              final newUrl = urlController.text.trim();
+              if (newUrl.isNotEmpty) {
+                ApiEndpoints.setBaseUrl(newUrl);
+                await SecureStorage.saveBaseUrl(newUrl);
+                setState(() {});
+              }
+              if (mounted) Navigator.pop(ctx);
+            },
+            child: const Text('Save & Apply', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -62,8 +165,13 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(''),
-        actions: const [
-          Padding(
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.dns_outlined),
+            tooltip: 'Server Connection',
+            onPressed: _showServerConfigDialog,
+          ),
+          const Padding(
             padding: EdgeInsets.only(right: 16.0),
             child: LanguageToggle(),
           ),

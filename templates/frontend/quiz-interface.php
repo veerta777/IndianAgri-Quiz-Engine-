@@ -28,12 +28,12 @@ if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 		<div class="iaq-topbar-controls">
 			<!-- Return to Dashboard Control -->
 			<button type="button" class="iaq-btn-exam-back" id="iaq-exam-back-dashboard-btn" title="<?php esc_attr_e( 'Pause & Return to Dashboard', 'indianagri-quiz-engine' ); ?>">
-				<span class="dashicons dashicons-arrow-left-alt"></span> <span class="iaq-btn-text"><?php esc_html_e( 'Dashboard', 'indianagri-quiz-engine' ); ?></span>
+				<svg class="iaq-icon" viewBox="0 0 20 20" fill="currentColor" width="14" height="14" aria-hidden="true"><path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" /></svg> <span class="iaq-btn-text"><?php esc_html_e( 'Dashboard', 'indianagri-quiz-engine' ); ?></span>
 			</button>
 
 			<!-- Timer Clock -->
 			<div class="iaq-timer-clock-badge" id="iaq-timer-container">
-				<span class="dashicons dashicons-clock iaq-timer-icon"></span>
+				<svg class="iaq-icon iaq-timer-icon" viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" /></svg>
 				<div class="iaq-timer-meta">
 					<span class="iaq-timer-label"><?php esc_html_e( 'Time Left', 'indianagri-quiz-engine' ); ?></span>
 					<span class="iaq-timer-digits" id="iaq-timer-digits">--:--</span>
@@ -99,7 +99,7 @@ if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 				</div>
 				<div class="iaq-actions-right">
 					<button type="button" class="iaq-btn-action iaq-btn-mark" id="iaq-action-mark">
-						<span class="dashicons dashicons-flag"></span> <?php esc_html_e( 'Mark for Review & Next', 'indianagri-quiz-engine' ); ?>
+						<svg class="iaq-icon iaq-icon-flag" viewBox="0 0 20 20" fill="currentColor" width="14" height="14" aria-hidden="true" style="vertical-align:-2px;margin-right:4px;"><path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd" /></svg> <?php esc_html_e( 'Mark for Review & Next', 'indianagri-quiz-engine' ); ?>
 					</button>
 					<button type="button" class="iaq-btn-action iaq-btn-save-next" id="iaq-action-next">
 						<?php esc_html_e( 'Save & Next', 'indianagri-quiz-engine' ); ?> &rarr;
@@ -151,7 +151,7 @@ if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 				<!-- Final Submit Button -->
 				<div class="iaq-palette-submit-bar">
 					<button type="button" class="iaq-btn-finalize-submit" id="iaq-btn-open-submit">
-						<span class="dashicons dashicons-yes-alt"></span> <?php esc_html_e( 'Submit Examination', 'indianagri-quiz-engine' ); ?>
+						<svg class="iaq-icon" viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true" style="vertical-align:-2px;margin-right:6px;"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg> <?php esc_html_e( 'Submit Examination', 'indianagri-quiz-engine' ); ?>
 					</button>
 				</div>
 
@@ -191,7 +191,7 @@ if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 				</table>
 
 				<div class="iaq-modal-alert" id="iaq-modal-warning" style="display:none;">
-					<span class="dashicons dashicons-warning"></span>
+					<svg class="iaq-icon" viewBox="0 0 20 20" fill="currentColor" width="18" height="18" aria-hidden="true" style="vertical-align:-2px;margin-right:6px;"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
 					<span><?php esc_html_e( 'Warning: You still have unattempted questions remaining!', 'indianagri-quiz-engine' ); ?></span>
 				</div>
 			</div>
@@ -211,7 +211,7 @@ if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 		<div class="iaq-modal-dialog">
 			<div class="iaq-modal-header" style="background:#dc2626;color:#ffffff;">
 				<h3 class="iaq-modal-title" style="color:#ffffff;">
-					<span class="dashicons dashicons-clock"></span> <?php esc_html_e( 'Time Expired!', 'indianagri-quiz-engine' ); ?>
+					<svg class="iaq-icon" viewBox="0 0 20 20" fill="currentColor" width="20" height="20" aria-hidden="true" style="vertical-align:-3px;margin-right:6px;"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" /></svg> <?php esc_html_e( 'Time Expired!', 'indianagri-quiz-engine' ); ?>
 				</h3>
 			</div>
 			<div class="iaq-modal-body" style="text-align:center;padding:30px 20px;">
@@ -274,7 +274,7 @@ if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 		<div class="iaq-subject-analytics-card" id="iaq-subject-analytics-section">
 			<div class="iaq-subject-analytics-header">
 				<h3 class="iaq-analytics-title">
-					<span class="dashicons dashicons-chart-pie"></span> <?php esc_html_e( 'Domain & Subject-Wise Performance Analysis', 'indianagri-quiz-engine' ); ?>
+					<svg class="iaq-icon" viewBox="0 0 20 20" fill="currentColor" width="18" height="18" aria-hidden="true" style="vertical-align:-3px;margin-right:6px;"><path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"/><path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"/></svg> <?php esc_html_e( 'Domain & Subject-Wise Performance Analysis', 'indianagri-quiz-engine' ); ?>
 				</h3>
 				<span class="iaq-analytics-subtitle"><?php esc_html_e( 'Identify strong areas and topics needing revision', 'indianagri-quiz-engine' ); ?></span>
 			</div>
@@ -301,13 +301,13 @@ if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 		<!-- Actions Bar -->
 		<div class="iaq-results-actions">
 			<button type="button" class="iaq-btn-action-primary" id="iaq-res-review-btn">
-				<span class="dashicons dashicons-search"></span> <?php esc_html_e( 'Review Detailed Solutions & Explanations', 'indianagri-quiz-engine' ); ?>
+				<svg class="iaq-icon" viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true" style="vertical-align:-2px;margin-right:6px;"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg> <?php esc_html_e( 'Review Detailed Solutions & Explanations', 'indianagri-quiz-engine' ); ?>
 			</button>
 			<button type="button" class="iaq-btn-print" id="iaq-res-print-btn">
-				<span class="dashicons dashicons-printer"></span> <?php esc_html_e( 'Print Scorecard / Download PDF', 'indianagri-quiz-engine' ); ?>
+				<svg class="iaq-icon" viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true" style="vertical-align:-2px;margin-right:6px;"><path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a1 1 0 001 1h8a1 1 0 001-1v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a1 1 0 00-1-1H6a1 1 0 00-1 1zm2 1h6v2H7V5zm8 6a1 1 0 11-2 0 1 1 0 012 0zm-8 2h6v3H7v-3z" clip-rule="evenodd" /></svg> <?php esc_html_e( 'Print Scorecard / Download PDF', 'indianagri-quiz-engine' ); ?>
 			</button>
 			<button type="button" class="iaq-btn-retake" id="iaq-res-retake-btn">
-				<span class="dashicons dashicons-redo"></span> <?php esc_html_e( 'Retake Test', 'indianagri-quiz-engine' ); ?>
+				<svg class="iaq-icon" viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true" style="vertical-align:-2px;margin-right:6px;"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" /></svg> <?php esc_html_e( 'Retake Test', 'indianagri-quiz-engine' ); ?>
 			</button>
 			<a href="<?php echo esc_url( remove_query_arg( array( 'iaq_quiz_id', 'iaq_action', 'attempt_id' ), ( function_exists( 'get_permalink' ) && get_permalink() ? get_permalink() : '/' ) ) ); ?>" class="iaq-btn-back-list">
 				&larr; <?php esc_html_e( 'Back to Student Dashboard', 'indianagri-quiz-engine' ); ?>
@@ -329,7 +329,7 @@ if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 			</div>
 			<div class="iaq-solutions-header-actions" style="display: flex; gap: 8px; align-items: center;">
 				<button type="button" class="iaq-btn-print" id="iaq-sol-print-btn">
-					<span class="dashicons dashicons-printer"></span> <?php esc_html_e( 'Print Solutions / Download PDF', 'indianagri-quiz-engine' ); ?>
+					<svg class="iaq-icon" viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true" style="vertical-align:-2px;margin-right:6px;"><path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a1 1 0 001 1h8a1 1 0 001-1v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a1 1 0 00-1-1H6a1 1 0 00-1 1zm2 1h6v2H7V5zm8 6a1 1 0 11-2 0 1 1 0 012 0zm-8 2h6v3H7v-3z" clip-rule="evenodd" /></svg> <?php esc_html_e( 'Print Solutions / Download PDF', 'indianagri-quiz-engine' ); ?>
 				</button>
 				<button type="button" class="iaq-btn-action-secondary" id="iaq-sol-back-btn">
 					&larr; <?php esc_html_e( 'Return to Scorecard', 'indianagri-quiz-engine' ); ?>
@@ -364,7 +364,7 @@ if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 				&larr; <?php esc_html_e( 'Return to Scorecard', 'indianagri-quiz-engine' ); ?>
 			</button>
 			<button type="button" class="iaq-btn-print" id="iaq-sol-bottom-print-btn">
-				<span class="dashicons dashicons-printer"></span> <?php esc_html_e( 'Print Solutions / Download PDF', 'indianagri-quiz-engine' ); ?>
+				<svg class="iaq-icon" viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true" style="vertical-align:-2px;margin-right:6px;"><path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a1 1 0 001 1h8a1 1 0 001-1v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a1 1 0 00-1-1H6a1 1 0 00-1 1zm2 1h6v2H7V5zm8 6a1 1 0 11-2 0 1 1 0 012 0zm-8 2h6v3H7v-3z" clip-rule="evenodd" /></svg> <?php esc_html_e( 'Print Solutions / Download PDF', 'indianagri-quiz-engine' ); ?>
 			</button>
 		</div>
 

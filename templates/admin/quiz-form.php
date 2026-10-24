@@ -151,6 +151,7 @@ if ( ! empty( $settings['default_duration'] ) ) $default_duration = $settings['d
 						<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
 							<div class="iaq-form-group">
 								<label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+									<input type="hidden" name="shuffle_questions" value="0">
 									<input type="checkbox" name="shuffle_questions" value="1" <?php checked( $is_edit ? $quiz->shuffle_questions : 1, 1 ); ?>>
 									<strong><?php esc_html_e( 'Randomize Question Order', 'indianagri-quiz-engine' ); ?></strong>
 								</label>
@@ -161,6 +162,7 @@ if ( ! empty( $settings['default_duration'] ) ) $default_duration = $settings['d
 
 							<div class="iaq-form-group">
 								<label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+									<input type="hidden" name="shuffle_options" value="0">
 									<input type="checkbox" name="shuffle_options" value="1" <?php checked( $is_edit ? $quiz->shuffle_options : 1, 1 ); ?>>
 									<strong><?php esc_html_e( 'Randomize Option Order (A/B/C/D)', 'indianagri-quiz-engine' ); ?></strong>
 								</label>

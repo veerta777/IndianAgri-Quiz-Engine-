@@ -5,6 +5,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_styles.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/state_views.dart';
+import '../../subscriptions/screens/subscription_plans_screen.dart';
 import 'cbt_exam_screen.dart';
 
 class QuizInstructionsScreen extends StatefulWidget {
@@ -133,14 +134,39 @@ class _QuizInstructionsScreenState extends State<QuizInstructionsScreen> {
                         borderRadius: AppStyles.borderRadiusM,
                         border: Border.all(color: AppColors.incorrectRed.withOpacity(0.4)),
                       ),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.lock, color: AppColors.incorrectRed, size: 24),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              reason,
-                              style: const TextStyle(color: AppColors.incorrectRed, fontSize: 13),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(Icons.lock, color: AppColors.incorrectRed, size: 22),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  reason.isNotEmpty ? reason : 'Active subscription required to access this examination.',
+                                  style: const TextStyle(color: AppColors.incorrectRed, fontSize: 13, height: 1.4),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const SubscriptionPlansScreen(),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.arrow_forward, size: 14, color: AppColors.accent),
+                              label: const Text(
+                                'View Subscription Plans',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.accent),
+                              ),
                             ),
                           ),
                         ],
@@ -194,20 +220,34 @@ class _QuizInstructionsScreenState extends State<QuizInstructionsScreen> {
               color: Colors.white,
               border: Border(top: BorderSide(color: AppColors.cardBorderLight)),
             ),
-            child: AppButton(
-              label: 'Enter Examination Hall',
-              icon: Icons.play_arrow,
-              onPressed: isAllowed && _hasAgreed
-                  ? () {
-                      Navigator.pushReplacement(
+            child: isAllowed
+                ? AppButton(
+                    label: 'Enter Examination Hall',
+                    icon: Icons.play_arrow,
+                    onPressed: _hasAgreed
+                        ? () {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => CbtExamScreen(quizId: widget.quizId),
+                              ),
+                            );
+                          }
+                        : null,
+                  )
+                : AppButton(
+                    label: 'Subscribe to Unlock Examination',
+                    icon: Icons.lock_open,
+                    customColor: AppColors.accent,
+                    onPressed: () {
+                      Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => CbtExamScreen(quizId: widget.quizId),
+                          builder: (_) => const SubscriptionPlansScreen(),
                         ),
                       );
-                    }
-                  : null,
-            ),
+                    },
+                  ),
           ),
         ],
       ),

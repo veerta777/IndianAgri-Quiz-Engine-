@@ -83,6 +83,24 @@
 	hyphens: none;
 }
 
+/* Inline SVG Icon Helper */
+.iaq-icon {
+	display: inline-block;
+	vertical-align: middle;
+	flex-shrink: 0;
+	width: 1em;
+	height: 1em;
+	fill: currentColor;
+}
+@keyframes iaqSpin {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}
+
 /* Single Quiz Overview Card */
 .iaq-exam-card {
 	background: var(--iaq-fe-bg);
@@ -836,14 +854,23 @@
 .iaq-option-status-tag {
 	display: inline-flex;
 	align-items: center;
-	gap: 5px;
-	font-size: 12px;
+	gap: 6px;
+	font-size: 11px;
 	font-weight: 700;
-	padding: 4px 10px;
+	line-height: 1;
+	padding: 5px 10px;
 	border-radius: 9999px;
 	margin-left: auto;
 	flex-shrink: 0;
+	white-space: nowrap;
 	letter-spacing: 0.01em;
+}
+
+.iaq-option-status-tag svg,
+.iaq-option-status-tag .iaq-icon {
+	width: 13px;
+	height: 13px;
+	flex-shrink: 0;
 }
 
 .iaq-option-status-tag.is-correct-tag {
@@ -959,9 +986,13 @@
 	color: #0f172a;
 }
 
-.iaq-feedback-expl-title .dashicons {
+.iaq-feedback-expl-title .dashicons,
+.iaq-feedback-expl-title .iaq-icon {
 	color: #eab308;
 	font-size: 18px;
+	width: 18px;
+	height: 18px;
+	flex-shrink: 0;
 }
 
 .iaq-feedback-expl-text {
@@ -1457,26 +1488,56 @@
 
 	/* Mobile Action Buttons Bar */
 	.iaq-exam-actions-bar {
+		display: flex;
 		flex-direction: column;
 		gap: 8px;
 		padding-top: 14px;
+		padding-bottom: max(32px, env(safe-area-inset-bottom, 24px));
+		margin-bottom: 24px;
 	}
 
 	.iaq-actions-left,
 	.iaq-actions-right {
 		width: 100%;
-		display: grid;
-		grid-template-columns: 1fr 1fr;
+		display: flex;
+		align-items: center;
 		gap: 8px;
 	}
 
+	.is-practice-mode .iaq-exam-actions-bar {
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.is-practice-mode .iaq-actions-left,
+	.is-practice-mode .iaq-actions-right {
+		width: auto;
+		flex: 1;
+	}
+
 	.iaq-btn-action {
+		flex: 1;
 		width: 100%;
 		justify-content: center;
-		padding: 12px 8px;
+		padding: 12px 10px;
 		min-height: 44px;
 		font-size: 13px;
+		font-weight: 600;
 		text-align: center;
+		white-space: nowrap;
+	}
+
+	.iaq-feedback-action-row {
+		padding: 12px 14px;
+	}
+
+	.iaq-feedback-next-btn {
+		width: 100%;
+		justify-content: center;
+		padding: 12px 16px;
+		font-size: 15px;
+		min-height: 46px;
 	}
 
 	/* Palette Grid on Mobile */

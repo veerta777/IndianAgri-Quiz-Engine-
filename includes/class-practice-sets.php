@@ -309,28 +309,7 @@ class IAQ_Practice_Sets {
 		$counter = 1;
 
 		foreach ( $rows as &$row ) {
-			$row->practice_set_number = $counter++;
-			$row->attempt_status      = 'not_attempted';
-			$row->latest_percentage   = null;
-			$row->latest_passed       = null;
-
-			if ( $user_id > 0 ) {
-				$latest_attempt = $wpdb->get_row(
-					$wpdb->prepare(
-						"SELECT status, score, percentage, passed FROM {$table_attempts}
-						 WHERE quiz_id = %d AND user_id = %d
-						 ORDER BY id DESC LIMIT 1",
-						$row->id,
-						$user_id
-					)
-				);
-
-				if ( $latest_attempt ) {
-					$row->attempt_status    = $latest_attempt->status; // 'in_progress' or 'completed'
-					$row->latest_percentage = $latest_attempt->percentage;
-					$row->latest_passed     = (bool) $latest_attempt->passed;
-				}
-			}
+			self::enrich_practice_set_meta( $row, $user_id, $table_attempts, $counter++ );
 		}
 
 		return $rows;
@@ -568,28 +547,7 @@ class IAQ_Practice_Sets {
 		$counter = 1;
 
 		foreach ( $rows as &$row ) {
-			$row->practice_set_number = $counter++;
-			$row->attempt_status      = 'not_attempted';
-			$row->latest_percentage   = null;
-			$row->latest_passed       = null;
-
-			if ( $user_id > 0 ) {
-				$latest_attempt = $wpdb->get_row(
-					$wpdb->prepare(
-						"SELECT status, score, percentage, passed FROM {$table_attempts}
-						 WHERE quiz_id = %d AND user_id = %d
-						 ORDER BY id DESC LIMIT 1",
-						$row->id,
-						$user_id
-					)
-				);
-
-				if ( $latest_attempt ) {
-					$row->attempt_status    = $latest_attempt->status;
-					$row->latest_percentage = $latest_attempt->percentage;
-					$row->latest_passed     = (bool) $latest_attempt->passed;
-				}
-			}
+			self::enrich_practice_set_meta( $row, $user_id, $table_attempts, $counter++ );
 		}
 
 		return $rows;
@@ -954,28 +912,7 @@ class IAQ_Practice_Sets {
 		$counter = 1;
 
 		foreach ( $rows as &$row ) {
-			$row->practice_set_number = $counter++;
-			$row->attempt_status      = 'not_attempted';
-			$row->latest_percentage   = null;
-			$row->latest_passed       = null;
-
-			if ( $user_id > 0 ) {
-				$latest_attempt = $wpdb->get_row(
-					$wpdb->prepare(
-						"SELECT status, score, percentage, passed FROM {$table_attempts}
-						 WHERE quiz_id = %d AND user_id = %d
-						 ORDER BY id DESC LIMIT 1",
-						$row->id,
-						$user_id
-					)
-				);
-
-				if ( $latest_attempt ) {
-					$row->attempt_status    = $latest_attempt->status;
-					$row->latest_percentage = $latest_attempt->percentage;
-					$row->latest_passed     = (bool) $latest_attempt->passed;
-				}
-			}
+			self::enrich_practice_set_meta( $row, $user_id, $table_attempts, $counter++ );
 		}
 
 		return $rows;
@@ -1138,6 +1075,116 @@ class IAQ_Practice_Sets {
 			$args[ $k ] = sanitize_text_field( $v );
 		}
 
+		// When navigating to the general books catalog, ensure no single book ID is carried over
+		if ( 'books' === $view ) {
+			unset( $args['book_id'] );
+		}
+
 		return add_query_arg( $args, $base_url );
+	}
+
+	/**
+	 * Enrich practice set row with attempt stats and access control flags.
+	 *
+	 * @param object $row Practice set row.
+	 * @param int    $user_id User ID.
+	 * @param string $table_attempts Attempts table name.
+	 * @param int    $counter Practice set number in sequence.
+	 */
+	public static function enrich_practice_set_meta( &$row, $user_id, $table_attempts, $counter ) {
+		global $wpdb;
+
+		$row->practice_set_number = $counter;
+		$row->attempt_status      = 'not_attempted';
+		$row->latest_percentage   = null;
+		$row->latest_passed       = null;
+
+		if ( $user_id > 0 ) {
+			$latest_attempt = $wpdb->get_row(
+				$wpdb->prepare(
+					"SELECT status, score, percentage, passed FROM {$table_attempts}
+					 WHERE quiz_id = %d AND user_id = %d
+					 ORDER BY id DESC LIMIT 1",
+					$row->id,
+					$user_id
+				)
+			);
+
+			if ( $latest_attempt ) {
+				$row->attempt_status    = $latest_attempt->status; // 'in_progress' or 'completed'
+				$row->latest_percentage = $latest_attempt->percentage;
+				$row->latest_passed     = (bool) $latest_attempt->passed;
+			}
+		}
+
+		// Access control & paywall status
+		$entitlement        = class_exists( 'IAQ_Access_Control' ) ? IAQ_Access_Control::check_user_entitlement( $user_id, $row ) : array( 'allowed' => true, 'reason' => '' );
+		$row->access_type   = ! empty( $row->access_type ) ? $row->access_type : 'paid';
+		$row->is_locked     = ! $entitlement['allowed'];
+		$row->can_attempt   = (bool) $entitlement['allowed'];
+		$row->access_reason = ! empty( $entitlement['reason'] ) ? $entitlement['reason'] : '';
+		$row->access_code   = isset( $entitlement['code'] ) ? $entitlement['code'] : '';
+	}
+
+	/**
+	 * Retrieve practice sets inside a book (REST API helper).
+	 *
+	 * @param int $book_id Book ID.
+	 * @param int $user_id Optional user ID.
+	 * @return array
+	 */
+	public static function get_book_practice_sets( $book_id, $user_id = 0 ) {
+		return self::get_book_quizzes( $book_id, 'published', $user_id );
+	}
+
+	/**
+	 * Retrieve practice sets inside a subject (REST API helper).
+	 *
+	 * @param int $subject_id Subject ID.
+	 * @param int $user_id Optional user ID.
+	 * @return array
+	 */
+	public static function get_subject_practice_sets( $subject_id, $user_id = 0 ) {
+		return self::get_subject_quizzes( $subject_id, 'published', $user_id );
+	}
+
+	/**
+	 * Retrieve practice sets hierarchy/list for an examination (REST API helper).
+	 *
+	 * @param int $exam_id Examination ID.
+	 * @param int $user_id Optional user ID.
+	 * @return array
+	 */
+	public static function get_exam_practice_hierarchy( $exam_id, $user_id = 0 ) {
+		$exam_id = absint( $exam_id );
+		if ( ! $exam_id ) {
+			return array();
+		}
+
+		$subjects = self::get_exam_subjects( $exam_id );
+		$all_sets = array();
+		$seen_ids = array();
+
+		if ( ! empty( $subjects ) ) {
+			foreach ( $subjects as $s ) {
+				$quizzes = self::get_exam_subject_quizzes( $exam_id, $s->id, 'published', $user_id );
+				if ( ! empty( $quizzes ) ) {
+					foreach ( $quizzes as $q ) {
+						if ( ! isset( $seen_ids[ (int) $q->id ] ) ) {
+							$seen_ids[ (int) $q->id ] = true;
+							$all_sets[]               = $q;
+						}
+					}
+				}
+			}
+		}
+
+		// Re-number practice_set_number sequentially
+		$counter = 1;
+		foreach ( $all_sets as &$set ) {
+			$set->practice_set_number = $counter++;
+		}
+
+		return $all_sets;
 	}
 }

@@ -7,6 +7,16 @@ class ApiEndpoints {
   // Active base endpoint (defaults to production)
   static String activeBaseUrl = baseUrl;
 
+  static void setBaseUrl(String url) {
+    var clean = url.trim();
+    while (clean.endsWith('/')) {
+      clean = clean.substring(0, clean.length - 1);
+    }
+    if (clean.isNotEmpty) {
+      activeBaseUrl = clean;
+    }
+  }
+
   // 1. Auth
   static String get login => '$activeBaseUrl/auth/login';
   static String get register => '$activeBaseUrl/auth/register';
@@ -59,4 +69,12 @@ class ApiEndpoints {
   static String get subscriptionPlans => '$activeBaseUrl/subscriptions/plans';
   static String get mySubscriptions => '$activeBaseUrl/subscriptions/my-subscriptions';
   static String get checkoutUrl => '$activeBaseUrl/subscriptions/checkout-url';
+
+  // 9. Mobile App Version & Updates
+  static String appVersion([String? currentVer]) {
+    if (currentVer != null && currentVer.isNotEmpty) {
+      return '$activeBaseUrl/app/version?current_version=$currentVer';
+    }
+    return '$activeBaseUrl/app/version';
+  }
 }

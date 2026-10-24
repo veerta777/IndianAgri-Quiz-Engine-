@@ -8,6 +8,20 @@
 (function ($) {
 	'use strict';
 
+	var IAQ_ICONS = {
+		check: '<svg class="iaq-icon iaq-icon-check" viewBox="0 0 20 20" fill="currentColor" width="14" height="14" aria-hidden="true"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>',
+		cross: '<svg class="iaq-icon iaq-icon-cross" viewBox="0 0 20 20" fill="currentColor" width="14" height="14" aria-hidden="true"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm2.707-10.707a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293z" clip-rule="evenodd" /></svg>',
+		lightbulb: '<svg class="iaq-icon iaq-icon-lightbulb" viewBox="0 0 20 20" fill="currentColor" width="15" height="15" aria-hidden="true" style="color:#f59e0b;vertical-align:-2px;margin-right:6px;"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14H8a4 4 0 01-.813-7.917A4 4 0 0112 14z" /></svg>',
+		flag: '<svg class="iaq-icon iaq-icon-flag" viewBox="0 0 20 20" fill="currentColor" width="14" height="14" aria-hidden="true" style="vertical-align:-2px;margin-right:4px;"><path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd" /></svg>',
+		minus: '<svg class="iaq-icon iaq-icon-minus" viewBox="0 0 20 20" fill="currentColor" width="14" height="14" aria-hidden="true"><path fill-rule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" /></svg>',
+		spinner: '<svg class="iaq-icon iaq-icon-spin" viewBox="0 0 24 24" fill="none" width="14" height="14" aria-hidden="true" style="animation: iaqSpin 1s linear infinite;vertical-align:-2px;margin-right:6px;"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.25"/><path fill="currentColor" d="M12 2a10 10 0 0110 10h-3a7 7 0 00-7-7V2z"/></svg>'
+	};
+
+	function cleanExplanationText(txt) {
+		if (!txt) return '';
+		return txt.replace(/\s*\[cite:\s*[^\]]+\]/gi, '');
+	}
+
 	var IAQQuizEngine = {
 		attemptId: 0,
 		quizId: 0,
@@ -227,7 +241,7 @@
 
 						// Switch UI to Examination Portal.
 						$('#iaq-quiz-overview-' + quizId).slideUp(200);
-						$('#iaq-examination-portal').fadeIn(300);
+						$('#iaq-examination-portal').toggleClass('is-practice-mode', self.isImmediate).fadeIn(300);
 
 						// Initialize Palette Grid.
 						self.buildPaletteGrid();
@@ -289,8 +303,8 @@
 			var isCorrect = !!fb.is_correct;
 			var bannerCls = isCorrect ? 'is-correct' : 'is-incorrect';
 			var iconHtml = isCorrect
-				? '<span class="dashicons dashicons-yes-alt iaq-feedback-icon" style="color:#10b981;"></span>'
-				: '<span class="dashicons dashicons-dismiss iaq-feedback-icon" style="color:#ef4444;"></span>';
+				? '<span class="iaq-feedback-icon" style="color:#10b981;">' + IAQ_ICONS.check + '</span>'
+				: '<span class="iaq-feedback-icon" style="color:#ef4444;">' + IAQ_ICONS.cross + '</span>';
 			var scorePillHtml = isCorrect
 				? '<span class="iaq-feedback-score-pill">+' + (fb.marks_awarded !== undefined ? fb.marks_awarded : q.marks) + ' Marks</span>'
 				: '<span class="iaq-feedback-score-pill">' + (fb.marks_awarded !== undefined ? (fb.marks_awarded > 0 ? '+' + fb.marks_awarded : fb.marks_awarded) : '0.00') + ' Marks</span>';
@@ -306,10 +320,11 @@
 			html += scorePillHtml;
 			html += '</div>';
 
-			if (fb.explanation && $.trim(fb.explanation).length > 0) {
+			var expl = cleanExplanationText(fb.explanation);
+			if (expl && $.trim(expl).length > 0) {
 				html += '<div class="iaq-feedback-explanation">';
-				html += '<h5 class="iaq-feedback-expl-title"><span class="dashicons dashicons-lightbulb"></span> Scientific Explanation & Key Learning Points:</h5>';
-				html += '<div class="iaq-feedback-expl-text">' + fb.explanation + '</div>';
+				html += '<h5 class="iaq-feedback-expl-title">' + IAQ_ICONS.lightbulb + ' Scientific Explanation &amp; Key Learning Points:</h5>';
+				html += '<div class="iaq-feedback-expl-text">' + expl + '</div>';
 				html += '</div>';
 			}
 
@@ -366,7 +381,8 @@
 					$item.addClass('is-selected');
 				}
 
-				var $key = $('<span class="iaq-option-key">' + opt.key + '</span>');
+				var visualLabel = ['A', 'B', 'C', 'D'][oi] || opt.key;
+				var $key = $('<span class="iaq-option-key">' + visualLabel + '</span>');
 				var $lbl = $('<span class="iaq-option-label"></span>').html(opt.text);
 
 				$item.append($key).append($lbl);
@@ -375,20 +391,26 @@
 					$item.addClass('is-disabled');
 					if (opt.key === fb.correct_option) {
 						$item.addClass('is-immediate-correct');
-						$item.append('<span class="iaq-option-status-tag is-correct-tag"><span class="dashicons dashicons-yes-alt"></span> Correct Answer</span>');
+						$item.append('<span class="iaq-option-status-tag is-correct-tag">' + IAQ_ICONS.check + ' <span>Correct Answer</span></span>');
 					} else if (opt.key === fb.selected && !fb.is_correct) {
 						$item.addClass('is-immediate-incorrect');
-						$item.append('<span class="iaq-option-status-tag is-incorrect-tag"><span class="dashicons dashicons-dismiss"></span> Your Choice</span>');
+						$item.append('<span class="iaq-option-status-tag is-incorrect-tag">' + IAQ_ICONS.cross + ' <span>Your Choice</span></span>');
 					}
 				}
 
 				$opts.append($item);
 			});
 
-			if (fb) {
-				self.renderImmediateFeedbackBox(q, fb);
-				$('#iaq-action-clear').hide();
+			if (self.isImmediate) {
+				$('#iaq-action-mark').hide();
+				if (fb) {
+					self.renderImmediateFeedbackBox(q, fb);
+					$('#iaq-action-clear').hide();
+				} else {
+					$('#iaq-action-clear').show();
+				}
 			} else {
+				$('#iaq-action-mark').show();
 				$('#iaq-action-clear').show();
 			}
 
@@ -412,9 +434,9 @@
 
 			// Update Mark button text/state.
 			if (userAns.isMarked) {
-				$('#iaq-action-mark').html('<span class="dashicons dashicons-flag"></span> Unmark Review');
+				$('#iaq-action-mark').html(IAQ_ICONS.flag + ' Unmark Review');
 			} else {
-				$('#iaq-action-mark').html('<span class="dashicons dashicons-flag"></span> Mark for Review &amp; Next');
+				$('#iaq-action-mark').html(IAQ_ICONS.flag + ' Mark for Review &amp; Next');
 			}
 
 			// Update Active Highlight on Palette.
@@ -488,12 +510,12 @@
 								if (k === fb.correct_option) {
 									$(this).addClass('is-immediate-correct');
 									if (!$(this).find('.iaq-option-status-tag').length) {
-										$(this).append('<span class="iaq-option-status-tag is-correct-tag"><span class="dashicons dashicons-yes-alt"></span> Correct Answer</span>');
+										$(this).append('<span class="iaq-option-status-tag is-correct-tag">' + IAQ_ICONS.check + ' <span>Correct Answer</span></span>');
 									}
 								} else if (k === fb.selected && !fb.is_correct) {
 									$(this).addClass('is-immediate-incorrect');
 									if (!$(this).find('.iaq-option-status-tag').length) {
-										$(this).append('<span class="iaq-option-status-tag is-incorrect-tag"><span class="dashicons dashicons-dismiss"></span> Your Choice</span>');
+										$(this).append('<span class="iaq-option-status-tag is-incorrect-tag">' + IAQ_ICONS.cross + ' <span>Your Choice</span></span>');
 									}
 								}
 							});
@@ -501,6 +523,7 @@
 							// Render feedback box with explanation
 							self.renderImmediateFeedbackBox(q, fb);
 							$('#iaq-action-clear').hide();
+							$('#iaq-action-mark').hide();
 
 							// Update palette status and summary counters
 							self.updateQuestionPaletteStatus(self.currentIndex);
@@ -1068,11 +1091,11 @@
 
 				var $statusBadge = $('<span class="iaq-sol-status-badge is-' + status + '"></span>');
 				if (status === 'correct') {
-					$statusBadge.html('<span class="dashicons dashicons-yes"></span> Correct (+' + q.marks_awarded + ')');
+					$statusBadge.html(IAQ_ICONS.check + ' Correct (+' + q.marks_awarded + ')');
 				} else if (status === 'incorrect') {
-					$statusBadge.html('<span class="dashicons dashicons-no"></span> Incorrect (' + q.marks_awarded + ')');
+					$statusBadge.html(IAQ_ICONS.cross + ' Incorrect (' + q.marks_awarded + ')');
 				} else {
-					$statusBadge.html('<span class="dashicons dashicons-minus"></span> Not Attempted (0.00)');
+					$statusBadge.html(IAQ_ICONS.minus + ' Not Attempted (0.00)');
 				}
 
 				$head.append($badges).append($statusBadge);
@@ -1124,10 +1147,11 @@
 				$card.append($opts);
 
 				// Detailed Explanation Box
-				if (q.explanation) {
+				var solExpl = cleanExplanationText(q.explanation);
+				if (solExpl && $.trim(solExpl).length > 0) {
 					var $expl = $('<div class="iaq-sol-explanation-box"></div>');
-					$expl.append($('<h4 class="iaq-sol-expl-title"><span class="dashicons dashicons-lightbulb"></span> Detailed Scientific Explanation &amp; Reference:</h4>'));
-					$expl.append($('<div class="iaq-sol-expl-content"></div>').html(q.explanation));
+					$expl.append($('<h4 class="iaq-sol-expl-title">' + IAQ_ICONS.lightbulb + ' Detailed Scientific Explanation &amp; Reference:</h4>'));
+					$expl.append($('<div class="iaq-sol-expl-content"></div>').html(solExpl));
 					$card.append($expl);
 				}
 
@@ -1381,7 +1405,7 @@
 				e.preventDefault();
 				var $btn = $(this);
 				var originalHtml = $btn.html();
-				$btn.prop('disabled', true).html('<span class="dashicons dashicons-update iaq-spin"></span> Preparing Revision Drill...');
+				$btn.prop('disabled', true).html(IAQ_ICONS.spinner + ' Preparing Revision Drill...');
 
 				$.post(window.iaqQuizData ? window.iaqQuizData.ajaxUrl : '/wp-admin/admin-ajax.php', {
 					action: 'iaq_create_revision_quiz',
@@ -1415,7 +1439,7 @@
 				}, function (res) {
 					if (res && res.success) {
 						$card.css('opacity', '0.5');
-						$btn.html('<span class="dashicons dashicons-yes"></span> Resolved!').prop('disabled', true);
+						$btn.html(IAQ_ICONS.check + ' Resolved!').prop('disabled', true);
 					}
 				});
 			});
@@ -1447,7 +1471,7 @@
 				e.preventDefault();
 				var $btn = $(this);
 				var originalHtml = $btn.html();
-				$btn.prop('disabled', true).html('<span class="dashicons dashicons-update iaq-spin"></span> Generating Retry Drill...');
+				$btn.prop('disabled', true).html(IAQ_ICONS.spinner + ' Generating Retry Drill...');
 
 				$.post(window.iaqQuizData ? window.iaqQuizData.ajaxUrl : '/wp-admin/admin-ajax.php', {
 					action: 'iaq_create_retry_quiz',

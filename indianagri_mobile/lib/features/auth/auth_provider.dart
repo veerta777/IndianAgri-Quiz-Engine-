@@ -25,9 +25,13 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       final res = await ApiClient.get(ApiEndpoints.me);
-      if (res is Map<String, dynamic> && res.containsKey('user')) {
-        _user = res['user'] as Map<String, dynamic>;
-        _subscriptions = (res['subscriptions'] as List<dynamic>?) ?? [];
+      if (res is Map && res.containsKey('user') && res['user'] != null) {
+        _user = Map<String, dynamic>.from(res['user'] as Map);
+        if (res['subscriptions'] is List) {
+          _subscriptions = List<dynamic>.from(res['subscriptions'] as List);
+        } else {
+          _subscriptions = [];
+        }
         await SecureStorage.saveUserProfile(_user!);
         notifyListeners();
         return true;
@@ -61,10 +65,19 @@ class AuthProvider extends ChangeNotifier {
         },
       );
 
-      if (res is Map<String, dynamic> && res.containsKey('token')) {
-        final token = res['token'] as String;
-        _user = res['user'] as Map<String, dynamic>;
-        _subscriptions = (res['subscriptions'] as List<dynamic>?) ?? [];
+      if (res is Map && res.containsKey('token') && res['token'] != null) {
+        final token = res['token'].toString();
+        if (res['user'] is Map) {
+          _user = Map<String, dynamic>.from(res['user'] as Map);
+        } else {
+          _user = {'username': username};
+        }
+
+        if (res['subscriptions'] is List) {
+          _subscriptions = List<dynamic>.from(res['subscriptions'] as List);
+        } else {
+          _subscriptions = [];
+        }
 
         await SecureStorage.saveToken(token);
         await SecureStorage.saveUserProfile(_user!);
@@ -74,11 +87,19 @@ class AuthProvider extends ChangeNotifier {
         return true;
       }
 
-      _errorMessage = 'Invalid response from server.';
+      _errorMessage = 'Invalid response format received from server.';
     } on ApiException catch (e) {
       _errorMessage = e.message;
     } catch (e) {
-      _errorMessage = 'An unexpected error occurred. Please try again.';
+      debugPrint('Auth login exception: $e');
+      final errStr = e.toString().replaceFirst('Exception: ', '');
+      if (errStr.contains('ClientException') || errStr.contains('SocketException')) {
+        _errorMessage = 'Cannot connect to server. Please check your internet connection.';
+      } else if (errStr.contains('HandshakeException')) {
+        _errorMessage = 'SSL connection failed. Please check network security settings.';
+      } else {
+        _errorMessage = errStr;
+      }
     }
 
     _isLoading = false;
@@ -103,9 +124,13 @@ class AuthProvider extends ChangeNotifier {
         },
       );
 
-      if (res is Map<String, dynamic> && res.containsKey('token')) {
-        final token = res['token'] as String;
-        _user = res['user'] as Map<String, dynamic>;
+      if (res is Map && res.containsKey('token') && res['token'] != null) {
+        final token = res['token'].toString();
+        if (res['user'] is Map) {
+          _user = Map<String, dynamic>.from(res['user'] as Map);
+        } else {
+          _user = {'username': username, 'email': email, 'display_name': displayName};
+        }
 
         await SecureStorage.saveToken(token);
         await SecureStorage.saveUserProfile(_user!);
@@ -118,8 +143,14 @@ class AuthProvider extends ChangeNotifier {
       _errorMessage = 'Registration failed. Please check your details.';
     } on ApiException catch (e) {
       _errorMessage = e.message;
-    } catch (_) {
-      _errorMessage = 'An error occurred during registration.';
+    } catch (e) {
+      debugPrint('Auth registration exception: $e');
+      final errStr = e.toString().replaceFirst('Exception: ', '');
+      if (errStr.contains('ClientException') || errStr.contains('SocketException')) {
+        _errorMessage = 'Cannot connect to server. Please check your internet connection.';
+      } else {
+        _errorMessage = errStr;
+      }
     }
 
     _isLoading = false;

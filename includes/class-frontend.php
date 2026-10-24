@@ -28,6 +28,7 @@ class IAQ_Frontend {
 		add_shortcode( 'iaq_subscription_plans', array( $this, 'render_subscription_plans_shortcode' ) );
 
 		add_action( 'wp_enqueue_scripts', array( $this, 'register_frontend_assets' ) );
+		add_filter( 'wp_resource_hints', array( $this, 'add_resource_hints' ), 10, 2 );
 
 		// Student Learning Features AJAX Endpoints
 		add_action( 'wp_ajax_iaq_toggle_bookmark', array( $this, 'ajax_toggle_bookmark' ) );
@@ -41,11 +42,29 @@ class IAQ_Frontend {
 	}
 
 	/**
+	 * Preconnect to Google Fonts domains for faster loading.
+	 *
+	 * @param array  $urls Array of resources.
+	 * @param string $relation_type Relation type ('preconnect', 'dns-prefetch').
+	 * @return array
+	 */
+	public function add_resource_hints( $urls, $relation_type ) {
+		if ( 'preconnect' === $relation_type ) {
+			$urls[] = array(
+				'href' => 'https://fonts.googleapis.com',
+			);
+			$urls[] = array(
+				'href'        => 'https://fonts.gstatic.com',
+				'crossorigin' => 'anonymous',
+			);
+		}
+		return $urls;
+	}
+
+	/**
 	 * Register frontend stylesheet and quiz script.
 	 */
 	public function register_frontend_assets() {
-		wp_enqueue_style( 'dashicons' );
-
 		wp_register_style(
 			'iaq-google-fonts',
 			'https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800;900&display=swap',
@@ -231,6 +250,11 @@ class IAQ_Frontend {
 			$view = sanitize_key( $atts['category'] );
 		}
 
+		// Ensure clicking Practice by Book always opens the catalog of available books
+		if ( 'books' === $view || ( 'book' === $view && ( empty( $_GET['book_id'] ) && empty( $atts['book_id'] ) ) ) ) {
+			$view = 'books';
+		}
+
 		$user_id       = get_current_user_id();
 		$books         = array();
 		$book          = null;
@@ -248,9 +272,16 @@ class IAQ_Frontend {
 				break;
 
 			case 'book':
-				$b_id    = isset( $_GET['book_id'] ) ? absint( $_GET['book_id'] ) : absint( $atts['book_id'] );
-				$book    = IAQ_Practice_Sets::get_book( $b_id );
-				$quizzes = $book ? IAQ_Practice_Sets::get_book_quizzes( $book->id, 'published', $user_id ) : array();
+				$b_id = isset( $_GET['book_id'] ) ? absint( $_GET['book_id'] ) : ( isset( $atts['book_id'] ) ? absint( $atts['book_id'] ) : 0 );
+				$book = $b_id > 0 ? IAQ_Practice_Sets::get_book( $b_id ) : null;
+				if ( ! $book ) {
+					// Fallback to all available books catalog so candidate always sees available books
+					$view   = 'books';
+					$search = isset( $_GET['ps_search'] ) ? sanitize_text_field( wp_unslash( $_GET['ps_search'] ) ) : '';
+					$books  = IAQ_Practice_Sets::get_books( array( 'status' => 'published', 'search' => $search ) );
+				} else {
+					$quizzes = IAQ_Practice_Sets::get_book_quizzes( $book->id, 'published', $user_id );
+				}
 				break;
 
 			case 'subjects':

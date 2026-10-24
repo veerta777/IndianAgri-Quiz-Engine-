@@ -415,8 +415,8 @@ class IAQ_Admin {
 				'default_negative_marks'         => max( 0.00, floatval( $_POST['default_negative_marks'] ) ),
 				'default_pass_percentage'        => isset( $_POST['default_pass_percentage'] ) ? floatval( $_POST['default_pass_percentage'] ) : 40.00,
 				'default_max_attempts'           => isset( $_POST['default_max_attempts'] ) ? absint( $_POST['default_max_attempts'] ) : 0,
-				'default_shuffle_questions'      => ! empty( $_POST['default_shuffle_questions'] ) ? 1 : 0,
-				'default_shuffle_options'        => ! empty( $_POST['default_shuffle_options'] ) ? 1 : 0,
+				'default_shuffle_questions'      => isset( $_POST['default_shuffle_questions'] ) ? ( ! empty( $_POST['default_shuffle_questions'] ) ? 1 : 0 ) : 1,
+				'default_shuffle_options'        => isset( $_POST['default_shuffle_options'] ) ? ( ! empty( $_POST['default_shuffle_options'] ) ? 1 : 0 ) : 1,
 				'default_access_type'            => ! empty( $_POST['default_access_type'] ) && in_array( $_POST['default_access_type'], array( 'free', 'paid' ), true ) ? $_POST['default_access_type'] : 'free',
 				'default_show_answers_mode'      => ! empty( $_POST['default_show_answers_mode'] ) && in_array( $_POST['default_show_answers_mode'], array( 'after_submission', 'immediate', 'never' ), true ) ? $_POST['default_show_answers_mode'] : 'after_submission',
 				'default_instructions'           => ! empty( $_POST['default_instructions'] ) ? wp_kses_post( wp_unslash( $_POST['default_instructions'] ) ) : '',
@@ -438,6 +438,15 @@ class IAQ_Admin {
 				// Recommendations & Streaks Rules
 				'recommendations_focus_weak_areas'=> isset( $_POST['recommendations_focus_weak_areas'] ) ? 1 : 0,
 				'streak_qualifying_activity'     => ! empty( $_POST['streak_qualifying_activity'] ) ? sanitize_key( $_POST['streak_qualifying_activity'] ) : 'quiz_completed',
+				// Mobile Application Update & Version Settings
+				'app_latest_version'             => ! empty( $_POST['app_latest_version'] ) ? sanitize_text_field( wp_unslash( $_POST['app_latest_version'] ) ) : '1.1.0',
+				'app_min_version'                => ! empty( $_POST['app_min_version'] ) ? sanitize_text_field( wp_unslash( $_POST['app_min_version'] ) ) : '1.0.0',
+				'app_force_update'               => ! empty( $_POST['app_force_update'] ) ? 1 : 0,
+				'app_update_title'               => ! empty( $_POST['app_update_title'] ) ? sanitize_text_field( wp_unslash( $_POST['app_update_title'] ) ) : __( 'Exciting New Update Available!', 'indianagri-quiz-engine' ),
+				'app_update_message'             => ! empty( $_POST['app_update_message'] ) ? sanitize_textarea_field( wp_unslash( $_POST['app_update_message'] ) ) : '',
+				'app_release_notes'              => ! empty( $_POST['app_release_notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['app_release_notes'] ) ) : '',
+				'app_update_url'                 => ! empty( $_POST['app_update_url'] ) ? esc_url_raw( wp_unslash( $_POST['app_update_url'] ) ) : 'https://indianagriexam.com/mobile-app/',
+				'app_update_date'                => ! empty( $_POST['app_update_date'] ) ? sanitize_text_field( wp_unslash( $_POST['app_update_date'] ) ) : current_time( 'Y-m-d' ),
 			);
 
 			update_option( 'iaq_settings', $settings );
@@ -449,6 +458,15 @@ class IAQ_Admin {
 			update_option( 'iaq_enable_bookmarks', $settings['enable_bookmarks'] );
 			update_option( 'iaq_enable_wrong_notebook', $settings['enable_wrong_notebook'] );
 			update_option( 'iaq_enable_study_streaks', $settings['enable_study_streaks'] );
+			// Update individual options for fast REST query
+			update_option( 'iaq_app_latest_version', $settings['app_latest_version'] );
+			update_option( 'iaq_app_min_version', $settings['app_min_version'] );
+			update_option( 'iaq_app_force_update', $settings['app_force_update'] );
+			update_option( 'iaq_app_update_title', $settings['app_update_title'] );
+			update_option( 'iaq_app_update_message', $settings['app_update_message'] );
+			update_option( 'iaq_app_release_notes', $settings['app_release_notes'] );
+			update_option( 'iaq_app_update_url', $settings['app_update_url'] );
+			update_option( 'iaq_app_update_date', $settings['app_update_date'] );
 
 			$this->add_notice( 'success', __( 'Plugin settings saved successfully.', 'indianagri-quiz-engine' ) );
 		}
@@ -708,7 +726,9 @@ class IAQ_Admin {
 				'pass_percentage'     => isset( $_POST['pass_percentage'] ) ? floatval( $_POST['pass_percentage'] ) : 50.00,
 				'show_answers_mode'   => 'immediate',
 				'status'              => 'published',
-				'access_type'         => $book ? $book->access_type : 'free',
+				'access_type'         => isset( $_POST['access_type'] ) && in_array( sanitize_text_field( $_POST['access_type'] ), array( 'free', 'paid' ), true ) ? sanitize_text_field( $_POST['access_type'] ) : ( $book && 'free' === $book->access_type ? 'free' : 'paid' ),
+				'shuffle_questions'   => 1,
+				'shuffle_options'     => 1,
 				'display_order'       => $sort_order,
 			);
 
@@ -900,7 +920,9 @@ class IAQ_Admin {
 				'pass_percentage'     => isset( $_POST['pass_percentage'] ) ? floatval( $_POST['pass_percentage'] ) : 50.00,
 				'show_answers_mode'   => 'immediate',
 				'status'              => 'published',
-				'access_type'         => 'free',
+				'access_type'         => isset( $_POST['access_type'] ) && in_array( sanitize_text_field( $_POST['access_type'] ), array( 'free', 'paid' ), true ) ? sanitize_text_field( $_POST['access_type'] ) : 'paid',
+				'shuffle_questions'   => 1,
+				'shuffle_options'     => 1,
 				'display_order'       => $sort_order,
 			);
 
@@ -1204,6 +1226,8 @@ class IAQ_Admin {
 				'show_answers_mode' => 'after_submission',
 				'status'            => 'published',
 				'access_type'       => isset( $_POST['access_type'] ) && in_array( $_POST['access_type'], array( 'free', 'paid' ), true ) ? $_POST['access_type'] : 'free',
+				'shuffle_questions' => 1,
+				'shuffle_options'   => 1,
 				'display_order'     => $sort_order,
 			);
 

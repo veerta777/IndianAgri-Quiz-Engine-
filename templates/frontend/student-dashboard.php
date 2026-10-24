@@ -464,58 +464,72 @@ $subscription_plans_html = isset( $subscription_plans_html ) ? $subscription_pla
 						</div>
 					<?php endif; ?>
 
-					<!-- QUICK PREPARATION ACTIONS -->
+					<!-- QUICK PREPARATION ACTIONS / BROWSE PRACTICE SETS -->
 					<section class="iaq-dashboard-block iaq-quick-actions-section">
 						<div class="iaq-block-header-wrap">
 							<div class="iaq-header-title-row">
 								<span class="iaq-lightning-icon">⚡</span>
-								<h3 class="iaq-block-title"><?php esc_html_e( 'Quick Preparation Actions', 'indianagri-quiz-engine' ); ?></h3>
+								<h3 class="iaq-block-title"><?php esc_html_e( 'Browse Practice Sets & Learning Pathways', 'indianagri-quiz-engine' ); ?></h3>
 							</div>
-							<p class="iaq-block-subtitle"><?php esc_html_e( 'Jump directly into focused practice, timed mock tests, or custom practice tests.', 'indianagri-quiz-engine' ); ?></p>
+							<p class="iaq-block-subtitle"><?php esc_html_e( 'Choose your preferred practice pathway: solve chapter-wise books, master core subjects, or target competitive exams.', 'indianagri-quiz-engine' ); ?></p>
 						</div>
 
 						<div class="iaq-quick-actions-row">
-							<!-- Card 1: Practice Sets -->
-							<div class="iaq-qa-pill-card is-green">
+							<!-- Card 1: Practice by Books -->
+							<div class="iaq-qa-pill-card is-green" style="cursor:pointer;" onclick="window.location.href='<?php echo esc_url( add_query_arg( array( 'iaq_ps_view' => 'books' ), get_permalink() ) ); ?>';">
 								<div class="iaq-qa-badge-icon">
 									<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 										<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/>
 									</svg>
 								</div>
-								<h4 class="iaq-qa-card-name"><?php esc_html_e( 'Practice Sets', 'indianagri-quiz-engine' ); ?></h4>
-								<p class="iaq-qa-card-desc"><?php esc_html_e( 'Topic-wise MCQs for targeted practice.', 'indianagri-quiz-engine' ); ?></p>
-								<a href="#iaq-pane-practice-sets" class="iaq-qa-action-pill is-green iaq-dash-nav-trigger" data-target="practice-sets">
-									<?php esc_html_e( 'Browse Practice Sets', 'indianagri-quiz-engine' ); ?> &rarr;
+								<h4 class="iaq-qa-card-name"><?php esc_html_e( 'Practice by Books', 'indianagri-quiz-engine' ); ?></h4>
+								<p class="iaq-qa-card-desc"><?php esc_html_e( 'Chapter-wise MCQs from standard reference literature & textbooks.', 'indianagri-quiz-engine' ); ?></p>
+								<a href="<?php echo esc_url( add_query_arg( array( 'iaq_ps_view' => 'books' ), get_permalink() ) ); ?>" class="iaq-qa-action-pill is-green" onclick="event.stopPropagation();">
+									<?php esc_html_e( 'Browse Practice Books', 'indianagri-quiz-engine' ); ?> &rarr;
 								</a>
 							</div>
 
-							<!-- Card 2: Mock Tests -->
+							<!-- Card 2: Practice by Subjects -->
 							<div class="iaq-qa-pill-card is-blue">
 								<div class="iaq-qa-badge-icon">
 									<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+										<rect width="7" height="7" x="3" y="3" rx="1.5"/>
+										<rect width="7" height="7" x="14" y="3" rx="1.5"/>
+										<rect width="7" height="7" x="14" y="14" rx="1.5"/>
+										<rect width="7" height="7" x="3" y="14" rx="1.5"/>
 									</svg>
 								</div>
-								<h4 class="iaq-qa-card-name"><?php esc_html_e( 'Mock Tests', 'indianagri-quiz-engine' ); ?></h4>
-								<p class="iaq-qa-card-desc"><?php esc_html_e( 'Full-length exam pattern tests.', 'indianagri-quiz-engine' ); ?></p>
-								<a href="#iaq-pane-mock-tests" class="iaq-qa-action-pill is-blue iaq-dash-nav-trigger" data-target="mock-tests">
-									<?php esc_html_e( 'Browse Mock Tests', 'indianagri-quiz-engine' ); ?> &rarr;
+								<h4 class="iaq-qa-card-name"><?php esc_html_e( 'Practice by Subjects', 'indianagri-quiz-engine' ); ?></h4>
+								<p class="iaq-qa-card-desc"><?php esc_html_e( 'Topic-wise chapter drills arranged sequentially across core disciplines.', 'indianagri-quiz-engine' ); ?></p>
+								<a href="<?php echo esc_url( add_query_arg( array( 'iaq_ps_view' => 'subjects' ), get_permalink() ) ); ?>" class="iaq-qa-action-pill is-blue">
+									<?php esc_html_e( 'Browse by Subject', 'indianagri-quiz-engine' ); ?> &rarr;
 								</a>
 							</div>
 
-							<!-- Card 3: Custom Practice Test -->
+							<!-- Card 3: Browse by Examination -->
 							<div class="iaq-qa-pill-card is-teal">
 								<div class="iaq-qa-badge-icon">
 									<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+										<circle cx="12" cy="8" r="6"/>
+										<path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
 									</svg>
 								</div>
-								<h4 class="iaq-qa-card-name"><?php esc_html_e( 'Custom Practice Test', 'indianagri-quiz-engine' ); ?></h4>
-								<p class="iaq-qa-card-desc"><?php esc_html_e( 'Create your own test by subject and topic.', 'indianagri-quiz-engine' ); ?></p>
-								<a href="#iaq-custom-practice-section" class="iaq-qa-action-pill is-teal iaq-dash-nav-trigger" data-target="custom-test">
-									<?php esc_html_e( 'Create Custom Test', 'indianagri-quiz-engine' ); ?> &rarr;
+								<h4 class="iaq-qa-card-name"><?php esc_html_e( 'Browse by Examination', 'indianagri-quiz-engine' ); ?></h4>
+								<p class="iaq-qa-card-desc"><?php esc_html_e( 'Target competitive entrance tests like ICAR JRF, ASRB NET, CUET PG & IBPS AFO.', 'indianagri-quiz-engine' ); ?></p>
+								<a href="<?php echo esc_url( add_query_arg( array( 'iaq_ps_view' => 'exams' ), get_permalink() ) ); ?>" class="iaq-qa-action-pill is-teal">
+									<?php esc_html_e( 'Browse by Examination', 'indianagri-quiz-engine' ); ?> &rarr;
 								</a>
 							</div>
+						</div>
+
+						<div class="iaq-qa-shortcuts-bar" style="display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;">
+							<span style="font-size:12.5px;color:#64748b;font-weight:700;"><?php esc_html_e( 'Direct shortcuts:', 'indianagri-quiz-engine' ); ?></span>
+							<a href="#iaq-pane-mock-tests" class="iaq-dash-nav-trigger" data-target="mock-tests" style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;color:#1d4ed8;background:#eff6ff;padding:5px 14px;border-radius:20px;text-decoration:none;border:1px solid #bfdbfe;">
+								⚡ <?php esc_html_e( 'Full-Length Mock Tests', 'indianagri-quiz-engine' ); ?> &rarr;
+							</a>
+							<a href="#iaq-custom-practice-section" class="iaq-dash-nav-trigger" data-target="custom-test" style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;color:#0f766e;background:#f0fdfa;padding:5px 14px;border-radius:20px;text-decoration:none;border:1px solid #99f6e4;">
+								⚙️ <?php esc_html_e( 'Create Custom Test', 'indianagri-quiz-engine' ); ?> &rarr;
+							</a>
 						</div>
 					</section>
 

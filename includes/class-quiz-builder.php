@@ -48,12 +48,42 @@ class IAQ_Quiz_Builder {
 	}
 
 	/**
+	 * Cache store for quizzes.
+	 *
+	 * @var array
+	 */
+	private static $quiz_cache = array();
+
+	/**
+	 * Clear in-memory quiz cache.
+	 *
+	 * @param int $id Optional Quiz ID to clear, 0 for all.
+	 */
+	public static function clear_quiz_cache( $id = 0 ) {
+		if ( $id > 0 ) {
+			unset( self::$quiz_cache[ $id ] );
+		} else {
+			self::$quiz_cache = array();
+		}
+	}
+
+	/**
 	 * Retrieve single quiz by ID.
 	 *
-	 * @param int $id Quiz ID.
+	 * @param int  $id Quiz ID.
+	 * @param bool $force_refresh Whether to bypass cache.
 	 * @return object|null Quiz object.
 	 */
-	public static function get_quiz( $id ) {
+	public static function get_quiz( $id, $force_refresh = false ) {
+		$id = absint( $id );
+		if ( ! $id ) {
+			return null;
+		}
+
+		if ( ! $force_refresh && isset( self::$quiz_cache[ $id ] ) ) {
+			return self::$quiz_cache[ $id ];
+		}
+
 		global $wpdb;
 
 		$table_quizzes  = IAQ_Database::get_table_name( 'quizzes' );
@@ -66,10 +96,12 @@ class IAQ_Quiz_Builder {
 			 LEFT JOIN {$table_subjects} s ON q.subject_id = s.id
 			 LEFT JOIN {$table_topics} t ON q.topic_id = t.id
 			 WHERE q.id = %d",
-			absint( $id )
+			$id
 		);
 
-		return $wpdb->get_row( $query );
+		$row = $wpdb->get_row( $query );
+		self::$quiz_cache[ $id ] = $row;
+		return $row;
 	}
 
 	/**
@@ -192,9 +224,14 @@ class IAQ_Quiz_Builder {
 		$page     = max( 1, absint( $args['page'] ) );
 		$offset   = ( $page - 1 ) * $per_page;
 
+		$include_assigned = is_admin() && ! wp_doing_ajax();
+		$count_clause     = $include_assigned
+			? "(SELECT COUNT(*) FROM {$table_quiz_q} qq WHERE qq.quiz_id = q.id) AS assigned_questions_count"
+			: "q.total_questions AS assigned_questions_count";
+
 		$sql = "
 			SELECT q.*, s.name AS subject_name, t.name AS topic_name,
-				(SELECT COUNT(*) FROM {$table_quiz_q} qq WHERE qq.quiz_id = q.id) AS assigned_questions_count
+				{$count_clause}
 			FROM {$table_quizzes} q
 			LEFT JOIN {$table_subjects} s ON q.subject_id = s.id
 			LEFT JOIN {$table_topics} t ON q.topic_id = t.id
@@ -278,8 +315,8 @@ class IAQ_Quiz_Builder {
 		$negative_marks   = isset( $data['negative_marks'] ) ? max( 0.00, floatval( $data['negative_marks'] ) ) : 0.25;
 		$pass_percentage  = isset( $data['pass_percentage'] ) ? min( 100.00, max( 0.00, floatval( $data['pass_percentage'] ) ) ) : 40.00;
 
-		$shuffle_questions = ! empty( $data['shuffle_questions'] ) ? 1 : 0;
-		$shuffle_options   = ! empty( $data['shuffle_options'] ) ? 1 : 0;
+		$shuffle_questions = isset( $data['shuffle_questions'] ) ? ( ! empty( $data['shuffle_questions'] ) ? 1 : 0 ) : 1;
+		$shuffle_options   = isset( $data['shuffle_options'] ) ? ( ! empty( $data['shuffle_options'] ) ? 1 : 0 ) : 1;
 		$max_attempts      = isset( $data['max_attempts'] ) ? max( 0, absint( $data['max_attempts'] ) ) : 0;
 
 		// Access & review mode.
@@ -488,6 +525,8 @@ class IAQ_Quiz_Builder {
 		// Remove linked questions.
 		$wpdb->delete( $table_quiz_q, array( 'quiz_id' => $id ), array( '%d' ) );
 
+		self::clear_quiz_cache( $id );
+
 		return (bool) $wpdb->delete( $table_quizzes, array( 'id' => $id ), array( '%d' ) );
 	}
 
@@ -503,6 +542,8 @@ class IAQ_Quiz_Builder {
 		if ( empty( $ids ) || ! is_array( $ids ) ) {
 			return 0;
 		}
+
+		self::clear_quiz_cache();
 
 		$ids             = array_map( 'absint', $ids );
 		$ids_placeholder = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
@@ -794,6 +835,8 @@ class IAQ_Quiz_Builder {
 			array( '%d', '%f' ),
 			array( '%d' )
 		);
+
+		self::clear_quiz_cache( $quiz_id );
 	}
 
 	/**

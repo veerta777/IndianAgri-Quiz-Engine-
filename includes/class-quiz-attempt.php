@@ -460,8 +460,9 @@ class IAQ_Quiz_Attempt {
 		// Fetch assigned questions with custom marks.
 		$raw_questions = IAQ_Quiz_Builder::get_quiz_questions( $quiz_id );
 
-		// Apply question shuffling if configured.
-		if ( ! empty( $quiz->shuffle_questions ) ) {
+		// Apply question shuffling: enabled by default for all practice sets and quizzes unless explicitly disabled.
+		$should_shuffle_questions = ! isset( $quiz->shuffle_questions ) || (int) $quiz->shuffle_questions !== 0;
+		if ( $should_shuffle_questions ) {
 			// Seed shuffle with attempt ID for consistent order on page reload during same attempt.
 			mt_srand( (int) $attempt->id );
 			shuffle( $raw_questions );
@@ -496,15 +497,27 @@ class IAQ_Quiz_Attempt {
 		$index = 1;
 
 		foreach ( $raw_questions as $q ) {
-			$opts = array(
-				array( 'key' => 'A', 'text' => $q->option_a ),
-				array( 'key' => 'B', 'text' => $q->option_b ),
-				array( 'key' => 'C', 'text' => $q->option_c ),
-				array( 'key' => 'D', 'text' => $q->option_d ),
-			);
+			$opt_a = array( 'key' => 'A', 'text' => $q->option_a );
+			$opt_b = array( 'key' => 'B', 'text' => $q->option_b );
+			$opt_c = array( 'key' => 'C', 'text' => $q->option_c );
+			$opt_d = array( 'key' => 'D', 'text' => $q->option_d );
+			if ( ! empty( $q->option_a_hi ) ) {
+				$opt_a['text_hi'] = $q->option_a_hi;
+			}
+			if ( ! empty( $q->option_b_hi ) ) {
+				$opt_b['text_hi'] = $q->option_b_hi;
+			}
+			if ( ! empty( $q->option_c_hi ) ) {
+				$opt_c['text_hi'] = $q->option_c_hi;
+			}
+			if ( ! empty( $q->option_d_hi ) ) {
+				$opt_d['text_hi'] = $q->option_d_hi;
+			}
+			$opts = array( $opt_a, $opt_b, $opt_c, $opt_d );
 
-			// Shuffle options if enabled.
-			if ( ! empty( $quiz->shuffle_options ) ) {
+			// Shuffle options: enabled by default for all practice sets and MCQs unless explicitly disabled.
+			$should_shuffle_options = ! isset( $quiz->shuffle_options ) || (int) $quiz->shuffle_options !== 0;
+			if ( $should_shuffle_options ) {
 				mt_srand( (int) ( $attempt->id * 1000 + $q->id ) );
 				shuffle( $opts );
 				mt_srand();
@@ -528,6 +541,9 @@ class IAQ_Quiz_Attempt {
 				'selected'       => $user_ans['selected'],
 				'is_marked'      => $user_ans['is_marked'],
 			);
+			if ( ! empty( $q->question_text_hi ) ) {
+				$q_data['question_text_hi'] = $q->question_text_hi;
+			}
 
 			// If this question was already answered in immediate mode, deliver locked feedback state so page reload preserves feedback.
 			if ( $is_immediate_mode && ! empty( $user_ans['selected'] ) ) {
@@ -541,7 +557,7 @@ class IAQ_Quiz_Attempt {
 					'selected'         => $user_ans['selected'],
 					'is_correct'       => (bool) ( 1 === $is_correct_val ),
 					'correct_option'   => $correct_opt,
-					'explanation'      => $q->explanation,
+					'explanation'      => self::clean_explanation( $q->explanation ),
 					'marks_awarded'    => ! is_null( $user_ans['marks_awarded'] ) ? (float) $user_ans['marks_awarded'] : $marks_val,
 					'feedback_message' => ( 1 === $is_correct_val )
 						? __( 'Correct! Excellent work!', 'indianagri-quiz-engine' )
@@ -699,7 +715,7 @@ class IAQ_Quiz_Attempt {
 					'selected'         => $existing_answer->selected_option,
 					'is_correct'       => $is_cor,
 					'correct_option'   => $correct_opt,
-					'explanation'      => $question ? $question->explanation : '',
+					'explanation'      => $question ? self::clean_explanation( $question->explanation ) : '',
 					'marks_awarded'    => (float) $existing_answer->marks_awarded,
 					'feedback_message' => $is_cor
 						? __( 'Correct! Excellent work!', 'indianagri-quiz-engine' )
@@ -784,7 +800,7 @@ class IAQ_Quiz_Attempt {
 				'selected'         => $selected_option,
 				'is_correct'       => $is_cor,
 				'correct_option'   => $correct_opt,
-				'explanation'      => $question ? $question->explanation : '',
+				'explanation'      => $question ? self::clean_explanation( $question->explanation ) : '',
 				'marks_awarded'    => (float) $marks_awarded,
 				'feedback_message' => $is_cor
 					? __( 'Correct! Excellent work!', 'indianagri-quiz-engine' )
@@ -854,6 +870,21 @@ class IAQ_Quiz_Attempt {
 			'answered_count' => $answered_count,
 			'marked_count'   => $marked_count,
 		);
+	}
+
+	/**
+	 * Clean scientific explanation text of any raw citation markers or generative artifacts.
+	 *
+	 * @param string $text Raw explanation text.
+	 * @return string Sanitized clean explanation.
+	 */
+	public static function clean_explanation( $text ) {
+		if ( empty( $text ) ) {
+			return '';
+		}
+		// Strip [cite: 1], [cite: 1, 2], [cite: ...]
+		$text = preg_replace( '/\s*\[cite:\s*[^\]]+\]/i', '', $text );
+		return trim( $text );
 	}
 
 	/**

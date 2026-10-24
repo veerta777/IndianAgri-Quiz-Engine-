@@ -19,6 +19,8 @@ import '../../learning/screens/leaderboard_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../quiz_cbt/screens/cbt_exam_screen.dart';
 import '../../quiz_cbt/screens/quiz_instructions_screen.dart';
+import '../../../core/models/app_update_info.dart';
+import '../../../core/services/app_update_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -32,11 +34,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   Map<String, dynamic>? _summary;
+  AppUpdateInfo? _appUpdateInfo;
 
   @override
   void initState() {
     super.initState();
     _fetchDashboardSummary();
+    _checkForAppUpdates();
+  }
+
+  Future<void> _checkForAppUpdates() async {
+    final info = await AppUpdateService.checkForUpdate();
+    if (mounted && info != null) {
+      setState(() {
+        _appUpdateInfo = info;
+      });
+      // If mandatory update, immediately show update dialog
+      if (info.isForceUpdate) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            AppUpdateService.showUpdateDialog(context, updateInfo: info);
+          }
+        });
+      }
+    }
   }
 
   Future<void> _fetchDashboardSummary() async {
@@ -181,6 +202,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // App Update Banner (if available and not dismissed)
+              if (_appUpdateInfo != null && _appUpdateInfo!.isUpdateAvailable && !AppUpdateService.hasDismissedBanner) ...[
+                _buildUpdateBanner(_appUpdateInfo!),
+                const SizedBox(height: 16),
+              ],
+
               // Active Attempt Alert (Resume Test)
               if (activeAttempt != null) ...[
                 _buildActiveAttemptCard(activeAttempt),
@@ -224,6 +251,86 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildUpdateBanner(AppUpdateInfo info) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0F766E), Color(0xFF117E3A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: AppStyles.borderRadiusM,
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF117E3A).withOpacity(0.25),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.rocket_launch_rounded, color: Colors.white, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Update v${info.latestVersion} Available',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  info.title.isNotEmpty ? info.title : "Tap to see what's new and get the latest features.",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 11.5),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: () {
+              AppUpdateService.showUpdateDialog(context, updateInfo: info);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF0F766E),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Update', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+          ),
+          if (!info.isForceUpdate) ...[
+            const SizedBox(width: 4),
+            IconButton(
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              icon: const Icon(Icons.close, color: Colors.white70, size: 18),
+              onPressed: () {
+                setState(() {
+                  AppUpdateService.dismissBanner();
+                });
+              },
+            ),
+          ],
+        ],
       ),
     );
   }

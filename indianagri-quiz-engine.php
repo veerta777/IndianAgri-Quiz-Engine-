@@ -21,11 +21,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Plugin constants.
 if ( ! defined( 'IAQ_VERSION' ) ) {
-	define( 'IAQ_VERSION', '1.1.0' );
+	define( 'IAQ_VERSION', '1.2.0' );
 }
 
 if ( ! defined( 'IAQ_DB_VERSION' ) ) {
-	define( 'IAQ_DB_VERSION', '1.1.0' );
+	define( 'IAQ_DB_VERSION', '1.2.0' );
 }
 
 if ( ! defined( 'IAQ_PLUGIN_DIR' ) ) {
