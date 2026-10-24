@@ -39,18 +39,18 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _startFlow() async {
-    // Failsafe: No matter what, leave splash screen within 2 seconds
-    _timer = Timer(const Duration(milliseconds: 2000), () {
+    // Failsafe: No matter what, leave splash screen within 1.5 seconds
+    _timer = Timer(const Duration(milliseconds: 1500), () {
       _goTo(const LoginScreen());
     });
 
     try {
-      await Future.delayed(const Duration(milliseconds: 800));
+      await Future.delayed(const Duration(milliseconds: 400));
       if (!mounted || _navigated) return;
 
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final isAuth = await authProvider.checkInitialAuth().timeout(
-        const Duration(milliseconds: 1000),
+        const Duration(milliseconds: 800),
         onTimeout: () => false,
       );
 
