@@ -7,6 +7,8 @@ class AppColors {
   static const Color primaryLight = Color(0xFF16A34A);
   static const Color primaryDark = Color(0xFF0E632E);
   static const Color primarySubtle = Color(0xFFE8F5E9);
+  static const Color accent = Color(0xFFD97706); // Warm Amber Accent
+  static const Color accentSubtle = Color(0xFFFFFBEB);
 
   // Status & Feedback colors
   static const Color correctGreen = Color(0xFF059669); // Emerald correct
