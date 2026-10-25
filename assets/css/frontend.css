@@ -4979,85 +4979,273 @@ body.iaq-portal-active {
 	text-decoration: underline !important;
 }
 
-/* Quick Preparation Actions: 3 Cards Row (Practice Sets, Mock Tests, Custom Test) */
 .iaq-quick-actions-row {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
-	gap: 16px;
+	gap: 20px;
 }
 
 .iaq-qa-pill-card {
-	background: #ffffff;
-	border: 1px solid #e2e8f0;
-	border-radius: 12px;
-	padding: 22px;
+	position: relative;
+	background: rgba(255, 255, 255, 0.85);
+	background: linear-gradient(145deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.65) 100%);
+	backdrop-filter: blur(20px) saturate(180%);
+	-webkit-backdrop-filter: blur(20px) saturate(180%);
+	border: 1px solid rgba(255, 255, 255, 0.85);
+	border-radius: 18px;
+	padding: 24px 22px 20px;
 	display: flex;
 	flex-direction: column;
 	justify-content: space-between;
-	box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-	transition: transform 0.15s ease, box-shadow 0.15s ease;
+	box-shadow: 0 10px 30px -4px rgba(15, 23, 42, 0.05), 0 4px 12px -2px rgba(15, 23, 42, 0.03), inset 0 1px 2px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.02);
+	transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 	min-width: 0;
+	overflow: hidden;
+	cursor: pointer;
+}
+
+/* Glass specular shine highlight */
+.iaq-qa-pill-card::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 120px;
+	pointer-events: none;
+	opacity: 0.85;
+	transition: opacity 0.35s ease;
+	border-radius: 18px 18px 0 0;
+}
+
+/* Diagonal glass light sweep on hover */
+.iaq-qa-pill-card::after {
+	content: '';
+	position: absolute;
+	top: -60%;
+	left: -80%;
+	width: 60%;
+	height: 220%;
+	background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+	transform: rotate(26deg);
+	pointer-events: none;
+	transition: left 0.75s ease, opacity 0.4s ease;
+	opacity: 0;
+	z-index: 1;
 }
 
 .iaq-qa-pill-card:hover {
-	transform: translateY(-2px);
-	box-shadow: 0 6px 14px rgba(0,0,0,0.06);
+	transform: translateY(-5px);
 }
 
+.iaq-qa-pill-card:hover::after {
+	left: 150%;
+	opacity: 1;
+}
+
+/* Variant Glass Backgrounds & Ambient Radial Lights */
+.iaq-qa-pill-card.is-green {
+	background: linear-gradient(145deg, rgba(255, 255, 255, 0.94) 0%, rgba(240, 253, 244, 0.65) 100%);
+	border-color: rgba(220, 252, 231, 0.85);
+}
+.iaq-qa-pill-card.is-green::before {
+	background: radial-gradient(circle at 20% 0%, rgba(34, 197, 94, 0.15) 0%, rgba(255, 255, 255, 0.45) 45%, transparent 75%);
+}
+.iaq-qa-pill-card.is-green:hover {
+	border-color: rgba(34, 197, 94, 0.45);
+	box-shadow: 0 20px 38px -8px rgba(22, 163, 74, 0.18), 0 8px 16px -4px rgba(15, 23, 42, 0.04), inset 0 1px 2px rgba(255, 255, 255, 1);
+}
+
+.iaq-qa-pill-card.is-blue {
+	background: linear-gradient(145deg, rgba(255, 255, 255, 0.94) 0%, rgba(239, 246, 255, 0.65) 100%);
+	border-color: rgba(219, 234, 254, 0.85);
+}
+.iaq-qa-pill-card.is-blue::before {
+	background: radial-gradient(circle at 20% 0%, rgba(59, 130, 246, 0.15) 0%, rgba(255, 255, 255, 0.45) 45%, transparent 75%);
+}
+.iaq-qa-pill-card.is-blue:hover {
+	border-color: rgba(59, 130, 246, 0.45);
+	box-shadow: 0 20px 38px -8px rgba(37, 99, 235, 0.18), 0 8px 16px -4px rgba(15, 23, 42, 0.04), inset 0 1px 2px rgba(255, 255, 255, 1);
+}
+
+.iaq-qa-pill-card.is-teal {
+	background: linear-gradient(145deg, rgba(255, 255, 255, 0.94) 0%, rgba(240, 253, 250, 0.65) 100%);
+	border-color: rgba(204, 251, 241, 0.85);
+}
+.iaq-qa-pill-card.is-teal::before {
+	background: radial-gradient(circle at 20% 0%, rgba(20, 184, 166, 0.15) 0%, rgba(255, 255, 255, 0.45) 45%, transparent 75%);
+}
+.iaq-qa-pill-card.is-teal:hover {
+	border-color: rgba(20, 184, 166, 0.45);
+	box-shadow: 0 20px 38px -8px rgba(13, 148, 136, 0.18), 0 8px 16px -4px rgba(15, 23, 42, 0.04), inset 0 1px 2px rgba(255, 255, 255, 1);
+}
+
+.iaq-qa-pill-card.is-purple {
+	background: linear-gradient(145deg, rgba(255, 255, 255, 0.94) 0%, rgba(250, 245, 255, 0.65) 100%);
+	border-color: rgba(243, 232, 255, 0.85);
+}
+.iaq-qa-pill-card.is-purple::before {
+	background: radial-gradient(circle at 20% 0%, rgba(168, 85, 247, 0.15) 0%, rgba(255, 255, 255, 0.45) 45%, transparent 75%);
+}
+.iaq-qa-pill-card.is-purple:hover {
+	border-color: rgba(168, 85, 247, 0.45);
+	box-shadow: 0 20px 38px -8px rgba(126, 34, 206, 0.18), 0 8px 16px -4px rgba(15, 23, 42, 0.04), inset 0 1px 2px rgba(255, 255, 255, 1);
+}
+
+/* Glass Badge Icons with 3D Specular Relief */
 .iaq-qa-badge-icon {
-	width: 42px;
-	height: 42px;
-	border-radius: 10px;
-	display: flex;
+	width: 48px;
+	height: 48px;
+	border-radius: 14px;
+	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	margin-bottom: 14px;
+	margin-bottom: 16px;
+	position: relative;
+	z-index: 2;
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+	transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease;
 }
 
-.iaq-qa-pill-card.is-green .iaq-qa-badge-icon { background: #dcfce7; color: #15803d; }
-.iaq-qa-pill-card.is-blue .iaq-qa-badge-icon { background: #dbeafe; color: #1d4ed8; }
-.iaq-qa-pill-card.is-purple .iaq-qa-badge-icon { background: #f3e8ff; color: #7e22ce; }
-.iaq-qa-pill-card.is-teal .iaq-qa-badge-icon { background: #ccfbf1; color: #0f766e; }
+.iaq-qa-pill-card:hover .iaq-qa-badge-icon {
+	transform: scale(1.08) translateY(-2px);
+}
 
+.iaq-qa-pill-card.is-green .iaq-qa-badge-icon {
+	background: linear-gradient(135deg, rgba(220, 252, 231, 0.95) 0%, rgba(187, 247, 208, 0.70) 100%);
+	color: #15803d;
+	border: 1px solid rgba(255, 255, 255, 0.9);
+	box-shadow: 0 6px 14px -2px rgba(22, 163, 74, 0.22), inset 0 1px 2px rgba(255, 255, 255, 0.95);
+}
+
+.iaq-qa-pill-card.is-blue .iaq-qa-badge-icon {
+	background: linear-gradient(135deg, rgba(219, 234, 254, 0.95) 0%, rgba(191, 219, 254, 0.70) 100%);
+	color: #1d4ed8;
+	border: 1px solid rgba(255, 255, 255, 0.9);
+	box-shadow: 0 6px 14px -2px rgba(37, 99, 235, 0.22), inset 0 1px 2px rgba(255, 255, 255, 0.95);
+}
+
+.iaq-qa-pill-card.is-purple .iaq-qa-badge-icon {
+	background: linear-gradient(135deg, rgba(243, 232, 255, 0.95) 0%, rgba(233, 213, 255, 0.70) 100%);
+	color: #7e22ce;
+	border: 1px solid rgba(255, 255, 255, 0.9);
+	box-shadow: 0 6px 14px -2px rgba(126, 34, 206, 0.22), inset 0 1px 2px rgba(255, 255, 255, 0.95);
+}
+
+.iaq-qa-pill-card.is-teal .iaq-qa-badge-icon {
+	background: linear-gradient(135deg, rgba(204, 251, 241, 0.95) 0%, rgba(153, 246, 228, 0.70) 100%);
+	color: #0f766e;
+	border: 1px solid rgba(255, 255, 255, 0.9);
+	box-shadow: 0 6px 14px -2px rgba(13, 148, 136, 0.22), inset 0 1px 2px rgba(255, 255, 255, 0.95);
+}
+
+/* Card Typography */
 .iaq-qa-card-name {
+	position: relative;
+	z-index: 2;
 	margin: 0 0 8px 0;
-	font-size: 16.5px;
+	font-size: 17px;
 	font-weight: 800;
 	color: #0f172a;
-	line-height: 1.3;
+	line-height: 1.35;
+	letter-spacing: -0.015em;
 	overflow-wrap: break-word;
 }
 
 .iaq-qa-card-desc {
-	margin: 0 0 18px 0;
+	position: relative;
+	z-index: 2;
+	margin: 0 0 20px 0;
 	font-size: 13.5px;
 	color: #64748b;
-	line-height: 1.5;
+	line-height: 1.55;
 	flex: 1 1 auto;
+	font-weight: 450;
 }
 
+/* Glass Pill Buttons with Micro-Interactions */
 .iaq-qa-action-pill {
-	display: block;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
 	text-align: center;
-	padding: 9px 16px;
-	border-radius: 6px;
+	padding: 10px 18px;
+	border-radius: 10px;
 	font-size: 13px;
 	font-weight: 700;
 	text-decoration: none !important;
-	transition: all 0.15s ease;
+	position: relative;
+	z-index: 2;
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
+	transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.iaq-qa-action-pill.is-green { background: #EAF5EC; color: #117E3A !important; }
-.iaq-qa-action-pill.is-green:hover { background: #117E3A; color: #ffffff !important; }
+.iaq-qa-pill-card:hover .iaq-qa-action-pill {
+	gap: 10px;
+}
 
-.iaq-qa-action-pill.is-blue { background: #EFF6FF; color: #1D4ED8 !important; }
-.iaq-qa-action-pill.is-blue:hover { background: #1D4ED8; color: #ffffff !important; }
+.iaq-qa-action-pill.is-green {
+	background: rgba(220, 252, 231, 0.75);
+	color: #15803d !important;
+	border: 1px solid rgba(134, 239, 172, 0.65);
+	box-shadow: 0 2px 6px rgba(22, 163, 74, 0.08);
+}
+.iaq-qa-action-pill.is-green:hover,
+.iaq-qa-pill-card.is-green:hover .iaq-qa-action-pill {
+	background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+	color: #ffffff !important;
+	border-color: transparent;
+	box-shadow: 0 8px 20px -2px rgba(22, 163, 74, 0.35);
+	transform: translateY(-1px);
+}
 
-.iaq-qa-action-pill.is-purple { background: #FAF5FF; color: #7E22CE !important; }
-.iaq-qa-action-pill.is-purple:hover { background: #7E22CE; color: #ffffff !important; }
+.iaq-qa-action-pill.is-blue {
+	background: rgba(219, 234, 254, 0.75);
+	color: #1d4ed8 !important;
+	border: 1px solid rgba(147, 197, 253, 0.65);
+	box-shadow: 0 2px 6px rgba(37, 99, 235, 0.08);
+}
+.iaq-qa-action-pill.is-blue:hover,
+.iaq-qa-pill-card.is-blue:hover .iaq-qa-action-pill {
+	background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+	color: #ffffff !important;
+	border-color: transparent;
+	box-shadow: 0 8px 20px -2px rgba(37, 99, 235, 0.35);
+	transform: translateY(-1px);
+}
 
-.iaq-qa-action-pill.is-teal { background: #F0FDFA; color: #0D9488 !important; }
-.iaq-qa-action-pill.is-teal:hover { background: #0D9488; color: #ffffff !important; }
+.iaq-qa-action-pill.is-purple {
+	background: rgba(243, 232, 255, 0.75);
+	color: #7e22ce !important;
+	border: 1px solid rgba(216, 180, 254, 0.65);
+	box-shadow: 0 2px 6px rgba(126, 34, 206, 0.08);
+}
+.iaq-qa-action-pill.is-purple:hover,
+.iaq-qa-pill-card.is-purple:hover .iaq-qa-action-pill {
+	background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+	color: #ffffff !important;
+	border-color: transparent;
+	box-shadow: 0 8px 20px -2px rgba(126, 34, 206, 0.35);
+	transform: translateY(-1px);
+}
+
+.iaq-qa-action-pill.is-teal {
+	background: rgba(204, 251, 241, 0.75);
+	color: #0f766e !important;
+	border: 1px solid rgba(94, 234, 212, 0.65);
+	box-shadow: 0 2px 6px rgba(13, 148, 136, 0.08);
+}
+.iaq-qa-action-pill.is-teal:hover,
+.iaq-qa-pill-card.is-teal:hover .iaq-qa-action-pill {
+	background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+	color: #ffffff !important;
+	border-color: transparent;
+	box-shadow: 0 8px 20px -2px rgba(13, 148, 136, 0.35);
+	transform: translateY(-1px);
+}
 
 /* Continue Practising Rows */
 .iaq-continue-items-list {

@@ -36,8 +36,21 @@ class AuthProvider extends ChangeNotifier {
         notifyListeners();
         return true;
       }
+    } on ApiException catch (e) {
+      // If unauthorized or forbidden, token is expired/invalid; force login
+      if (e.statusCode == 401 || e.statusCode == 403) {
+        await SecureStorage.clearAll();
+        _user = null;
+        return false;
+      }
+      // For network errors (status 0), fallback to cached offline profile
+      final cached = await SecureStorage.getUserProfile();
+      if (cached != null) {
+        _user = cached;
+        notifyListeners();
+        return true;
+      }
     } catch (_) {
-      // Cached offline profile fallback
       final cached = await SecureStorage.getUserProfile();
       if (cached != null) {
         _user = cached;

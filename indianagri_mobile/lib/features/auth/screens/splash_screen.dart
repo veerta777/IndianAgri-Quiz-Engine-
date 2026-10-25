@@ -30,27 +30,31 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _goTo(Widget screen) {
-    if (_navigated || !mounted) return;
+    if (_navigated) return;
     _navigated = true;
     _timer?.cancel();
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => screen),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => screen),
+        );
+      }
+    });
   }
 
   Future<void> _startFlow() async {
-    // Failsafe: No matter what, leave splash screen within 1.5 seconds
-    _timer = Timer(const Duration(milliseconds: 1500), () {
+    // Failsafe: Guarantee transition out of splash screen within 1.2 seconds
+    _timer = Timer(const Duration(milliseconds: 1200), () {
       _goTo(const LoginScreen());
     });
 
     try {
-      await Future.delayed(const Duration(milliseconds: 400));
+      await Future.delayed(const Duration(milliseconds: 300));
       if (!mounted || _navigated) return;
 
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final isAuth = await authProvider.checkInitialAuth().timeout(
-        const Duration(milliseconds: 800),
+        const Duration(milliseconds: 600),
         onTimeout: () => false,
       );
 

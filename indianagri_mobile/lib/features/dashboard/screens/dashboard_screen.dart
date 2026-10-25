@@ -8,6 +8,7 @@ import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/language_toggle.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../auth/auth_provider.dart';
+import '../../auth/screens/login_screen.dart';
 import '../../examinations/screens/examinations_screen.dart';
 import '../../practice_sets/screens/practice_sets_screen.dart';
 import '../../mock_tests/screens/mock_tests_screen.dart';
@@ -67,23 +68,51 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
 
     try {
-      final res = await ApiClient.get(ApiEndpoints.dashboardSummary);
+      final res = await ApiClient.get(ApiEndpoints.dashboardSummary).timeout(
+        const Duration(seconds: 8),
+        onTimeout: () => throw ApiException('Dashboard load timed out. Please tap retry.', statusCode: 408),
+      );
       if (res is Map<String, dynamic>) {
-        setState(() {
-          _summary = res;
-          _isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            _summary = res;
+            _isLoading = false;
+          });
+        }
         return;
       }
-      setState(() {
-        _errorMessage = 'Could not load dashboard data.';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Could not load dashboard data.';
+          _isLoading = false;
+        });
+      }
+    } on ApiException catch (e) {
+      if (e.statusCode == 401 || e.statusCode == 403) {
+        if (!mounted) return;
+        final auth = Provider.of<AuthProvider>(context, listen: false);
+        await auth.logout();
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
+        }
+        return;
+      }
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.message;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString().replaceFirst('Exception: ', '');
+          _isLoading = false;
+        });
+      }
     }
   }
 

@@ -149,7 +149,7 @@ $page_url = function( $subview = '', $params = array() ) {
 			</div>
 
 			<!-- Card 2: Practice by Subjects -->
-			<div class="iaq-qa-pill-card is-blue" id="card-practice-by-subjects">
+			<div class="iaq-qa-pill-card is-blue" id="card-practice-by-subjects" style="cursor:pointer;" onclick="window.location.href='<?php echo esc_url( $page_url( 'subjects' ) ); ?>';">
 				<div class="iaq-qa-badge-icon">
 					<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<rect width="7" height="7" x="3" y="3" rx="1.5"/>
@@ -160,13 +160,13 @@ $page_url = function( $subview = '', $params = array() ) {
 				</div>
 				<h4 class="iaq-qa-card-name"><?php esc_html_e( 'Practice by Subjects', 'indianagri-quiz-engine' ); ?></h4>
 				<p class="iaq-qa-card-desc"><?php esc_html_e( 'Topic-wise chapter drills arranged sequentially (Set 1, 2, 3...) across core disciplines.', 'indianagri-quiz-engine' ); ?></p>
-				<a href="<?php echo esc_url( $page_url( 'subjects' ) ); ?>" class="iaq-qa-action-pill is-blue">
+				<a href="<?php echo esc_url( $page_url( 'subjects' ) ); ?>" class="iaq-qa-action-pill is-blue" onclick="event.stopPropagation();">
 					<?php esc_html_e( 'Browse by Subject', 'indianagri-quiz-engine' ); ?> &rarr;
 				</a>
 			</div>
 
 			<!-- Card 3: Browse by Examination -->
-			<div class="iaq-qa-pill-card is-teal" id="card-practice-by-exams">
+			<div class="iaq-qa-pill-card is-teal" id="card-practice-by-exams" style="cursor:pointer;" onclick="window.location.href='<?php echo esc_url( $page_url( 'exams' ) ); ?>';">
 				<div class="iaq-qa-badge-icon">
 					<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<circle cx="12" cy="8" r="6"/>
@@ -175,7 +175,7 @@ $page_url = function( $subview = '', $params = array() ) {
 				</div>
 				<h4 class="iaq-qa-card-name"><?php esc_html_e( 'Browse by Examination', 'indianagri-quiz-engine' ); ?></h4>
 				<p class="iaq-qa-card-desc"><?php esc_html_e( 'Practice by Exams: Target competitive entrance tests like ICAR JRF, ASRB NET, CUET PG & IBPS AFO.', 'indianagri-quiz-engine' ); ?></p>
-				<a href="<?php echo esc_url( $page_url( 'exams' ) ); ?>" class="iaq-qa-action-pill is-teal">
+				<a href="<?php echo esc_url( $page_url( 'exams' ) ); ?>" class="iaq-qa-action-pill is-teal" onclick="event.stopPropagation();">
 					<?php esc_html_e( 'Browse by Examination', 'indianagri-quiz-engine' ); ?> &rarr;
 				</a>
 			</div>

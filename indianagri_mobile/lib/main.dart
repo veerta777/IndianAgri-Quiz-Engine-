@@ -11,9 +11,13 @@ import 'features/auth/screens/splash_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final savedBaseUrl = await SecureStorage.getBaseUrl();
-  if (savedBaseUrl != null && savedBaseUrl.trim().isNotEmpty) {
-    ApiEndpoints.setBaseUrl(savedBaseUrl);
+  try {
+    final savedBaseUrl = await SecureStorage.getBaseUrl();
+    if (savedBaseUrl != null && savedBaseUrl.trim().isNotEmpty) {
+      ApiEndpoints.setBaseUrl(savedBaseUrl);
+    }
+  } catch (e) {
+    debugPrint('Storage initialization fallback: $e');
   }
 
   runApp(
