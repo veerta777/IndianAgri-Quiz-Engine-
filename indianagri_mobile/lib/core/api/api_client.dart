@@ -16,9 +16,52 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
-/// Centralized REST API client for IndianAgriExam.
+class _CacheItem {
+  final dynamic data;
+  final DateTime expiry;
+
+  _CacheItem(this.data, Duration ttl) : expiry = DateTime.now().add(ttl);
+
+  bool get isExpired => DateTime.now().isAfter(expiry);
+}
+
+/// Centralized REST API client for IndianAgriExam with connection pooling & fast caching.
 class ApiClient {
-  static const Duration timeoutDuration = Duration(seconds: 15);
+  static const Duration timeoutDuration = Duration(seconds: 12);
+
+  /// Shared persistent client to reuse TCP/TLS connections via Keep-Alive
+  static final http.Client _httpClient = http.Client();
+
+  /// Fast in-memory cache for catalogs, version, and dashboard summaries
+  static final Map<String, _CacheItem> _cache = {};
+
+  /// Invalidate entire cache or entries matching a given URL prefix.
+  static void clearCache({String? prefix}) {
+    if (prefix == null) {
+      _cache.clear();
+    } else {
+      _cache.removeWhere((key, _) => key.contains(prefix));
+    }
+  }
+
+  /// Automatic TTL determination for cacheable endpoints.
+  static Duration? _defaultTtlForUrl(String url) {
+    if (url.contains('/examinations') ||
+        url.contains('/practice-sets/books') ||
+        url.contains('/practice-sets/subjects') ||
+        url.contains('/mock-tests/categories') ||
+        url.contains('/mock-tests/hierarchy') ||
+        url.contains('/subscriptions/plans')) {
+      return const Duration(minutes: 10);
+    }
+    if (url.contains('/app/version')) {
+      return const Duration(minutes: 15);
+    }
+    if (url.contains('/dashboard/summary')) {
+      return const Duration(seconds: 90);
+    }
+    return null;
+  }
 
   /// Build request headers with Bearer token authentication.
   static Future<Map<String, String>> _getHeaders({bool isJson = true}) async {
@@ -38,40 +81,82 @@ class ApiClient {
     return headers;
   }
 
-  /// HTTP GET
-  static Future<dynamic> get(String url) async {
+  /// HTTP GET with instant cache return and connection reuse
+  static Future<dynamic> get(
+    String url, {
+    bool forceRefresh = false,
+    Duration? ttl,
+  }) async {
+    final effectiveTtl = ttl ?? _defaultTtlForUrl(url);
+
+    // 1. Return immediately from in-memory cache if available and fresh (0 ms)
+    if (!forceRefresh && effectiveTtl != null && _cache.containsKey(url)) {
+      final item = _cache[url]!;
+      if (!item.isExpired) {
+        return item.data;
+      }
+    }
+
     try {
       final headers = await _getHeaders();
-      final response = await http
+      final response = await _httpClient
           .get(Uri.parse(url), headers: headers)
           .timeout(timeoutDuration);
 
-      return _processResponse(response);
+      final result = _processResponse(response);
+
+      // Cache valid result in memory
+      if (effectiveTtl != null && result != null) {
+        _cache[url] = _CacheItem(result, effectiveTtl);
+      }
+
+      return result;
     } on SocketException {
+      // Graceful offline fallback: if network drops, serve cached copy
+      if (_cache.containsKey(url)) {
+        return _cache[url]!.data;
+      }
       throw ApiException('Network connection failed. Please check your internet connection.', statusCode: 0);
     } on TimeoutException {
+      if (_cache.containsKey(url)) {
+        return _cache[url]!.data;
+      }
       throw ApiException('Request timed out. Please try again.', statusCode: 408);
     } on http.ClientException catch (e) {
+      if (_cache.containsKey(url)) {
+        return _cache[url]!.data;
+      }
       throw ApiException('Unable to connect to server. Please check your internet connection (${e.message}).', statusCode: 0);
     } on HandshakeException catch (e) {
+      if (_cache.containsKey(url)) {
+        return _cache[url]!.data;
+      }
       throw ApiException('Secure connection failed (${e.message}). Please verify network or SSL settings.', statusCode: 0);
     } catch (e) {
       if (e is ApiException) rethrow;
+      if (_cache.containsKey(url)) {
+        return _cache[url]!.data;
+      }
       throw ApiException('Network error: ${e.toString().replaceFirst("Exception: ", "")}', statusCode: 0);
     }
   }
 
-  /// HTTP POST
+  /// HTTP POST with connection reuse and automatic cache invalidation
   static Future<dynamic> post(String url, {Map<String, dynamic>? body}) async {
     try {
       final headers = await _getHeaders(isJson: true);
-      final response = await http
+      final response = await _httpClient
           .post(
             Uri.parse(url),
             headers: headers,
             body: body != null ? jsonEncode(body) : null,
           )
           .timeout(timeoutDuration);
+
+      // Invalidate relevant cache on mutations
+      if (url.contains('/submit') || url.contains('/save-answer')) {
+        clearCache(prefix: 'dashboard/summary');
+      }
 
       return _processResponse(response);
     } on SocketException {

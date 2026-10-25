@@ -826,12 +826,29 @@ class IAQ_Rest_Api {
 	 * ========================================================================= */
 
 	/**
-	 * Get student dashboard summary.
+	 * Send client-side HTTP cache headers for public read-only catalog routes.
+	 *
+	 * @param int $seconds Cache max-age duration.
+	 */
+	public static function send_cache_headers( $seconds = 180 ) {
+		if ( ! headers_sent() ) {
+			header( "Cache-Control: public, max-age={$seconds}, stale-while-revalidate=300" );
+		}
+	}
+
+	/**
+	 * Get student dashboard summary with 60s transient caching.
 	 *
 	 * @return WP_REST_Response
 	 */
 	public static function get_dashboard_summary() {
 		$user_id = get_current_user_id();
+
+		$cache_key = 'iaq_dash_' . $user_id;
+		$cached    = get_transient( $cache_key );
+		if ( false !== $cached && is_array( $cached ) ) {
+			return rest_ensure_response( $cached );
+		}
 
 		$stats             = IAQ_Quiz_Attempt::get_user_dashboard_stats( $user_id );
 		$current_streak    = IAQ_Study_Streaks::get_current_streak( $user_id );
@@ -843,30 +860,38 @@ class IAQ_Rest_Api {
 		$subject_mastery   = IAQ_Quiz_Attempt::get_user_overall_subject_mastery( $user_id );
 		$performance_trend = IAQ_Quiz_Attempt::get_user_performance_trend( $user_id, 6 );
 
-		return rest_ensure_response(
-			array(
-				'stats'             => $stats,
-				'streaks'           => array(
-					'current' => $current_streak,
-					'best'    => $best_streak,
-					'goals'   => $user_goals,
-				),
-				'active_attempt'    => $active_attempt,
-				'continue_quizzes'  => $continue_quizzes,
-				'recent_history'    => $recent_history,
-				'subject_mastery'   => $subject_mastery,
-				'performance_trend' => $performance_trend,
-			)
+		$response_data = array(
+			'stats'             => $stats,
+			'streaks'           => array(
+				'current' => $current_streak,
+				'best'    => $best_streak,
+				'goals'   => $user_goals,
+			),
+			'active_attempt'    => $active_attempt,
+			'continue_quizzes'  => $continue_quizzes,
+			'recent_history'    => $recent_history,
+			'subject_mastery'   => $subject_mastery,
+			'performance_trend' => $performance_trend,
 		);
+
+		set_transient( $cache_key, $response_data, 60 );
+
+		return rest_ensure_response( $response_data );
 	}
 
 	/**
-	 * Get examinations catalog.
+	 * Get examinations catalog with transient caching.
 	 *
 	 * @return WP_REST_Response
 	 */
 	public static function get_examinations() {
-		$exams = IAQ_Examinations::get_examinations( array( 'status' => 'active' ) );
+		self::send_cache_headers( 300 );
+		$cache_key = 'iaq_rest_examinations';
+		$exams     = get_transient( $cache_key );
+		if ( false === $exams ) {
+			$exams = IAQ_Examinations::get_examinations( array( 'status' => 'active' ) );
+			set_transient( $cache_key, $exams, 15 * MINUTE_IN_SECONDS );
+		}
 		return rest_ensure_response( $exams );
 	}
 
@@ -899,12 +924,18 @@ class IAQ_Rest_Api {
 	 * ========================================================================= */
 
 	/**
-	 * Get books catalog for Practice Sets.
+	 * Get books catalog for Practice Sets with transient caching.
 	 *
 	 * @return WP_REST_Response
 	 */
 	public static function get_practice_books() {
-		$books = IAQ_Practice_Sets::get_books( array( 'status' => 'active' ) );
+		self::send_cache_headers( 300 );
+		$cache_key = 'iaq_rest_books';
+		$books     = get_transient( $cache_key );
+		if ( false === $books ) {
+			$books = IAQ_Practice_Sets::get_books( array( 'status' => 'active' ) );
+			set_transient( $cache_key, $books, 15 * MINUTE_IN_SECONDS );
+		}
 		return rest_ensure_response( $books );
 	}
 
@@ -934,12 +965,18 @@ class IAQ_Rest_Api {
 	}
 
 	/**
-	 * Get subjects catalog for Practice Sets.
+	 * Get subjects catalog for Practice Sets with transient caching.
 	 *
 	 * @return WP_REST_Response
 	 */
 	public static function get_practice_subjects() {
-		$subjects = IAQ_Practice_Sets::get_subjects_catalog();
+		self::send_cache_headers( 300 );
+		$cache_key = 'iaq_rest_subjects';
+		$subjects  = get_transient( $cache_key );
+		if ( false === $subjects ) {
+			$subjects = IAQ_Practice_Sets::get_subjects_catalog();
+			set_transient( $cache_key, $subjects, 15 * MINUTE_IN_SECONDS );
+		}
 		return rest_ensure_response( $subjects );
 	}
 
@@ -998,12 +1035,18 @@ class IAQ_Rest_Api {
 	 * ========================================================================= */
 
 	/**
-	 * Get 10 Main Mock Test Categories.
+	 * Get 10 Main Mock Test Categories with transient caching.
 	 *
 	 * @return WP_REST_Response
 	 */
 	public static function get_mock_categories() {
-		$categories = IAQ_Mock_Tests::get_categories();
+		self::send_cache_headers( 300 );
+		$cache_key   = 'iaq_rest_mock_cats';
+		$categories = get_transient( $cache_key );
+		if ( false === $categories ) {
+			$categories = IAQ_Mock_Tests::get_categories();
+			set_transient( $cache_key, $categories, 15 * MINUTE_IN_SECONDS );
+		}
 		return rest_ensure_response( $categories );
 	}
 
@@ -1244,6 +1287,8 @@ class IAQ_Rest_Api {
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
+
+		delete_transient( 'iaq_dash_' . $user_id );
 
 		return rest_ensure_response( $result );
 	}

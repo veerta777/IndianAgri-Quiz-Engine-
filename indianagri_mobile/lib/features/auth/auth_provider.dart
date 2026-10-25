@@ -194,6 +194,7 @@ class AuthProvider extends ChangeNotifier {
     } catch (_) {}
 
     await SecureStorage.clearAll();
+    ApiClient.clearCache();
     _user = null;
     _subscriptions = [];
     notifyListeners();

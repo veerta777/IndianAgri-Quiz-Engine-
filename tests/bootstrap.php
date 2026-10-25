@@ -33,6 +33,25 @@ if ( ! defined( 'IAQ_PLUGIN_BASENAME' ) ) {
 	define( 'IAQ_PLUGIN_BASENAME', 'indianagri-quiz-engine/indianagri-quiz-engine.php' );
 }
 
+if ( ! defined( 'MINUTE_IN_SECONDS' ) ) {
+	define( 'MINUTE_IN_SECONDS', 60 );
+}
+if ( ! defined( 'HOUR_IN_SECONDS' ) ) {
+	define( 'HOUR_IN_SECONDS', 3600 );
+}
+if ( ! defined( 'DAY_IN_SECONDS' ) ) {
+	define( 'DAY_IN_SECONDS', 86400 );
+}
+if ( ! defined( 'WEEK_IN_SECONDS' ) ) {
+	define( 'WEEK_IN_SECONDS', 604800 );
+}
+if ( ! defined( 'MONTH_IN_SECONDS' ) ) {
+	define( 'MONTH_IN_SECONDS', 2592000 );
+}
+if ( ! defined( 'YEAR_IN_SECONDS' ) ) {
+	define( 'YEAR_IN_SECONDS', 31536000 );
+}
+
 // Global Options storage mock.
 global $mock_wp_options, $mock_wp_roles, $current_user_id;
 $mock_wp_options = array();
@@ -64,7 +83,23 @@ function delete_option( $option ) {
 	return true;
 }
 
+global $mock_wp_transients;
+$mock_wp_transients = array();
+
+function get_transient( $transient ) {
+	global $mock_wp_transients;
+	return isset( $mock_wp_transients[ $transient ] ) ? $mock_wp_transients[ $transient ] : false;
+}
+
+function set_transient( $transient, $value, $expiration = 0 ) {
+	global $mock_wp_transients;
+	$mock_wp_transients[ $transient ] = $value;
+	return true;
+}
+
 function delete_transient( $transient ) {
+	global $mock_wp_transients;
+	unset( $mock_wp_transients[ $transient ] );
 	return true;
 }
 

@@ -61,14 +61,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  Future<void> _fetchDashboardSummary() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  Future<void> _fetchDashboardSummary({bool forceRefresh = false}) async {
+    if (_summary == null) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
-      final res = await ApiClient.get(ApiEndpoints.dashboardSummary).timeout(
+      final res = await ApiClient.get(
+        ApiEndpoints.dashboardSummary,
+        forceRefresh: forceRefresh,
+      ).timeout(
         const Duration(seconds: 8),
         onTimeout: () => throw ApiException('Dashboard load timed out. Please tap retry.', statusCode: 408),
       );
@@ -77,13 +82,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
           setState(() {
             _summary = res;
             _isLoading = false;
+            _errorMessage = null;
           });
         }
         return;
       }
       if (mounted) {
         setState(() {
-          _errorMessage = 'Could not load dashboard data.';
+          if (_summary == null) {
+            _errorMessage = 'Could not load dashboard data.';
+          }
           _isLoading = false;
         });
       }
@@ -130,7 +138,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ];
 
     return Scaffold(
-      body: pages[_currentNavIndex],
+      body: IndexedStack(
+        index: _currentNavIndex,
+        children: pages,
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentNavIndex,
         onDestinationSelected: (index) {
@@ -179,7 +190,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         appBar: AppBar(title: const Text('Dashboard')),
         body: ErrorStateView(
           message: _errorMessage!,
-          onRetry: _fetchDashboardSummary,
+          onRetry: () => _fetchDashboardSummary(forceRefresh: true),
         ),
       );
     }
@@ -223,7 +234,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _fetchDashboardSummary,
+        onRefresh: () => _fetchDashboardSummary(forceRefresh: true),
         color: AppColors.primary,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),

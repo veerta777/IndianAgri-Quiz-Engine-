@@ -16,7 +16,10 @@ class MockTestsScreen extends StatefulWidget {
   State<MockTestsScreen> createState() => _MockTestsScreenState();
 }
 
-class _MockTestsScreenState extends State<MockTestsScreen> {
+class _MockTestsScreenState extends State<MockTestsScreen> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   bool _isLoading = true;
   String? _errorMessage;
   List<dynamic> _categories = [];
@@ -56,6 +59,7 @@ class _MockTestsScreenState extends State<MockTestsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mock Test Series', style: TextStyle(fontWeight: FontWeight.bold)),

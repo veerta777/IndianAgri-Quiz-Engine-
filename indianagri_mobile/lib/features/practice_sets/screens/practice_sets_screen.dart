@@ -17,7 +17,10 @@ class PracticeSetsScreen extends StatefulWidget {
   State<PracticeSetsScreen> createState() => _PracticeSetsScreenState();
 }
 
-class _PracticeSetsScreenState extends State<PracticeSetsScreen> with SingleTickerProviderStateMixin {
+class _PracticeSetsScreenState extends State<PracticeSetsScreen> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   late TabController _tabController;
 
   bool _isLoadingSubjects = true;
@@ -101,6 +104,7 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> with SingleTick
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Practice Question Drills', style: TextStyle(fontWeight: FontWeight.bold)),
