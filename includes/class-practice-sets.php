@@ -112,7 +112,33 @@ class IAQ_Practice_Sets {
 		}
 
 		$results = $wpdb->get_results( $sql );
-		return is_array( $results ) ? $results : array();
+		if ( ! is_array( $results ) ) {
+			return array();
+		}
+
+		// Dynamically compute practice sets count if relation table has 0 mappings
+		foreach ( $results as &$book_obj ) {
+			if ( empty( $book_obj->practice_sets_count ) ) {
+				$keywords = self::get_book_keywords( $book_obj );
+				if ( ! empty( $keywords ) ) {
+					$like_parts = array();
+					$like_vals  = array();
+					foreach ( $keywords as $kw ) {
+						$escaped_kw   = method_exists( $wpdb, 'esc_like' ) ? $wpdb->esc_like( $kw ) : addcslashes( $kw, '_%\\' );
+						$like_parts[] = 'q.title LIKE %s';
+						$like_vals[]  = '%' . $escaped_kw . '%';
+					}
+					$kw_where = '(' . implode( ' OR ', $like_parts ) . ") AND q.status = 'published'";
+					$kw_sql   = $wpdb->prepare( "SELECT COUNT(q.id) FROM {$table_quizzes} q WHERE {$kw_where}", $like_vals );
+					$dynamic_count = (int) $wpdb->get_var( $kw_sql );
+					if ( $dynamic_count > 0 ) {
+						$book_obj->practice_sets_count = $dynamic_count;
+					}
+				}
+			}
+		}
+
+		return $results;
 	}
 
 	/**
@@ -301,6 +327,49 @@ class IAQ_Practice_Sets {
 
 		$rows = $wpdb->get_results( $wpdb->prepare( $query, $values ) );
 		if ( empty( $rows ) ) {
+			// Dynamic fallback: look up book and match published quizzes by author / title keywords
+			$book = self::get_book( $book_id );
+			if ( $book ) {
+				$keywords = self::get_book_keywords( $book );
+				if ( ! empty( $keywords ) ) {
+					$like_parts = array();
+					$like_vals  = array();
+					foreach ( $keywords as $kw ) {
+						$escaped_kw   = method_exists( $wpdb, 'esc_like' ) ? $wpdb->esc_like( $kw ) : addcslashes( $kw, '_%\\' );
+						$like_parts[] = 'q.title LIKE %s';
+						$like_vals[]  = '%' . $escaped_kw . '%';
+					}
+					$kw_where = '(' . implode( ' OR ', $like_parts ) . ')';
+					if ( ! empty( $status ) ) {
+						$kw_where .= ' AND q.status = %s';
+						$like_vals[] = $status;
+					} else {
+						$kw_where .= " AND q.status != 'archived'";
+					}
+					$kw_query = "
+						SELECT q.*,
+							0 AS book_sort_order,
+							0 AS book_quiz_rel_id,
+							s.name AS subject_name
+						FROM {$table_quizzes} q
+						LEFT JOIN {$table_subjects} s ON q.subject_id = s.id
+						WHERE {$kw_where}
+						ORDER BY q.id ASC
+					";
+					$rows = $wpdb->get_results( $wpdb->prepare( $kw_query, $like_vals ) );
+
+					// Auto-link quizzes into table_book_quizzes for database relationship persistence
+					if ( ! empty( $rows ) ) {
+						$order_seq = 1;
+						foreach ( $rows as $matched_q ) {
+							self::assign_quiz_to_book( $book_id, (int) $matched_q->id, $order_seq++ );
+						}
+					}
+				}
+			}
+		}
+
+		if ( empty( $rows ) ) {
 			return array();
 		}
 
@@ -313,6 +382,41 @@ class IAQ_Practice_Sets {
 		}
 
 		return $rows;
+	}
+
+	/**
+	 * Extract search keywords for matching quizzes to standard agricultural textbooks.
+	 *
+	 * @param object $book Book row object.
+	 * @return array
+	 */
+	public static function get_book_keywords( $book ) {
+		$keywords = array();
+		$title    = ! empty( $book->title ) ? strtolower( $book->title ) : '';
+		$author   = ! empty( $book->author ) ? strtolower( $book->author ) : '';
+
+		if ( strpos( $author, 'sunda' ) !== false || strpos( $title, 'competitive' ) !== false || strpos( $author, 'nem raj' ) !== false ) {
+			$keywords[] = 'NR Sunda';
+			$keywords[] = 'Nem Raj';
+			$keywords[] = 'Sunda';
+		}
+		if ( strpos( $author, 'kantwa' ) !== false || strpos( $title, 'objective' ) !== false ) {
+			$keywords[] = 'SR Kantwa';
+			$keywords[] = 'Kantwa';
+		}
+		if ( strpos( $author, 'gupta' ) !== false || strpos( $title, 'instant horticulture' ) !== false ) {
+			$keywords[] = 'Instant Horticulture';
+		}
+		if ( strpos( $author, 'katyayan' ) !== false || strpos( $title, 'fundamentals' ) !== false ) {
+			$keywords[] = 'Arun Katyayan';
+			$keywords[] = 'Fundamentals';
+		}
+		if ( strpos( $author, 'das' ) !== false || strpos( $title, 'soil science at a glance' ) !== false ) {
+			$keywords[] = 'D.K. Das';
+			$keywords[] = 'Soil Science at a Glance';
+		}
+
+		return array_unique( $keywords );
 	}
 
 	/**

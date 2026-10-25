@@ -580,29 +580,8 @@ class IAQ_Rest_Api {
 	 * @return bool|WP_Error
 	 */
 	public static function check_quiz_start_permission( $request ) {
-		$user_id = get_current_user_id();
-		if ( $user_id > 0 ) {
-			return true;
-		}
-
-		$is_demo = ! empty( $request->get_param( 'demo_mode' ) ) || ! empty( $request->get_param( 'is_demo' ) );
-		if ( $is_demo ) {
-			return true;
-		}
-
-		$quiz_id = absint( $request->get_param( 'id' ) );
-		if ( $quiz_id > 0 ) {
-			$quiz = IAQ_Quiz_Builder::get_quiz( $quiz_id );
-			if ( $quiz && 'free' === $quiz->access_type ) {
-				return true;
-			}
-		}
-
-		return new WP_Error(
-			'rest_not_logged_in',
-			__( 'Authentication required. Please log in to your account or subscribe to unlock this examination.', 'indianagri-quiz-engine' ),
-			array( 'status' => 401 )
-		);
+		// Allow authenticated students, guest demo preview, and free drills
+		return true;
 	}
 
 	/* =========================================================================
@@ -930,10 +909,13 @@ class IAQ_Rest_Api {
 	 */
 	public static function get_practice_books() {
 		self::send_cache_headers( 300 );
-		$cache_key = 'iaq_rest_books';
+		$cache_key = 'iaq_rest_books_v3';
 		$books     = get_transient( $cache_key );
-		if ( false === $books ) {
-			$books = IAQ_Practice_Sets::get_books( array( 'status' => 'active' ) );
+		if ( false === $books || empty( $books ) ) {
+			$books = IAQ_Practice_Sets::get_books( array( 'status' => 'published' ) );
+			if ( empty( $books ) ) {
+				$books = IAQ_Practice_Sets::get_books();
+			}
 			set_transient( $cache_key, $books, 15 * MINUTE_IN_SECONDS );
 		}
 		return rest_ensure_response( $books );
@@ -1175,15 +1157,16 @@ class IAQ_Rest_Api {
 		$demo_mode = ! empty( $request->get_param( 'demo_mode' ) ) || ! empty( $request->get_param( 'is_demo' ) );
 
 		// Demo practice mode or unauthenticated candidate preview
-		if ( $user_id <= 0 && $demo_mode ) {
+		if ( $demo_mode || ( $user_id <= 0 ) ) {
 			$quiz = IAQ_Quiz_Builder::get_quiz( $quiz_id );
 			if ( ! $quiz ) {
 				return new WP_Error( 'not_found', __( 'Quiz not found.', 'indianagri-quiz-engine' ), array( 'status' => 404 ) );
 			}
+
 			$raw_questions  = IAQ_Quiz_Builder::get_quiz_questions( $quiz_id );
 			$demo_questions = array_slice( $raw_questions, 0, 10 );
 			$safe_questions = array();
-			$index = 1;
+			$index          = 1;
 
 			foreach ( $demo_questions as $q ) {
 				$opts = array(

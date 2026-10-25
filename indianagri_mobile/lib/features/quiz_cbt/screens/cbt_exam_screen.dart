@@ -9,6 +9,8 @@ import '../../../core/localization/app_localizations.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/language_toggle.dart';
 import '../../../core/widgets/state_views.dart';
+import '../../auth/screens/login_screen.dart';
+import '../../subscriptions/screens/subscription_plans_screen.dart';
 import '../../results/screens/scorecard_screen.dart';
 
 class CbtExamScreen extends StatefulWidget {
@@ -524,35 +526,111 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
     }
 
     if (_errorMessage != null) {
+      final isAuthError = _errorMessage!.toLowerCase().contains('auth') ||
+          _errorMessage!.toLowerCase().contains('token') ||
+          _errorMessage!.toLowerCase().contains('log in');
+      final isSubscriptionError = _errorMessage!.toLowerCase().contains('subscription') ||
+          _errorMessage!.toLowerCase().contains('access_denied') ||
+          _errorMessage!.toLowerCase().contains('premium');
+
       return Scaffold(
-        appBar: AppBar(title: const Text('CBT Examination')),
+        appBar: AppBar(title: const Text('Examination Access')),
         body: Center(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, size: 54, color: AppColors.warningAmber),
-                const SizedBox(height: 16),
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: AppColors.warningAmber.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.lock_outline, size: 40, color: AppColors.warningAmber),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  isAuthError
+                      ? 'Student Login Required'
+                      : (isSubscriptionError ? 'Active Subscription Required' : 'Unable to Open Examination'),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
                 Text(
                   _errorMessage!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14, color: AppColors.textSecondaryLight),
+                  style: const TextStyle(fontSize: 13.5, color: AppColors.textSecondaryLight, height: 1.4),
                 ),
-                const SizedBox(height: 20),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    // Try demo practice mode so questions show immediately
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => CbtExamScreen(quizId: widget.quizId, isDemoMode: true),
+                const SizedBox(height: 24),
+                if (!widget.isDemoMode) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => CbtExamScreen(quizId: widget.quizId, isDemoMode: true),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.remove_red_eye_outlined, color: Colors.white, size: 18),
+                      label: const Text('Practice Sample Drill (10 Free Questions)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.science_outlined, color: Colors.white),
-                  label: const Text('Launch in Sample Practice Mode', style: TextStyle(color: Colors.white)),
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (isAuthError) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        );
+                      },
+                      icon: const Icon(Icons.login, color: Colors.white, size: 18),
+                      label: const Text('Log In to Your Account', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryDark,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (isSubscriptionError || !isAuthError) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const SubscriptionPlansScreen()),
+                        );
+                      },
+                      icon: const Icon(Icons.workspace_premium_outlined, color: AppColors.accent, size: 18),
+                      label: const Text('View Subscription Packages', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        side: const BorderSide(color: AppColors.accent, width: 1.5),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                TextButton.icon(
+                  onPressed: _startOrResumeExam,
+                  icon: const Icon(Icons.refresh, size: 16),
+                  label: const Text('Retry Connection'),
                 ),
               ],
             ),

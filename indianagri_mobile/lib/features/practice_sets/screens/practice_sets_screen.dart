@@ -347,23 +347,44 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> with SingleTick
     if (_isLoadingBooks) return const LoadingView(message: 'Loading standard books...');
     if (_booksError != null) return ErrorStateView(message: _booksError!, onRetry: _fetchBooks);
     
-    // Curated standard reference books if server list is empty
+    // Curated standard reference books matching live database IDs & counts
     final displayBooks = _books.isNotEmpty
         ? _books
         : [
             {
               'id': 1,
               'title': 'A Competitive Book of Agriculture',
-              'author': 'Nem Raj Sunda',
-              'practice_sets_count': 64,
-              'description': 'Standard reference covering General Agriculture, Agronomy, Soil Science, Horticulture & Entomology.',
+              'author': 'Nem Raj Sundha',
+              'practice_sets_count': 69,
+              'description': 'Standard reference covering General Agriculture, Agronomy, Soil Science, Horticulture, Entomology & Economics.',
+            },
+            {
+              'id': 5,
+              'title': 'Objective Agriculture',
+              'author': 'S.R. Kantwa',
+              'practice_sets_count': 47,
+              'description': 'High-yield MCQs for ICAR JRF/SRF, NET, CUET and State PSC examinations across Agronomy, Pathology & Breeding.',
+            },
+            {
+              'id': 4,
+              'title': 'Instant Horticulture',
+              'author': 'S.N. Gupta',
+              'practice_sets_count': 1,
+              'description': 'Targeted objective drills for Horticulture JRF, SRF, and NET examinations.',
             },
             {
               'id': 2,
-              'title': 'Objective Agriculture',
-              'author': 'S.R. Kantwa',
-              'practice_sets_count': 35,
-              'description': 'High-yield MCQs for ICAR JRF/SRF, NET, CUET and State PSC examinations.',
+              'title': 'Fundamentals of Agriculture (Vol 1 & 2)',
+              'author': 'Dr. Arun Katyayan',
+              'practice_sets_count': 0,
+              'description': 'Conceptual reference for Agronomy, Extension, and Crop Physiology.',
+            },
+            {
+              'id': 3,
+              'title': 'Soil Science at a Glance',
+              'author': 'Dr. D.K. Das',
+              'practice_sets_count': 0,
+              'description': 'Specialized review handbook for Soil Physics, Chemistry, and Nutrient Management.',
             },
           ];
 
@@ -501,18 +522,27 @@ class _GenericSetsListScreenState extends State<GenericSetsListScreen> {
 
   Future<void> _fetch() async {
     try {
-      final res = await ApiClient.get(widget.fetchUrl);
-      if (res is Map<String, dynamic> && res.containsKey(widget.dataKey)) {
-        final raw = res[widget.dataKey];
-        if (raw is List<dynamic>) {
-          setState(() {
-            _sets = raw;
-            _isLoading = false;
-          });
-          return;
+      final res = await ApiClient.get(widget.fetchUrl, forceRefresh: true);
+      List<dynamic> extractedSets = [];
+
+      if (res is List<dynamic>) {
+        extractedSets = res;
+      } else if (res is Map<String, dynamic>) {
+        if (res[widget.dataKey] is List<dynamic>) {
+          extractedSets = res[widget.dataKey];
+        } else if (res['sets'] is List<dynamic>) {
+          extractedSets = res['sets'];
+        } else if (res['quizzes'] is List<dynamic>) {
+          extractedSets = res['quizzes'];
+        } else if (res['practice_sets'] is List<dynamic>) {
+          extractedSets = res['practice_sets'];
+        } else if (res['hierarchy'] is List<dynamic>) {
+          extractedSets = res['hierarchy'];
         }
       }
+
       setState(() {
+        _sets = extractedSets;
         _isLoading = false;
       });
     } catch (e) {
@@ -521,6 +551,16 @@ class _GenericSetsListScreenState extends State<GenericSetsListScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  void _openQuiz(BuildContext context, int quizId, bool isLocked, String title, int setNumber) {
+    // Open instructions screen so candidate can review syllabus, rules, and launch CBT or sample preview
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => QuizInstructionsScreen(quizId: quizId),
+      ),
+    );
   }
 
   @override
@@ -544,124 +584,141 @@ class _GenericSetsListScreenState extends State<GenericSetsListScreen> {
       itemBuilder: (context, index) {
         final item = _sets[index] as Map<String, dynamic>;
         final quizId = (item['quiz_id'] ?? item['id'] as num?)?.toInt() ?? 0;
-        final title = item['title'] ?? 'Practice Set ${index + 1}';
+        final setNumber = (item['practice_set_number'] as num?)?.toInt() ?? (index + 1);
+        final rawTitle = item['title']?.toString() ?? 'Practice Set $setNumber';
         final totalQ = item['total_questions'] ?? 50;
         final duration = item['duration_minutes'] ?? 0;
         final isLocked = item['is_locked'] == true;
+        final subjectName = item['subject_name']?.toString() ?? '';
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           decoration: AppStyles.glassCardDecoration(context),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: AppStyles.borderRadiusL,
+            child: InkWell(
+              onTap: () => _openQuiz(context, quizId, isLocked, rawTitle, setNumber),
+              borderRadius: AppStyles.borderRadiusL,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        gradient: isLocked
-                            ? const LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFD97706)])
-                            : AppColors.heroEmeraldGradient,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${index + 1}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 6),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 4,
-                            children: [
-                              _buildMetaChip(Icons.help_outline, '$totalQ MCQs / Questions', AppColors.primary),
-                              _buildMetaChip(Icons.timer_outlined, duration > 0 ? '$duration Mins' : 'Practice Drill', AppColors.textSecondaryLight),
-                              if (isLocked)
-                                _buildMetaChip(Icons.lock, 'Subscribers Only', AppColors.accent),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Distinct Practice Set Number Badge
+                        Container(
+                          width: 48,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            gradient: isLocked
+                                ? const LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFD97706)])
+                                : AppColors.heroEmeraldGradient,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: (isLocked ? const Color(0xFFD97706) : AppColors.primary).withOpacity(0.25),
+                                blurRadius: 6,
+                                offset: const Offset(0, 3),
+                              ),
                             ],
                           ),
-                        ],
-                      ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text(
+                                'SET',
+                                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 9.5, color: Colors.white70, letterSpacing: 0.8),
+                              ),
+                              Text(
+                                '$setNumber',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Colors.white),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Explicit Practice Set Number Heading
+                              Text(
+                                'Practice Set $setNumber: $rawTitle',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, height: 1.25),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (subjectName.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  subjectName,
+                                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight, fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: [
+                                  _buildMetaChip(Icons.help_outline, '$totalQ Questions', AppColors.primary),
+                                  _buildMetaChip(Icons.timer_outlined, duration > 0 ? '$duration Mins' : 'Practice Drill', AppColors.textSecondaryLight),
+                                  if (isLocked)
+                                    _buildMetaChip(Icons.lock, 'Subscribers Only', AppColors.accent),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                const Divider(height: 1),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    // Sample Preview Drill: Guarantees candidate can ALWAYS see and practice questions!
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => CbtExamScreen(quizId: quizId, isDemoMode: true),
+                    const SizedBox(height: 14),
+                    const Divider(height: 1),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        // Button 1: Sample Preview Drill (Always opens directly so questions are accessible)
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => CbtExamScreen(quizId: quizId, isDemoMode: true),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.remove_red_eye_outlined, size: 15),
+                            label: const Text('Sample Drill (10 Qs)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              side: const BorderSide(color: AppColors.primary),
                             ),
-                          );
-                        },
-                        icon: const Icon(Icons.remove_red_eye_outlined, size: 15),
-                        label: const Text('Sample Drill (10 Qs)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          side: const BorderSide(color: AppColors.primary),
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    // Full Examination / Unlock CTA
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          if (isLocked) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const SubscriptionPlansScreen(),
-                              ),
-                            );
-                          } else {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => QuizInstructionsScreen(quizId: quizId),
-                              ),
-                            );
-                          }
-                        },
-                        icon: Icon(isLocked ? Icons.lock_open : Icons.play_arrow, size: 16),
-                        label: Text(
-                          isLocked ? 'Unlock All (50 Qs)' : 'Full Drill (50 Qs)',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                        const SizedBox(width: 10),
+                        // Button 2: Full Exam Instructions & CBT Hall
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => _openQuiz(context, quizId, isLocked, rawTitle, setNumber),
+                            icon: Icon(isLocked ? Icons.lock_open : Icons.play_arrow, size: 16),
+                            label: Text(
+                              isLocked ? 'Unlock (50 Qs)' : 'Full Drill (50 Qs)',
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isLocked ? AppColors.accent : AppColors.primary,
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                            ),
+                          ),
                         ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isLocked ? AppColors.accent : AppColors.primary,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                        ),
-                      ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
         );
