@@ -49,4 +49,55 @@ class AppStyles {
       boxShadow: cardShadow,
     );
   }
+
+  /// Ultra-premium Glassmorphic card decoration with subtle specular highlight
+  static BoxDecoration glassCardDecoration(BuildContext context, {bool isSelected = false, bool isHighlighted = false}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    Color borderClr;
+    if (isHighlighted) {
+      borderClr = AppColors.accent;
+    } else if (isSelected) {
+      borderClr = AppColors.primary;
+    } else {
+      borderClr = isDark ? const Color(0x2EFFFFFF) : const Color(0x38000000);
+    }
+
+    return BoxDecoration(
+      color: isDark ? const Color(0xE61E293B) : const Color(0xF7FFFFFF),
+      borderRadius: borderRadiusL,
+      border: Border.all(
+        color: borderClr,
+        width: (isSelected || isHighlighted) ? 1.8 : 1.0,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: isDark ? const Color(0x40000000) : const Color(0x0F000000),
+          blurRadius: 14,
+          offset: const Offset(0, 4),
+        ),
+        if (isSelected)
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.18),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+      ],
+    );
+  }
+
+  /// Hero gradient container decoration
+  static BoxDecoration heroGradientDecoration({BorderRadius? radius}) {
+    return BoxDecoration(
+      gradient: AppColors.heroEmeraldGradient,
+      borderRadius: radius ?? borderRadiusL,
+      boxShadow: [
+        BoxShadow(
+          color: AppColors.primaryDark.withOpacity(0.35),
+          blurRadius: 16,
+          offset: const Offset(0, 6),
+        ),
+      ],
+    );
+  }
 }

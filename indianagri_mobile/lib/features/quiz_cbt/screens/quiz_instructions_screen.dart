@@ -22,7 +22,9 @@ class _QuizInstructionsScreenState extends State<QuizInstructionsScreen> {
   String? _errorMessage;
   Map<String, dynamic>? _quiz;
   Map<String, dynamic>? _entitlement;
+  List<dynamic> _sampleQuestions = [];
   bool _hasAgreed = false;
+  bool _showQuestionsPreview = false;
 
   @override
   void initState() {
@@ -42,6 +44,7 @@ class _QuizInstructionsScreenState extends State<QuizInstructionsScreen> {
         setState(() {
           _quiz = res['quiz'] as Map<String, dynamic>?;
           _entitlement = res['entitlement'] as Map<String, dynamic>?;
+          _sampleQuestions = (res['sample_questions'] as List<dynamic>?) ?? [];
           _isLoading = false;
         });
         return;
@@ -62,7 +65,7 @@ class _QuizInstructionsScreenState extends State<QuizInstructionsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Examination Instructions'),
+        title: const Text('Examination Instructions', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: _buildBody(),
     );
@@ -82,114 +85,261 @@ class _QuizInstructionsScreenState extends State<QuizInstructionsScreen> {
 
     final q = _quiz!;
     final title = q['title'] ?? 'Examination';
-    final totalQ = q['total_questions'] ?? 0;
-    final totalMarks = (q['total_marks'] as num?)?.toDouble() ?? 0.0;
+    final totalQ = q['total_questions'] ?? 50;
+    final totalMarks = (q['total_marks'] as num?)?.toDouble() ?? (totalQ * 1.0);
     final duration = q['duration_minutes'] ?? 0;
     final correctMarks = (q['correct_marks'] as num?)?.toDouble() ?? 1.0;
     final negMarks = (q['negative_marks'] as num?)?.toDouble() ?? 0.25;
-    final instructions = q['instructions'] ?? 'Read each question carefully before submitting your answer.';
+    final instructions = q['instructions']?.toString().isNotEmpty == true
+        ? q['instructions']
+        : 'Attempt all questions with precision. In CBT mode, navigate using the bottom bar or Question Palette. Timer will automatically submit your attempt when it runs out.';
     final isAllowed = _entitlement?['allowed'] == true;
-    final reason = _entitlement?['reason'] ?? '';
+    final reason = _entitlement?['reason'] ?? 'An active subscription is required to unlock the full examination.';
 
     return SafeArea(
       child: Column(
         children: [
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Title & Meta
-                  Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                  // Title Header Card
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: AppStyles.heroGradientDecoration(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'ONLINE CBT EXAMINATION',
+                            style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          title,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '$totalQ Questions • ${duration > 0 ? "$duration Minutes" : "Practice Drill"} • Max Marks: $totalMarks',
+                          style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
 
                   // Key Details Card
                   Container(
                     padding: const EdgeInsets.all(16),
-                    decoration: AppStyles.cardDecoration(context),
+                    decoration: AppStyles.glassCardDecoration(context),
                     child: Column(
                       children: [
-                        _buildDetailRow('Total Questions', '$totalQ Questions'),
+                        _buildDetailRow('Total Questions', '$totalQ Multiple Choice Questions (MCQs)'),
                         const Divider(height: 16),
                         _buildDetailRow('Maximum Marks', '$totalMarks Marks'),
                         const Divider(height: 16),
-                        _buildDetailRow('Duration', '$duration Minutes'),
+                        _buildDetailRow('Examination Duration', duration > 0 ? '$duration Minutes' : 'Untimed Practice Drill'),
                         const Divider(height: 16),
                         _buildDetailRow('Marking Scheme', '+$correctMarks for Correct • -$negMarks for Incorrect'),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
-                  // Paywall / Access check notice
+                  // Sample Questions Preview Accordion (Guarantees candidate can ALWAYS preview questions!)
+                  if (_sampleQuestions.isNotEmpty) ...[
+                    Container(
+                      decoration: AppStyles.glassCardDecoration(context),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          InkWell(
+                            onTap: () {
+                              setState(() {
+                                _showQuestionsPreview = !_showQuestionsPreview;
+                              });
+                            },
+                            borderRadius: AppStyles.borderRadiusL,
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.quiz, color: AppColors.primary, size: 20),
+                                  const SizedBox(width: 10),
+                                  const Expanded(
+                                    child: Text(
+                                      'Preview Syllabus & Sample Questions',
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                    ),
+                                  ),
+                                  Icon(
+                                    _showQuestionsPreview ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                                    color: AppColors.textSecondaryLight,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          if (_showQuestionsPreview) ...[
+                            const Divider(height: 1),
+                            Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  ..._sampleQuestions.map((sq) {
+                                    final sIndex = sq['index'] ?? 1;
+                                    final sText = sq['question_text'] ?? '';
+                                    final sSub = sq['subject_name'] ?? '';
+
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 12),
+                                      child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Container(
+                                            width: 22,
+                                            height: 22,
+                                            decoration: const BoxDecoration(
+                                              color: AppColors.primarySubtle,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                '$sIndex',
+                                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(sText, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                                                if (sSub.toString().isNotEmpty) ...[
+                                                  const SizedBox(height: 2),
+                                                  Text(sSub, style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight)),
+                                                ],
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Paywall / Access check notice if not allowed
                   if (!isAllowed) ...[
                     Container(
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppColors.incorrectRedBg,
-                        borderRadius: AppStyles.borderRadiusM,
-                        border: Border.all(color: AppColors.incorrectRed.withOpacity(0.4)),
+                        color: AppColors.warningAmberBg,
+                        borderRadius: AppStyles.borderRadiusL,
+                        border: Border.all(color: AppColors.warningAmber.withOpacity(0.4)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Icon(Icons.lock, color: AppColors.warningAmber, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                'Full Examination Locked',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.warningAmber),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            reason,
+                            style: const TextStyle(fontSize: 13, height: 1.4),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
                             children: [
-                              const Icon(Icons.lock, color: AppColors.incorrectRed, size: 22),
-                              const SizedBox(width: 10),
+                              // 1-Click Free Sample Drill Button
                               Expanded(
-                                child: Text(
-                                  reason.isNotEmpty ? reason : 'Active subscription required to access this examination.',
-                                  style: const TextStyle(color: AppColors.incorrectRed, fontSize: 13, height: 1.4),
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => CbtExamScreen(quizId: widget.quizId, isDemoMode: true),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.play_circle_outline, size: 16),
+                                  label: const Text('Try 10 Free Qs', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    side: const BorderSide(color: AppColors.primary),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              // Subscribe Plans Button
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const SubscriptionPlansScreen(),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.star, size: 16),
+                                  label: const Text('Unlock All (Subscribe)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.accent,
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton.icon(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const SubscriptionPlansScreen(),
-                                  ),
-                                );
-                              },
-                              icon: const Icon(Icons.arrow_forward, size: 14, color: AppColors.accent),
-                              label: const Text(
-                                'View Subscription Plans',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.accent),
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                   ],
 
                   // Instructions Box
                   const Text(
-                    'Instructions for Candidates',
+                    'Code of Conduct & Instructions',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.all(14),
-                    decoration: AppStyles.cardDecoration(context),
+                    decoration: AppStyles.glassCardDecoration(context),
                     child: Text(
                       instructions,
                       style: const TextStyle(fontSize: 13, height: 1.5),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
                   // Agreement Checkbox
                   if (isAllowed) ...[
@@ -213,16 +363,23 @@ class _QuizInstructionsScreenState extends State<QuizInstructionsScreen> {
             ),
           ),
 
-          // Action CTA
+          // Bottom Action Bar
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               border: Border(top: BorderSide(color: AppColors.cardBorderLight)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, -3),
+                ),
+              ],
             ),
             child: isAllowed
                 ? AppButton(
-                    label: 'Enter Examination Hall',
+                    label: 'Enter CBT Examination Hall',
                     icon: Icons.play_arrow,
                     onPressed: _hasAgreed
                         ? () {
@@ -235,18 +392,21 @@ class _QuizInstructionsScreenState extends State<QuizInstructionsScreen> {
                           }
                         : null,
                   )
-                : AppButton(
-                    label: 'Subscribe to Unlock Examination',
-                    icon: Icons.lock_open,
-                    customColor: AppColors.accent,
+                : OutlinedButton.icon(
                     onPressed: () {
-                      Navigator.push(
+                      Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const SubscriptionPlansScreen(),
+                          builder: (_) => CbtExamScreen(quizId: widget.quizId, isDemoMode: true),
                         ),
                       );
                     },
+                    icon: const Icon(Icons.science_outlined),
+                    label: const Text('Launch Free Practice Drill (Sample Questions)', style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: const BorderSide(color: AppColors.primary, width: 1.8),
+                    ),
                   ),
           ),
         ],
@@ -258,8 +418,15 @@ class _QuizInstructionsScreenState extends State<QuizInstructionsScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight)),
-        Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+        Text(label, style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 13)),
+        const SizedBox(width: 12),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          ),
+        ),
       ],
     );
   }

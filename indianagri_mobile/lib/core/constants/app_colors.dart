@@ -40,4 +40,42 @@ class AppColors {
   static const Color textPrimaryDark = Color(0xFFF8FAFC);
   static const Color textSecondaryDark = Color(0xFF94A3B8);
   static const Color textMutedDark = Color(0xFF64748B);
+
+  // Premium Glassmorphism & Specular Colors
+  static const Color glassWhite = Color(0xE6FFFFFF);
+  static const Color glassBorder = Color(0x66FFFFFF);
+  static const Color glassBorderSubtle = Color(0x1F000000);
+  static const Color glassDark = Color(0xD91E293B);
+  static const Color glassDarkBorder = Color(0x33FFFFFF);
+
+  // Brand Gradients
+  static const LinearGradient primaryGradient = LinearGradient(
+    colors: [Color(0xFF117E3A), Color(0xFF0E632E)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient heroEmeraldGradient = LinearGradient(
+    colors: [Color(0xFF0A4D24), Color(0xFF117E3A), Color(0xFF16A34A)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient goldGradient = LinearGradient(
+    colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient glassGradient = LinearGradient(
+    colors: [Color(0xF0FFFFFF), Color(0xE0F8FAF9)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient darkGlassGradient = LinearGradient(
+    colors: [Color(0xF01E293B), Color(0xE00F172A)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 }

@@ -473,8 +473,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: AppStyles.cardDecoration(context),
+      padding: const EdgeInsets.all(16),
+      decoration: AppStyles.glassCardDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -484,15 +484,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Text(
                 title,
-                style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondaryLight),
               ),
-              Icon(icon, color: color, size: 20),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 18),
+              ),
             ],
           ),
           Text(
             value,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
               color: color,
             ),
@@ -583,33 +590,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required Color color,
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: AppStyles.borderRadiusL,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: AppStyles.cardDecoration(context),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                borderRadius: AppStyles.borderRadiusM,
-              ),
-              child: Icon(icon, color: color, size: 22),
+    return Container(
+      decoration: AppStyles.glassCardDecoration(context),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: AppStyles.borderRadiusL,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: AppStyles.borderRadiusL,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.12),
+                    borderRadius: AppStyles.borderRadiusM,
+                  ),
+                  child: Icon(icon, color: color, size: 22),
+                ),
+                const SizedBox(height: 10),
+                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-            const SizedBox(height: 10),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -618,47 +631,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildContinueQuizCard(dynamic quiz) {
     final title = quiz['title'] ?? 'Practice Set';
     final qId = (quiz['id'] as num?)?.toInt() ?? 0;
-    final totalQ = quiz['total_questions'] ?? 0;
+    final totalQ = quiz['total_questions'] ?? 50;
     final duration = quiz['duration_minutes'] ?? 0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: AppStyles.cardDecoration(context),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$totalQ Questions • $duration Mins',
-                  style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 12),
-                ),
-              ],
+      decoration: AppStyles.glassCardDecoration(context),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.primarySubtle,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.menu_book, color: AppColors.primary, size: 22),
             ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => QuizInstructionsScreen(quizId: qId),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$totalQ MCQs • ${duration > 0 ? "$duration Mins" : "Practice Drill"}',
+                    style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 12),
+                  ),
+                ],
+              ),
             ),
-            child: const Text('Start', style: TextStyle(fontSize: 13, color: Colors.white)),
-          ),
-        ],
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => QuizInstructionsScreen(quizId: qId),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              ),
+              child: const Text('Start Drill', style: TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
       ),
     );
   }

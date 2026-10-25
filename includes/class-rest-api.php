@@ -223,7 +223,7 @@ class IAQ_Rest_Api {
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
 				'callback'            => array( __CLASS__, 'start_or_resume_quiz_attempt' ),
-				'permission_callback' => array( __CLASS__, 'require_authenticated_student' ),
+				'permission_callback' => array( __CLASS__, 'check_quiz_start_permission' ),
 			)
 		);
 
@@ -568,6 +568,39 @@ class IAQ_Rest_Api {
 		return new WP_Error(
 			'rest_not_logged_in',
 			__( 'Authentication required. Please provide a valid Bearer token.', 'indianagri-quiz-engine' ),
+			array( 'status' => 401 )
+		);
+	}
+
+	/**
+	 * Permission callback for starting or resuming a quiz attempt.
+	 * Allows authenticated candidates, free quizzes, or sample demo drills.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return bool|WP_Error
+	 */
+	public static function check_quiz_start_permission( $request ) {
+		$user_id = get_current_user_id();
+		if ( $user_id > 0 ) {
+			return true;
+		}
+
+		$is_demo = ! empty( $request->get_param( 'demo_mode' ) ) || ! empty( $request->get_param( 'is_demo' ) );
+		if ( $is_demo ) {
+			return true;
+		}
+
+		$quiz_id = absint( $request->get_param( 'id' ) );
+		if ( $quiz_id > 0 ) {
+			$quiz = IAQ_Quiz_Builder::get_quiz( $quiz_id );
+			if ( $quiz && 'free' === $quiz->access_type ) {
+				return true;
+			}
+		}
+
+		return new WP_Error(
+			'rest_not_logged_in',
+			__( 'Authentication required. Please log in to your account or subscribe to unlock this examination.', 'indianagri-quiz-engine' ),
 			array( 'status' => 401 )
 		);
 	}
@@ -1047,9 +1080,25 @@ class IAQ_Rest_Api {
 		$user_id     = get_current_user_id();
 		$entitlement = IAQ_Access_Control::check_user_entitlement( $user_id, $quiz );
 
+		// Sample questions preview (first 5 questions) for syllabus transparency
+		$raw_questions   = IAQ_Quiz_Builder::get_quiz_questions( $quiz_id );
+		$sample_preview = array();
+		if ( ! empty( $raw_questions ) ) {
+			$s_idx = 1;
+			foreach ( array_slice( $raw_questions, 0, 5 ) as $sq ) {
+				$sample_preview[] = array(
+					'index'            => $s_idx++,
+					'id'               => (int) $sq->id,
+					'question_text'    => $sq->question_text,
+					'question_text_hi' => ! empty( $sq->question_text_hi ) ? $sq->question_text_hi : '',
+					'subject_name'     => isset( $sq->subject_name ) ? $sq->subject_name : '',
+				);
+			}
+		}
+
 		return rest_ensure_response(
 			array(
-				'quiz'        => array(
+				'quiz'             => array(
 					'id'                 => (int) $quiz->id,
 					'title'              => $quiz->title,
 					'description'        => $quiz->description,
@@ -1064,20 +1113,83 @@ class IAQ_Rest_Api {
 					'show_answers_mode'  => $quiz->show_answers_mode,
 					'access_type'        => $quiz->access_type,
 				),
-				'entitlement' => $entitlement,
+				'entitlement'      => $entitlement,
+				'sample_questions' => $sample_preview,
 			)
 		);
 	}
 
 	/**
 	 * Start or resume a quiz attempt.
+	 * Supports full student attempts, free public attempts, and instant demo practice sessions.
 	 *
 	 * @param WP_REST_Request $request
 	 * @return WP_REST_Response|WP_Error
 	 */
 	public static function start_or_resume_quiz_attempt( $request ) {
-		$quiz_id = absint( $request->get_param( 'id' ) );
-		$user_id = get_current_user_id();
+		$quiz_id   = absint( $request->get_param( 'id' ) );
+		$user_id   = get_current_user_id();
+		$demo_mode = ! empty( $request->get_param( 'demo_mode' ) ) || ! empty( $request->get_param( 'is_demo' ) );
+
+		// Demo practice mode or unauthenticated candidate preview
+		if ( $user_id <= 0 && $demo_mode ) {
+			$quiz = IAQ_Quiz_Builder::get_quiz( $quiz_id );
+			if ( ! $quiz ) {
+				return new WP_Error( 'not_found', __( 'Quiz not found.', 'indianagri-quiz-engine' ), array( 'status' => 404 ) );
+			}
+			$raw_questions  = IAQ_Quiz_Builder::get_quiz_questions( $quiz_id );
+			$demo_questions = array_slice( $raw_questions, 0, 10 );
+			$safe_questions = array();
+			$index = 1;
+
+			foreach ( $demo_questions as $q ) {
+				$opts = array(
+					array( 'key' => 'A', 'text' => $q->option_a, 'text_hi' => ! empty( $q->option_a_hi ) ? $q->option_a_hi : '' ),
+					array( 'key' => 'B', 'text' => $q->option_b, 'text_hi' => ! empty( $q->option_b_hi ) ? $q->option_b_hi : '' ),
+					array( 'key' => 'C', 'text' => $q->option_c, 'text_hi' => ! empty( $q->option_c_hi ) ? $q->option_c_hi : '' ),
+					array( 'key' => 'D', 'text' => $q->option_d, 'text_hi' => ! empty( $q->option_d_hi ) ? $q->option_d_hi : '' ),
+				);
+
+				$safe_questions[] = array(
+					'index'            => $index++,
+					'id'               => (int) $q->id,
+					'question_text'    => $q->question_text,
+					'question_text_hi' => ! empty( $q->question_text_hi ) ? $q->question_text_hi : '',
+					'subject_name'     => isset( $q->subject_name ) ? $q->subject_name : '',
+					'topic_name'       => isset( $q->topic_name ) ? $q->topic_name : '',
+					'marks'            => (float) $q->marks,
+					'negative_marks'   => (float) $q->negative_marks,
+					'options'          => $opts,
+					'selected'         => null,
+					'is_marked'        => 0,
+					'immediate_feedback' => array(
+						'is_immediate'     => true,
+						'is_locked'        => false,
+						'correct_option'   => strtoupper( trim( $q->correct_option ) ),
+						'explanation'      => IAQ_Quiz_Attempt::clean_explanation( $q->explanation ),
+						'feedback_message' => __( 'Review explanation to master this concept.', 'indianagri-quiz-engine' ),
+					),
+				);
+			}
+
+			return rest_ensure_response(
+				array(
+					'attempt_id'        => 9999000 + $quiz_id,
+					'quiz_id'           => (int) $quiz->id,
+					'quiz_title'        => $quiz->title . ' (Sample Practice Drill)',
+					'quiz_type'         => $quiz->quiz_type,
+					'show_answers_mode' => 'immediate',
+					'is_immediate'      => true,
+					'is_demo'           => true,
+					'duration_minutes'  => 0,
+					'remaining_seconds' => null,
+					'total_questions'   => count( $safe_questions ),
+					'total_marks'       => (float) count( $safe_questions ),
+					'pass_percentage'   => 50.0,
+					'questions'         => $safe_questions,
+				)
+			);
+		}
 
 		$result = IAQ_Quiz_Attempt::start_or_resume_attempt( $quiz_id, $user_id );
 		if ( is_wp_error( $result ) ) {
