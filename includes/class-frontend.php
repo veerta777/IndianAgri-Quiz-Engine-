@@ -39,6 +39,9 @@ class IAQ_Frontend {
 		add_action( 'wp_ajax_iaq_generate_custom_test', array( $this, 'ajax_generate_custom_test' ) );
 		add_action( 'wp_ajax_iaq_update_study_goals', array( $this, 'ajax_update_study_goals' ) );
 		add_action( 'wp_ajax_iaq_get_leaderboard', array( $this, 'ajax_get_leaderboard' ) );
+
+		// Mobile App Download URL handler / redirect
+		add_action( 'template_redirect', array( $this, 'handle_mobile_app_download_redirect' ) );
 	}
 
 	/**
@@ -940,5 +943,24 @@ class IAQ_Frontend {
 		);
 
 		wp_send_json_success( $data );
+	}
+
+	/**
+	 * Handle redirect for mobile app download requests.
+	 * Redirects requests for /mobile-app/ or ?iaq_download_app=1 to the direct APK download asset.
+	 */
+	public function handle_mobile_app_download_redirect() {
+		$uri = isset( $_SERVER['REQUEST_URI'] ) ? esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+		$is_mobile_app_slug = ( false !== strpos( $uri, '/mobile-app' ) );
+		$is_query_download  = isset( $_GET['iaq_download_app'] );
+
+		if ( $is_mobile_app_slug || $is_query_download ) {
+			$download_url = get_option( 'iaq_app_update_url', 'https://github.com/veerta777/IndianAgri-Quiz-Engine-/releases/latest/download/IndianAgriExam.apk' );
+			if ( empty( $download_url ) || false !== strpos( $download_url, 'indianagriexam.com/mobile-app' ) ) {
+				$download_url = 'https://github.com/veerta777/IndianAgri-Quiz-Engine-/releases/latest/download/IndianAgriExam.apk';
+			}
+			wp_redirect( $download_url, 302 );
+			exit;
+		}
 	}
 }

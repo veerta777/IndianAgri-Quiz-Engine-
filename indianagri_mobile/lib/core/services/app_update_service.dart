@@ -42,10 +42,18 @@ class AppUpdateService {
     return _cachedUpdateInfo;
   }
 
+  static const String directApkDownloadUrl =
+      'https://github.com/veerta777/IndianAgri-Quiz-Engine-/releases/latest/download/IndianAgriExam.apk';
+
   /// Launch the download / Play Store URL.
   static Future<void> launchUpdateUrl(String url, BuildContext context) async {
     try {
-      final uri = Uri.parse(url.trim());
+      var clean = url.trim();
+      // If URL is empty, points to unconfigured /mobile-app/ slug, fallback to direct APK download
+      if (clean.isEmpty || clean.contains('indianagriexam.com/mobile-app')) {
+        clean = directApkDownloadUrl;
+      }
+      final uri = Uri.parse(clean);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {

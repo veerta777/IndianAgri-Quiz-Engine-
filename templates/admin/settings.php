@@ -42,7 +42,7 @@ $app_force_update          = isset( $settings['app_force_update'] ) ? (int) $set
 $app_update_title          = isset( $settings['app_update_title'] ) ? $settings['app_update_title'] : get_option( 'iaq_app_update_title', __( 'Exciting New Update Available!', 'indianagri-quiz-engine' ) );
 $app_update_message        = isset( $settings['app_update_message'] ) ? $settings['app_update_message'] : get_option( 'iaq_app_update_message', __( 'We have updated the IndianAgri mobile app with new Subject-Wise Practice Sets (Set 1, 2, 3), revamped Examination pathways, and enhanced exam speed.', 'indianagri-quiz-engine' ) );
 $app_release_notes         = isset( $settings['app_release_notes'] ) ? $settings['app_release_notes'] : get_option( 'iaq_app_release_notes', "• New Subject-wise Practice Sets (Set 1, 2, 3)\n• Revamped Practice by Books & Examinations\n• Ultra-fast CBT quiz timer and instant review\n• Enhanced login stability and offline crash prevention" );
-$app_update_url            = isset( $settings['app_update_url'] ) ? $settings['app_update_url'] : get_option( 'iaq_app_update_url', 'https://indianagriexam.com/mobile-app/' );
+$app_update_url            = isset( $settings['app_update_url'] ) ? $settings['app_update_url'] : get_option( 'iaq_app_update_url', 'https://github.com/veerta777/IndianAgri-Quiz-Engine-/releases/latest/download/IndianAgriExam.apk' );
 $app_update_date           = isset( $settings['app_update_date'] ) ? $settings['app_update_date'] : get_option( 'iaq_app_update_date', current_time( 'Y-m-d' ) );
 ?>
 

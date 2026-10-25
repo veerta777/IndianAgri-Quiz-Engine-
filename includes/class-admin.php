@@ -445,7 +445,7 @@ class IAQ_Admin {
 				'app_update_title'               => ! empty( $_POST['app_update_title'] ) ? sanitize_text_field( wp_unslash( $_POST['app_update_title'] ) ) : __( 'Exciting New Update Available!', 'indianagri-quiz-engine' ),
 				'app_update_message'             => ! empty( $_POST['app_update_message'] ) ? sanitize_textarea_field( wp_unslash( $_POST['app_update_message'] ) ) : '',
 				'app_release_notes'              => ! empty( $_POST['app_release_notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['app_release_notes'] ) ) : '',
-				'app_update_url'                 => ! empty( $_POST['app_update_url'] ) ? esc_url_raw( wp_unslash( $_POST['app_update_url'] ) ) : 'https://indianagriexam.com/mobile-app/',
+				'app_update_url'                 => ! empty( $_POST['app_update_url'] ) ? esc_url_raw( wp_unslash( $_POST['app_update_url'] ) ) : 'https://github.com/veerta777/IndianAgri-Quiz-Engine-/releases/latest/download/IndianAgriExam.apk',
 				'app_update_date'                => ! empty( $_POST['app_update_date'] ) ? sanitize_text_field( wp_unslash( $_POST['app_update_date'] ) ) : current_time( 'Y-m-d' ),
 			);
 

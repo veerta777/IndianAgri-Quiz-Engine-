@@ -1632,7 +1632,11 @@ class IAQ_Rest_Api {
 		$update_title   = get_option( 'iaq_app_update_title', __( 'Exciting New Update Available!', 'indianagri-quiz-engine' ) );
 		$update_message = get_option( 'iaq_app_update_message', __( 'We have updated the IndianAgri mobile app with new Subject-Wise Practice Sets (Set 1, 2, 3), revamped Examination pathways, and enhanced exam speed.', 'indianagri-quiz-engine' ) );
 		$release_notes  = get_option( 'iaq_app_release_notes', "• New Subject-wise Practice Sets (Set 1, 2, 3)\n• Revamped Practice by Books & Examinations\n• Ultra-fast CBT quiz timer and instant review\n• Enhanced login stability and offline crash prevention" );
-		$update_url     = get_option( 'iaq_app_update_url', 'https://indianagriexam.com/mobile-app/' );
+		$default_update_url = 'https://github.com/veerta777/IndianAgri-Quiz-Engine-/releases/latest/download/IndianAgriExam.apk';
+		$update_url         = get_option( 'iaq_app_update_url', $default_update_url );
+		if ( empty( $update_url ) || false !== strpos( $update_url, 'indianagriexam.com/mobile-app' ) ) {
+			$update_url = $default_update_url;
+		}
 		$published_at   = get_option( 'iaq_app_update_date', date( 'Y-m-d' ) );
 
 		// Parse release notes into list of strings if string
