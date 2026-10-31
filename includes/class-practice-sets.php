@@ -553,9 +553,11 @@ class IAQ_Practice_Sets {
 	public static function get_subjects_catalog( $args = array() ) {
 		global $wpdb;
 
-		$table_subjects = IAQ_Database::get_table_name( 'subjects' );
-		$table_quizzes  = IAQ_Database::get_table_name( 'quizzes' );
-		$table_topics   = IAQ_Database::get_table_name( 'topics' );
+		$table_subjects     = IAQ_Database::get_table_name( 'subjects' );
+		$table_quizzes      = IAQ_Database::get_table_name( 'quizzes' );
+		$table_topics       = IAQ_Database::get_table_name( 'topics' );
+		$table_book_quizzes = IAQ_Database::get_table_name( 'book_quizzes' );
+		$table_esq          = IAQ_Database::get_table_name( 'exam_subject_quizzes' );
 
 		$search = ! empty( $args['search'] ) ? trim( $args['search'] ) : '';
 
@@ -576,6 +578,8 @@ class IAQ_Practice_Sets {
 					WHERE q.subject_id = s.id
 					  AND q.quiz_type = 'practice'
 					  AND q.status = 'published'
+					  AND q.id NOT IN (SELECT bq.quiz_id FROM {$table_book_quizzes} bq)
+					  AND q.id NOT IN (SELECT esq.quiz_id FROM {$table_esq} esq)
 				) AS practice_sets_count,
 				(
 					SELECT COUNT(t.id)
@@ -600,6 +604,7 @@ class IAQ_Practice_Sets {
 	/**
 	 * Retrieve practice sets for a specific subject.
 	 * Numbering dynamically starts at 1 according to display_order.
+	 * Excludes book practice sets and exam practice sets so each pathway is strictly separate.
 	 *
 	 * @param int    $subject_id Subject ID.
 	 * @param string $status     Quiz status ('published' or all).
@@ -609,17 +614,24 @@ class IAQ_Practice_Sets {
 	public static function get_subject_quizzes( $subject_id, $status = 'published', $user_id = 0 ) {
 		global $wpdb;
 
-		$table_quizzes  = IAQ_Database::get_table_name( 'quizzes' );
-		$table_subjects = IAQ_Database::get_table_name( 'subjects' );
-		$table_topics   = IAQ_Database::get_table_name( 'topics' );
-		$table_attempts = IAQ_Database::get_table_name( 'quiz_attempts' );
+		$table_quizzes      = IAQ_Database::get_table_name( 'quizzes' );
+		$table_subjects     = IAQ_Database::get_table_name( 'subjects' );
+		$table_topics       = IAQ_Database::get_table_name( 'topics' );
+		$table_attempts     = IAQ_Database::get_table_name( 'quiz_attempts' );
+		$table_book_quizzes = IAQ_Database::get_table_name( 'book_quizzes' );
+		$table_esq          = IAQ_Database::get_table_name( 'exam_subject_quizzes' );
 
 		$subject_id = absint( $subject_id );
 		if ( ! $subject_id ) {
 			return array();
 		}
 
-		$where  = array( 'q.subject_id = %d', "q.quiz_type = 'practice'" );
+		$where  = array(
+			'q.subject_id = %d',
+			"q.quiz_type = 'practice'",
+			"q.id NOT IN (SELECT bq.quiz_id FROM {$table_book_quizzes} bq)",
+			"q.id NOT IN (SELECT esq.quiz_id FROM {$table_esq} esq)",
+		);
 		$values = array( $subject_id );
 
 		if ( ! empty( $status ) ) {
@@ -708,6 +720,7 @@ class IAQ_Practice_Sets {
 		$table_exam_subjects = IAQ_Database::get_table_name( 'exam_subjects' );
 		$table_quizzes       = IAQ_Database::get_table_name( 'quizzes' );
 		$table_esq           = IAQ_Database::get_table_name( 'exam_subject_quizzes' );
+		$table_book_quizzes  = IAQ_Database::get_table_name( 'book_quizzes' );
 
 		$search = ! empty( $args['search'] ) ? trim( $args['search'] ) : '';
 
@@ -739,6 +752,7 @@ class IAQ_Practice_Sets {
 					)
 					AND q.quiz_type = 'practice'
 					AND q.status = 'published'
+					AND q.id NOT IN (SELECT bq.quiz_id FROM {$table_book_quizzes} bq)
 				) AS practice_sets_count
 			FROM {$table_exams} e
 			WHERE {$where_clause}
@@ -770,6 +784,7 @@ class IAQ_Practice_Sets {
 		$table_exams         = IAQ_Database::get_table_name( 'examinations' );
 		$table_quizzes       = IAQ_Database::get_table_name( 'quizzes' );
 		$table_esq           = IAQ_Database::get_table_name( 'exam_subject_quizzes' );
+		$table_book_quizzes  = IAQ_Database::get_table_name( 'book_quizzes' );
 
 		$exam_id = absint( $exam_id );
 		if ( ! $exam_id ) {
@@ -794,6 +809,7 @@ class IAQ_Practice_Sets {
 						q.id IN (SELECT esq.quiz_id FROM {$table_esq} esq WHERE esq.exam_id = %d AND esq.subject_id = s.id)
 						OR (q.exam_category = %s OR q.exam_category = %s)
 					  )
+					  AND q.id NOT IN (SELECT bq.quiz_id FROM {$table_book_quizzes} bq)
 				) AS practice_sets_count
 			FROM {$table_exam_subjects} es
 			INNER JOIN {$table_subjects} s ON es.subject_id = s.id
@@ -951,10 +967,11 @@ class IAQ_Practice_Sets {
 	public static function get_exam_subject_quizzes( $exam_id, $subject_id, $status = 'published', $user_id = 0 ) {
 		global $wpdb;
 
-		$table_esq      = IAQ_Database::get_table_name( 'exam_subject_quizzes' );
-		$table_quizzes  = IAQ_Database::get_table_name( 'quizzes' );
-		$table_subjects = IAQ_Database::get_table_name( 'subjects' );
-		$table_attempts = IAQ_Database::get_table_name( 'quiz_attempts' );
+		$table_esq          = IAQ_Database::get_table_name( 'exam_subject_quizzes' );
+		$table_quizzes      = IAQ_Database::get_table_name( 'quizzes' );
+		$table_subjects     = IAQ_Database::get_table_name( 'subjects' );
+		$table_attempts     = IAQ_Database::get_table_name( 'quiz_attempts' );
+		$table_book_quizzes = IAQ_Database::get_table_name( 'book_quizzes' );
 
 		$exam_id    = absint( $exam_id );
 		$subject_id = absint( $subject_id );
@@ -969,7 +986,7 @@ class IAQ_Practice_Sets {
 
 		$status_clause = ! empty( $status ) ? $wpdb->prepare( 'AND q.status = %s', $status ) : "AND q.status != 'archived'";
 
-		// First query explicitly mapped practice sets in table_esq.
+		// First query explicitly mapped practice sets in table_esq (strictly excluding book sets).
 		$query = $wpdb->prepare(
 			"SELECT q.*,
 				esq.sort_order AS exam_sort_order,
@@ -978,7 +995,9 @@ class IAQ_Practice_Sets {
 			FROM {$table_esq} esq
 			INNER JOIN {$table_quizzes} q ON esq.quiz_id = q.id
 			LEFT JOIN {$table_subjects} s ON q.subject_id = s.id
-			WHERE esq.exam_id = %d AND esq.subject_id = %d {$status_clause}
+			WHERE esq.exam_id = %d AND esq.subject_id = %d
+			  AND q.id NOT IN (SELECT bq.quiz_id FROM {$table_book_quizzes} bq)
+			  {$status_clause}
 			ORDER BY esq.sort_order ASC, q.id ASC",
 			$exam_id,
 			$subject_id
@@ -998,6 +1017,7 @@ class IAQ_Practice_Sets {
 				WHERE q.subject_id = %d
 				  AND q.quiz_type = 'practice'
 				  AND (q.exam_category = %s OR q.exam_category = %s)
+				  AND q.id NOT IN (SELECT bq.quiz_id FROM {$table_book_quizzes} bq)
 				  {$status_clause}
 				ORDER BY q.display_order ASC, q.id ASC",
 				$subject_id,
@@ -1290,5 +1310,95 @@ class IAQ_Practice_Sets {
 		}
 
 		return $all_sets;
+	}
+
+	/**
+	 * Determine the specific practice scope of a quiz: 'book', 'exam', 'subject', or 'general'.
+	 *
+	 * @param int $quiz_id Quiz ID.
+	 * @return array Array with keys: scope, label, parent_id, parent_title.
+	 */
+	public static function get_quiz_practice_scope( $quiz_id ) {
+		global $wpdb;
+		$quiz_id = absint( $quiz_id );
+		if ( ! $quiz_id ) {
+			return array(
+				'scope'        => 'none',
+				'label'        => __( 'General Quiz', 'indianagri-quiz-engine' ),
+				'parent_id'    => 0,
+				'parent_title' => '',
+			);
+		}
+
+		$table_bq    = IAQ_Database::get_table_name( 'book_quizzes' );
+		$table_books = IAQ_Database::get_table_name( 'books' );
+		$table_esq   = IAQ_Database::get_table_name( 'exam_subject_quizzes' );
+		$table_exams = IAQ_Database::get_table_name( 'examinations' );
+		$table_q     = IAQ_Database::get_table_name( 'quizzes' );
+		$table_s     = IAQ_Database::get_table_name( 'subjects' );
+
+		// 1. Check if Book Practice Set
+		$book_row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT bq.book_id, b.title
+				FROM {$table_bq} bq
+				INNER JOIN {$table_books} b ON bq.book_id = b.id
+				WHERE bq.quiz_id = %d LIMIT 1",
+				$quiz_id
+			)
+		);
+		if ( $book_row ) {
+			return array(
+				'scope'        => 'book',
+				'label'        => sprintf( __( 'Book: %s', 'indianagri-quiz-engine' ), $book_row->title ),
+				'parent_id'    => (int) $book_row->book_id,
+				'parent_title' => $book_row->title,
+			);
+		}
+
+		// 2. Check if Examination Practice Set
+		$exam_row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT esq.exam_id, e.name AS exam_name
+				FROM {$table_esq} esq
+				INNER JOIN {$table_exams} e ON esq.exam_id = e.id
+				WHERE esq.quiz_id = %d LIMIT 1",
+				$quiz_id
+			)
+		);
+		if ( $exam_row ) {
+			return array(
+				'scope'        => 'exam',
+				'label'        => sprintf( __( 'Exam: %s', 'indianagri-quiz-engine' ), $exam_row->exam_name ),
+				'parent_id'    => (int) $exam_row->exam_id,
+				'parent_title' => $exam_row->exam_name,
+			);
+		}
+
+		// 3. Check if pure Subject Practice Set
+		$quiz_row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT q.quiz_type, q.subject_id, s.name AS subject_name
+				FROM {$table_q} q
+				LEFT JOIN {$table_s} s ON q.subject_id = s.id
+				WHERE q.id = %d LIMIT 1",
+				$quiz_id
+			)
+		);
+		if ( $quiz_row && 'practice' === $quiz_row->quiz_type && ! empty( $quiz_row->subject_id ) ) {
+			return array(
+				'scope'        => 'subject',
+				'label'        => sprintf( __( 'Subject: %s', 'indianagri-quiz-engine' ), $quiz_row->subject_name ? $quiz_row->subject_name : __( 'Subject Practice Set', 'indianagri-quiz-engine' ) ),
+				'parent_id'    => (int) $quiz_row->subject_id,
+				'parent_title' => $quiz_row->subject_name ? $quiz_row->subject_name : '',
+			);
+		}
+
+		return array(
+			'scope'        => 'general',
+			'label'        => ( $quiz_row && 'mock' === $quiz_row->quiz_type ) ? __( 'Mock Test', 'indianagri-quiz-engine' ) : __( 'General Quiz', 'indianagri-quiz-engine' ),
+			'parent_id'    => 0,
+			'parent_title' => '',
+		);
 	}
 }

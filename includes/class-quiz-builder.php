@@ -177,6 +177,19 @@ class IAQ_Quiz_Builder {
 			$params[]        = $args['status'];
 		}
 
+		// Practice Scope Filter (book / subject / exam).
+		if ( ! empty( $args['practice_scope'] ) ) {
+			$t_bq  = IAQ_Database::get_table_name( 'book_quizzes' );
+			$t_esq = IAQ_Database::get_table_name( 'exam_subject_quizzes' );
+			if ( 'book' === $args['practice_scope'] ) {
+				$where_clauses[] = "q.id IN (SELECT bq.quiz_id FROM {$t_bq} bq)";
+			} elseif ( 'exam' === $args['practice_scope'] ) {
+				$where_clauses[] = "q.id IN (SELECT esq.quiz_id FROM {$t_esq} esq)";
+			} elseif ( 'subject' === $args['practice_scope'] ) {
+				$where_clauses[] = "q.quiz_type = 'practice' AND q.subject_id IS NOT NULL AND q.id NOT IN (SELECT bq.quiz_id FROM {$t_bq} bq) AND q.id NOT IN (SELECT esq.quiz_id FROM {$t_esq} esq)";
+			}
+		}
+
 		return array(
 			'where'  => implode( ' AND ', $where_clauses ),
 			'params' => $params,
@@ -193,16 +206,17 @@ class IAQ_Quiz_Builder {
 		global $wpdb;
 
 		$defaults = array(
-			'search'        => '',
-			'quiz_type'     => '',
-			'exam_category' => '',
-			'subject_id'    => 0,
-			'access_type'   => '',
-			'status'        => '',
-			'page'          => 1,
-			'per_page'      => 20,
-			'orderby'       => 'id',
-			'order'         => 'DESC',
+			'search'         => '',
+			'quiz_type'      => '',
+			'practice_scope' => '',
+			'exam_category'  => '',
+			'subject_id'     => 0,
+			'access_type'    => '',
+			'status'         => '',
+			'page'           => 1,
+			'per_page'       => 20,
+			'orderby'        => 'id',
+			'order'          => 'DESC',
 		);
 
 		$args = wp_parse_args( $args, $defaults );
@@ -420,9 +434,33 @@ class IAQ_Quiz_Builder {
 			}
 		}
 
-		// If a book assignment was requested, link to book.
-		if ( $target_id > 0 && ! empty( $data['book_id'] ) && class_exists( 'IAQ_Practice_Sets' ) ) {
-			IAQ_Practice_Sets::assign_quiz_to_book( absint( $data['book_id'] ), $target_id );
+		// Manage Practice Set Scope (Book, Exam, or Subject Practice Set).
+		if ( $target_id > 0 && class_exists( 'IAQ_Practice_Sets' ) ) {
+			$practice_scope = isset( $data['practice_scope'] ) ? sanitize_key( $data['practice_scope'] ) : '';
+			$book_id        = ! empty( $data['book_id'] ) ? absint( $data['book_id'] ) : 0;
+			$exam_id        = ! empty( $data['exam_id'] ) ? absint( $data['exam_id'] ) : 0;
+			$t_bq           = IAQ_Database::get_table_name( 'book_quizzes' );
+			$t_esq          = IAQ_Database::get_table_name( 'exam_subject_quizzes' );
+
+			if ( 'book' === $practice_scope || ( empty( $practice_scope ) && $book_id > 0 ) ) {
+				if ( $book_id > 0 ) {
+					// Clean existing book relations if changed
+					$wpdb->delete( $t_bq, array( 'quiz_id' => $target_id ), array( '%d' ) );
+					IAQ_Practice_Sets::assign_quiz_to_book( $book_id, $target_id, $display_order );
+					// Clean any exam relations
+					$wpdb->delete( $t_esq, array( 'quiz_id' => $target_id ), array( '%d' ) );
+				}
+			} elseif ( 'exam' === $practice_scope && $exam_id > 0 && $subject_id > 0 ) {
+				// Clean existing exam relations if changed
+				$wpdb->delete( $t_esq, array( 'quiz_id' => $target_id ), array( '%d' ) );
+				IAQ_Practice_Sets::assign_quiz_to_exam_subject( $exam_id, $subject_id, $target_id, $display_order );
+				// Clean any book relations
+				$wpdb->delete( $t_bq, array( 'quiz_id' => $target_id ), array( '%d' ) );
+			} elseif ( 'subject' === $practice_scope || ( isset( $data['book_id'] ) && 0 === $book_id && empty( $exam_id ) ) ) {
+				// Pure Subject Practice Set: strictly remove from book and exam mappings
+				$wpdb->delete( $t_bq, array( 'quiz_id' => $target_id ), array( '%d' ) );
+				$wpdb->delete( $t_esq, array( 'quiz_id' => $target_id ), array( '%d' ) );
+			}
 		}
 
 		return $target_id;

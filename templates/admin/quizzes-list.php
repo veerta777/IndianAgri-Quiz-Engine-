@@ -9,22 +9,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$search        = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
-$quiz_type     = isset( $_GET['quiz_type'] ) ? sanitize_key( $_GET['quiz_type'] ) : '';
-$exam_category = isset( $_GET['exam_category'] ) ? sanitize_text_field( wp_unslash( $_GET['exam_category'] ) ) : '';
-$status        = isset( $_GET['status'] ) ? sanitize_key( $_GET['status'] ) : '';
-$current_page  = isset( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
-$per_page      = 20;
+$search         = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
+$quiz_type      = isset( $_GET['quiz_type'] ) ? sanitize_key( $_GET['quiz_type'] ) : '';
+$practice_scope = isset( $_GET['practice_scope'] ) ? sanitize_key( $_GET['practice_scope'] ) : '';
+$exam_category  = isset( $_GET['exam_category'] ) ? sanitize_text_field( wp_unslash( $_GET['exam_category'] ) ) : '';
+$status         = isset( $_GET['status'] ) ? sanitize_key( $_GET['status'] ) : '';
+$current_page   = isset( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
+$per_page       = 20;
 
 $filter_args = array(
-	'search'        => $search,
-	'quiz_type'     => $quiz_type,
-	'exam_category' => $exam_category,
-	'status'        => $status,
-	'page'          => $current_page,
-	'per_page'      => $per_page,
-	'orderby'       => 'id',
-	'order'         => 'DESC',
+	'search'         => $search,
+	'quiz_type'      => $quiz_type,
+	'practice_scope' => $practice_scope,
+	'exam_category'  => $exam_category,
+	'status'         => $status,
+	'page'           => $current_page,
+	'per_page'       => $per_page,
+	'orderby'        => 'id',
+	'order'          => 'DESC',
 );
 
 $quizzes       = IAQ_Quiz_Builder::get_quizzes( $filter_args );
@@ -34,11 +36,61 @@ $total_pages   = ceil( $total_quizzes / $per_page );
 $quiz_types      = IAQ_Quiz_Builder::get_quiz_types();
 $exam_categories = IAQ_Question_Bank::get_exam_categories();
 
-// Statistics counts.
-$count_all      = IAQ_Quiz_Builder::get_quiz_count();
-$count_practice = IAQ_Quiz_Builder::get_quiz_count( array( 'quiz_type' => 'practice' ) );
-$count_mock     = IAQ_Quiz_Builder::get_quiz_count( array( 'quiz_type' => 'mock' ) );
+// Statistics counts for separated pathways.
+$count_all     = IAQ_Quiz_Builder::get_quiz_count();
+$count_book    = IAQ_Quiz_Builder::get_quiz_count( array( 'practice_scope' => 'book' ) );
+$count_subject = IAQ_Quiz_Builder::get_quiz_count( array( 'practice_scope' => 'subject' ) );
+$count_exam    = IAQ_Quiz_Builder::get_quiz_count( array( 'practice_scope' => 'exam' ) );
+$count_mock    = IAQ_Quiz_Builder::get_quiz_count( array( 'quiz_type' => 'mock' ) );
 ?>
+
+<style>
+.iaq-scope-nav-bar {
+	display: flex;
+	gap: 10px;
+	margin-bottom: 20px;
+	flex-wrap: wrap;
+}
+.iaq-scope-nav-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 9px 16px;
+	border-radius: 8px;
+	background: #ffffff;
+	border: 1px solid #cbd5e1;
+	color: #334155;
+	font-size: 13px;
+	font-weight: 600;
+	text-decoration: none;
+	box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+	transition: all 0.15s ease;
+}
+.iaq-scope-nav-pill:hover {
+	border-color: #94a3b8;
+	color: #0f172a;
+	transform: translateY(-1px);
+}
+.iaq-scope-nav-pill.is-active {
+	background: #0f172a;
+	color: #ffffff;
+	border-color: #0f172a;
+	box-shadow: 0 3px 8px rgba(15,23,42,0.18);
+}
+.iaq-scope-nav-pill .iaq-pill-count {
+	display: inline-block;
+	padding: 2px 7px;
+	border-radius: 12px;
+	font-size: 11px;
+	font-weight: 700;
+	background: #f1f5f9;
+	color: #475569;
+}
+.iaq-scope-nav-pill.is-active .iaq-pill-count {
+	background: rgba(255,255,255,0.25);
+	color: #ffffff;
+}
+</style>
 
 <div class="wrap iaq-admin-wrap">
 	<!-- Header Bar -->
@@ -47,7 +99,7 @@ $count_mock     = IAQ_Quiz_Builder::get_quiz_count( array( 'quiz_type' => 'mock'
 			<div class="iaq-header-badge"><?php esc_html_e( 'IndianAgriExam.com', 'indianagri-quiz-engine' ); ?></div>
 			<h1><?php esc_html_e( 'Quiz & Exam Builder', 'indianagri-quiz-engine' ); ?></h1>
 			<p class="iaq-header-desc">
-				<?php esc_html_e( 'Configure agricultural mock examinations, practice sets, and previous year question papers with custom rules and shortcodes.', 'indianagri-quiz-engine' ); ?>
+				<?php esc_html_e( 'Manage segregated practice sets (Books, Subjects, Examinations) and full CBT mock examinations with zero overlap.', 'indianagri-quiz-engine' ); ?>
 			</p>
 		</div>
 		<div class="iaq-header-actions">
@@ -60,29 +112,28 @@ $count_mock     = IAQ_Quiz_Builder::get_quiz_count( array( 'quiz_type' => 'mock'
 		</div>
 	</div>
 
-	<!-- Statistics Cards -->
-	<div class="iaq-stats-grid">
-		<div class="iaq-stat-card">
-			<div class="iaq-stat-icon dashicons dashicons-clipboard"></div>
-			<div class="iaq-stat-content">
-				<span class="iaq-stat-label"><?php esc_html_e( 'All Quizzes', 'indianagri-quiz-engine' ); ?></span>
-				<span class="iaq-stat-value"><?php echo number_format_i18n( $count_all ); ?></span>
-			</div>
-		</div>
-		<div class="iaq-stat-card">
-			<div class="iaq-stat-icon dashicons dashicons-welcome-learn-more" style="color: #0284c7; background: #e0f2fe;"></div>
-			<div class="iaq-stat-content">
-				<span class="iaq-stat-label"><?php esc_html_e( 'Practice Sets', 'indianagri-quiz-engine' ); ?></span>
-				<span class="iaq-stat-value"><?php echo number_format_i18n( $count_practice ); ?></span>
-			</div>
-		</div>
-		<div class="iaq-stat-card">
-			<div class="iaq-stat-icon dashicons dashicons-clock" style="color: #117E3A; background: #dcfce7;"></div>
-			<div class="iaq-stat-content">
-				<span class="iaq-stat-label"><?php esc_html_e( 'Mock Tests', 'indianagri-quiz-engine' ); ?></span>
-				<span class="iaq-stat-value"><?php echo number_format_i18n( $count_mock ); ?></span>
-			</div>
-		</div>
+	<!-- Segregated Pathway Navigation Pills -->
+	<div class="iaq-scope-nav-bar">
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=iaq-quizzes' ) ); ?>" class="iaq-scope-nav-pill <?php echo ( empty( $practice_scope ) && empty( $quiz_type ) ) ? 'is-active' : ''; ?>">
+			<span><?php esc_html_e( 'All Quizzes', 'indianagri-quiz-engine' ); ?></span>
+			<span class="iaq-pill-count"><?php echo number_format_i18n( $count_all ); ?></span>
+		</a>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=iaq-quizzes&practice_scope=book' ) ); ?>" class="iaq-scope-nav-pill <?php echo ( 'book' === $practice_scope ) ? 'is-active' : ''; ?>" style="border-left: 3px solid #9333ea;">
+			<span>📚 <?php esc_html_e( 'Practice by Books', 'indianagri-quiz-engine' ); ?></span>
+			<span class="iaq-pill-count"><?php echo number_format_i18n( $count_book ); ?></span>
+		</a>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=iaq-quizzes&practice_scope=subject' ) ); ?>" class="iaq-scope-nav-pill <?php echo ( 'subject' === $practice_scope ) ? 'is-active' : ''; ?>" style="border-left: 3px solid #16a34a;">
+			<span>🌿 <?php esc_html_e( 'Practice by Subjects', 'indianagri-quiz-engine' ); ?></span>
+			<span class="iaq-pill-count"><?php echo number_format_i18n( $count_subject ); ?></span>
+		</a>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=iaq-quizzes&practice_scope=exam' ) ); ?>" class="iaq-scope-nav-pill <?php echo ( 'exam' === $practice_scope ) ? 'is-active' : ''; ?>" style="border-left: 3px solid #d97706;">
+			<span>🎓 <?php esc_html_e( 'Browse by Examination', 'indianagri-quiz-engine' ); ?></span>
+			<span class="iaq-pill-count"><?php echo number_format_i18n( $count_exam ); ?></span>
+		</a>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=iaq-quizzes&quiz_type=mock' ) ); ?>" class="iaq-scope-nav-pill <?php echo ( 'mock' === $quiz_type ) ? 'is-active' : ''; ?>" style="border-left: 3px solid #0284c7;">
+			<span>⏱️ <?php esc_html_e( 'Mock Test Series', 'indianagri-quiz-engine' ); ?></span>
+			<span class="iaq-pill-count"><?php echo number_format_i18n( $count_mock ); ?></span>
+		</a>
 	</div>
 
 	<!-- Filter Bar -->
@@ -208,8 +259,9 @@ $count_mock     = IAQ_Quiz_Builder::get_quiz_count( array( 'quiz_type' => 'mock'
 					<?php else : ?>
 						<?php foreach ( $quizzes as $q ) : ?>
 							<?php
-							$type_meta = isset( $quiz_types[ $q->quiz_type ] ) ? $quiz_types[ $q->quiz_type ] : array( 'label' => ucfirst( $q->quiz_type ), 'badge_color' => '#64748b' );
-							$edit_url  = admin_url( 'admin.php?page=iaq-quizzes&action=edit&id=' . $q->id );
+							$type_meta  = isset( $quiz_types[ $q->quiz_type ] ) ? $quiz_types[ $q->quiz_type ] : array( 'label' => ucfirst( $q->quiz_type ), 'badge_color' => '#64748b' );
+							$scope_info = class_exists( 'IAQ_Practice_Sets' ) ? IAQ_Practice_Sets::get_quiz_practice_scope( $q->id ) : null;
+							$edit_url   = admin_url( 'admin.php?page=iaq-quizzes&action=edit&id=' . $q->id );
 							$assign_url = admin_url( 'admin.php?page=iaq-quizzes&action=manage_questions&id=' . $q->id );
 							$delete_url = wp_nonce_url(
 								admin_url( 'admin.php?page=iaq-quizzes&action=delete&id=' . $q->id ),
@@ -229,7 +281,17 @@ $count_mock     = IAQ_Quiz_Builder::get_quiz_count( array( 'quiz_type' => 'mock'
 								</td>
 								<td>
 									<strong><a href="<?php echo esc_url( $edit_url ); ?>" style="color:#0f172a;text-decoration:none;font-size:14px;"><?php echo esc_html( $q->title ); ?></a></strong>
-									<div style="margin-top:4px;display:flex;gap:6px;align-items:center;">
+									<div style="margin-top:5px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+										<?php if ( $scope_info && 'general' !== $scope_info['scope'] ) : ?>
+											<?php if ( 'book' === $scope_info['scope'] ) : ?>
+												<span class="iaq-badge" style="background:#f3e8ff;color:#7e22ce;border:1px solid #d8b4fe;font-weight:700;">📚 <?php echo esc_html( $scope_info['label'] ); ?></span>
+											<?php elseif ( 'exam' === $scope_info['scope'] ) : ?>
+												<span class="iaq-badge" style="background:#fef3c7;color:#b45309;border:1px solid #fde68a;font-weight:700;">🎓 <?php echo esc_html( $scope_info['label'] ); ?></span>
+											<?php elseif ( 'subject' === $scope_info['scope'] ) : ?>
+												<span class="iaq-badge" style="background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;font-weight:700;">🌿 <?php echo esc_html( $scope_info['label'] ); ?></span>
+											<?php endif; ?>
+										<?php endif; ?>
+
 										<span class="iaq-badge iaq-badge-exam"><?php echo esc_html( $q->exam_category ); ?></span>
 										<?php if ( $q->subject_name ) : ?>
 											<span class="iaq-topic-badge"><?php echo esc_html( $q->subject_name ); ?></span>

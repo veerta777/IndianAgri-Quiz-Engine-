@@ -23,6 +23,7 @@ class Test_Practice_Sets {
 		self::test_frontend_shortcode_rendering();
 		self::test_exam_subject_practice_set_creation_and_import();
 		self::test_subject_practice_sets_management_and_bulk_upload();
+		self::test_strict_separation_of_pathways();
 
 		echo "Test_Practice_Sets: ALL PASS\n";
 	}
@@ -723,6 +724,118 @@ class Test_Practice_Sets {
 		}
 
 		echo "  [PASS] Subject Practice Sets listing, title display, and Bulk Import verified.\n";
+	}
+
+	/**
+	 * 11. Strict Separation: Practice by Books, Practice by Subjects, and Browse by Examination.
+	 * Verifies that a book practice set only appears under books, an exam practice set only under exams,
+	 * and pure subject practice sets only under subjects with zero cross-contamination.
+	 */
+	private static function test_strict_separation_of_pathways() {
+		$subjects = IAQ_Question_Bank::get_subjects();
+		$books    = IAQ_Practice_Sets::get_books();
+		$exams    = IAQ_Practice_Sets::get_exams_catalog();
+
+		if ( empty( $subjects ) || empty( $books ) || empty( $exams ) ) {
+			throw new Exception( 'Prerequisites missing for strict separation test.' );
+		}
+
+		$test_subject_id = (int) $subjects[0]->id;
+		$test_book_id    = (int) $books[0]->id;
+		$test_exam_id    = (int) $exams[0]->id;
+
+		// 1. Create a pure Subject Practice Set
+		$q_subject_id = IAQ_Quiz_Builder::save_quiz(
+			array(
+				'title'          => 'Pure Subject Drill - Soil Physics',
+				'quiz_type'      => 'practice',
+				'practice_scope' => 'subject',
+				'subject_id'     => $test_subject_id,
+				'status'         => 'published',
+				'display_order'  => 101,
+			)
+		);
+
+		// 2. Create a Book Practice Set
+		$q_book_id = IAQ_Quiz_Builder::save_quiz(
+			array(
+				'title'          => 'Book Practice Set - Chapter 1 Agronomy',
+				'quiz_type'      => 'practice',
+				'practice_scope' => 'book',
+				'book_id'        => $test_book_id,
+				'subject_id'     => $test_subject_id,
+				'status'         => 'published',
+				'display_order'  => 102,
+			)
+		);
+
+		// 3. Create an Examination Practice Set
+		$q_exam_id = IAQ_Quiz_Builder::save_quiz(
+			array(
+				'title'          => 'Exam Practice Set - ICAR JRF Soil Test',
+				'quiz_type'      => 'practice',
+				'practice_scope' => 'exam',
+				'exam_id'        => $test_exam_id,
+				'subject_id'     => $test_subject_id,
+				'status'         => 'published',
+				'display_order'  => 103,
+			)
+		);
+
+		// Verification 1: Pure subject list must contain q_subject_id, and MUST NOT contain q_book_id or q_exam_id
+		$subject_quizzes = IAQ_Practice_Sets::get_subject_quizzes( $test_subject_id, 'published' );
+		$subject_quiz_ids = array_map( function( $q ) { return (int) $q->id; }, $subject_quizzes );
+
+		if ( ! in_array( $q_subject_id, $subject_quiz_ids, true ) ) {
+			throw new Exception( 'Pure subject practice set missing from get_subject_quizzes.' );
+		}
+		if ( in_array( $q_book_id, $subject_quiz_ids, true ) ) {
+			throw new Exception( 'Contamination! Book practice set leaked into get_subject_quizzes.' );
+		}
+		if ( in_array( $q_exam_id, $subject_quiz_ids, true ) ) {
+			throw new Exception( 'Contamination! Examination practice set leaked into get_subject_quizzes.' );
+		}
+
+		// Verification 2: Book quizzes must contain q_book_id, and MUST NOT contain q_subject_id
+		$book_quizzes = IAQ_Practice_Sets::get_book_quizzes( $test_book_id, 'published' );
+		$book_quiz_ids = array_map( function( $q ) { return (int) $q->id; }, $book_quizzes );
+
+		if ( ! in_array( $q_book_id, $book_quiz_ids, true ) ) {
+			throw new Exception( 'Book practice set missing from get_book_quizzes.' );
+		}
+		if ( in_array( $q_subject_id, $book_quiz_ids, true ) ) {
+			throw new Exception( 'Contamination! Pure subject practice set leaked into get_book_quizzes.' );
+		}
+
+		// Verification 3: Scope helper verification
+		$scope_subject = IAQ_Practice_Sets::get_quiz_practice_scope( $q_subject_id );
+		$scope_book    = IAQ_Practice_Sets::get_quiz_practice_scope( $q_book_id );
+		$scope_exam    = IAQ_Practice_Sets::get_quiz_practice_scope( $q_exam_id );
+
+		if ( 'subject' !== $scope_subject['scope'] ) {
+			throw new Exception( 'Expected scope subject for pure subject practice set.' );
+		}
+		if ( 'book' !== $scope_book['scope'] ) {
+			throw new Exception( 'Expected scope book for book practice set.' );
+		}
+		if ( 'exam' !== $scope_exam['scope'] ) {
+			throw new Exception( 'Expected scope exam for exam practice set.' );
+		}
+
+		// Verification 4: Admin filtered lists isolation
+		$filtered_books = IAQ_Quiz_Builder::get_quizzes( array( 'practice_scope' => 'book' ) );
+		$filtered_book_ids = array_map( function( $q ) { return (int) $q->id; }, $filtered_books );
+		if ( ! in_array( $q_book_id, $filtered_book_ids, true ) || in_array( $q_subject_id, $filtered_book_ids, true ) ) {
+			throw new Exception( 'Admin practice_scope=book filter failed isolation test.' );
+		}
+
+		$filtered_subjects = IAQ_Quiz_Builder::get_quizzes( array( 'practice_scope' => 'subject' ) );
+		$filtered_subject_ids = array_map( function( $q ) { return (int) $q->id; }, $filtered_subjects );
+		if ( ! in_array( $q_subject_id, $filtered_subject_ids, true ) || in_array( $q_book_id, $filtered_subject_ids, true ) ) {
+			throw new Exception( 'Admin practice_scope=subject filter failed isolation test.' );
+		}
+
+		echo "  [PASS] Strict separation of Practice Sets (Books, Subjects, Examinations) verified with zero cross-contamination.\n";
 	}
 }
 

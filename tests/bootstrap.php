@@ -937,8 +937,24 @@ class Mock_WPDB {
 					if ( $t->subject_id == $s->id ) $t_count++;
 				}
 				$ps_count = 0;
+				$exclude_book = ( strpos( $query, 'iaq_book_quizzes' ) !== false );
+				$exclude_esq  = ( strpos( $query, 'iaq_exam_subject_quizzes' ) !== false );
 				foreach ( $this->tables[ $this->prefix . 'iaq_quizzes' ] as $qz ) {
 					if ( ! empty( $qz->subject_id ) && (int) $qz->subject_id === (int) $s->id && isset( $qz->quiz_type ) && 'practice' === $qz->quiz_type && isset( $qz->status ) && 'published' === $qz->status ) {
+						if ( $exclude_book ) {
+							$in_b = false;
+							foreach ( $this->tables[ $this->prefix . 'iaq_book_quizzes' ] as $bq ) {
+								if ( (int) $bq->quiz_id === (int) $qz->id ) { $in_b = true; break; }
+							}
+							if ( $in_b ) continue;
+						}
+						if ( $exclude_esq ) {
+							$in_e = false;
+							foreach ( $this->tables[ $this->prefix . 'iaq_exam_subject_quizzes' ] as $esq ) {
+								if ( (int) $esq->quiz_id === (int) $qz->id ) { $in_e = true; break; }
+							}
+							if ( $in_e ) continue;
+						}
 						$ps_count++;
 					}
 				}
@@ -1052,6 +1068,10 @@ class Mock_WPDB {
 				$filter_status = $stm[1];
 			}
 
+			$scope_book = ( strpos( $query, 'iaq_book_quizzes' ) !== false && strpos( $query, 'q.id IN' ) !== false );
+			$scope_exam = ( strpos( $query, 'iaq_exam_subject_quizzes' ) !== false && strpos( $query, 'q.id IN' ) !== false );
+			$scope_subj = ( strpos( $query, 'iaq_book_quizzes' ) !== false && strpos( $query, 'q.id NOT IN' ) !== false );
+
 			foreach ( $this->tables[ $this->prefix . 'iaq_quizzes' ] as $qz ) {
 				if ( null !== $filter_subj_id && ( ! isset( $qz->subject_id ) || (int) $qz->subject_id !== $filter_subj_id ) ) {
 					continue;
@@ -1061,6 +1081,33 @@ class Mock_WPDB {
 				}
 				if ( null !== $filter_status && ( ! isset( $qz->status ) || $qz->status !== $filter_status ) ) {
 					continue;
+				}
+				if ( $scope_book ) {
+					$in_b = false;
+					foreach ( $this->tables[ $this->prefix . 'iaq_book_quizzes' ] as $bq ) {
+						if ( (int) $bq->quiz_id === (int) $qz->id ) { $in_b = true; break; }
+					}
+					if ( ! $in_b ) continue;
+				}
+				if ( $scope_exam ) {
+					$in_e = false;
+					foreach ( $this->tables[ $this->prefix . 'iaq_exam_subject_quizzes' ] as $esq ) {
+						if ( (int) $esq->quiz_id === (int) $qz->id ) { $in_e = true; break; }
+					}
+					if ( ! $in_e ) continue;
+				}
+				if ( $scope_subj ) {
+					if ( ! isset( $qz->quiz_type ) || 'practice' !== $qz->quiz_type || empty( $qz->subject_id ) ) continue;
+					$in_b = false;
+					foreach ( $this->tables[ $this->prefix . 'iaq_book_quizzes' ] as $bq ) {
+						if ( (int) $bq->quiz_id === (int) $qz->id ) { $in_b = true; break; }
+					}
+					if ( $in_b ) continue;
+					$in_e = false;
+					foreach ( $this->tables[ $this->prefix . 'iaq_exam_subject_quizzes' ] as $esq ) {
+						if ( (int) $esq->quiz_id === (int) $qz->id ) { $in_e = true; break; }
+					}
+					if ( $in_e ) continue;
 				}
 
 				$subj = ( ! empty( $qz->subject_id ) && isset( $this->tables[ $this->prefix . 'iaq_subjects' ][ $qz->subject_id ] ) ) ? $this->tables[ $this->prefix . 'iaq_subjects' ][ $qz->subject_id ]->name : '';
@@ -1559,10 +1606,26 @@ class Mock_WPDB {
 			}
 			$not_archived = ( strpos( $query, "q.status != 'archived'" ) !== false );
 			$list = array();
+			$exclude_book = ( strpos( $query, 'iaq_book_quizzes' ) !== false );
+			$exclude_esq  = ( strpos( $query, 'iaq_exam_subject_quizzes' ) !== false );
 			foreach ( $this->tables[ $this->prefix . 'iaq_quizzes' ] as $qz ) {
 				if ( (int) $qz->subject_id === $sid && 'practice' === $qz->quiz_type ) {
 					if ( $status_match && isset( $qz->status ) && $qz->status !== $status_match ) continue;
 					if ( $not_archived && isset( $qz->status ) && 'archived' === $qz->status ) continue;
+					if ( $exclude_book ) {
+						$in_b = false;
+						foreach ( $this->tables[ $this->prefix . 'iaq_book_quizzes' ] as $bq ) {
+							if ( (int) $bq->quiz_id === (int) $qz->id ) { $in_b = true; break; }
+						}
+						if ( $in_b ) continue;
+					}
+					if ( $exclude_esq ) {
+						$in_e = false;
+						foreach ( $this->tables[ $this->prefix . 'iaq_exam_subject_quizzes' ] as $esq ) {
+							if ( (int) $esq->quiz_id === (int) $qz->id ) { $in_e = true; break; }
+						}
+						if ( $in_e ) continue;
+					}
 					$clone = clone $qz;
 					$clone->subject_name = ( ! empty( $clone->subject_id ) && isset( $this->tables[ $this->prefix . 'iaq_subjects' ][ $clone->subject_id ] ) ) ? $this->tables[ $this->prefix . 'iaq_subjects' ][ $clone->subject_id ]->name : '';
 					$clone->topic_name   = ( ! empty( $clone->topic_id ) && isset( $this->tables[ $this->prefix . 'iaq_topics' ][ $clone->topic_id ] ) ) ? $this->tables[ $this->prefix . 'iaq_topics' ][ $clone->topic_id ]->name : '';
@@ -1816,6 +1879,32 @@ class Mock_WPDB {
 
 	public function get_row( $query ) {
 		$this->queries[] = $query;
+
+		// Match quiz practice scope: Book quiz relation lookup
+		if ( strpos( $query, $this->prefix . 'iaq_book_quizzes' ) !== false && preg_match( "/bq\.quiz_id = (\d+)/", $query, $m ) ) {
+			$qid = (int) $m[1];
+			foreach ( $this->tables[ $this->prefix . 'iaq_book_quizzes' ] as $bq ) {
+				if ( (int) $bq->quiz_id === $qid ) {
+					$bid = (int) $bq->book_id;
+					$title = ( isset( $this->tables[ $this->prefix . 'iaq_books' ][ $bid ] ) && ! empty( $this->tables[ $this->prefix . 'iaq_books' ][ $bid ]->title ) ) ? $this->tables[ $this->prefix . 'iaq_books' ][ $bid ]->title : 'Reference Book';
+					return (object) array( 'book_id' => $bid, 'title' => $title );
+				}
+			}
+			return null;
+		}
+
+		// Match quiz practice scope: Exam quiz relation lookup
+		if ( strpos( $query, $this->prefix . 'iaq_exam_subject_quizzes' ) !== false && preg_match( "/esq\.quiz_id = (\d+)/", $query, $m ) ) {
+			$qid = (int) $m[1];
+			foreach ( $this->tables[ $this->prefix . 'iaq_exam_subject_quizzes' ] as $esq ) {
+				if ( (int) $esq->quiz_id === $qid ) {
+					$eid = (int) $esq->exam_id;
+					$name = ( isset( $this->tables[ $this->prefix . 'iaq_examinations' ][ $eid ] ) && ! empty( $this->tables[ $this->prefix . 'iaq_examinations' ][ $eid ]->name ) ) ? $this->tables[ $this->prefix . 'iaq_examinations' ][ $eid ]->name : 'Competitive Exam';
+					return (object) array( 'exam_id' => $eid, 'exam_name' => $name );
+				}
+			}
+			return null;
+		}
 
 		// Match single book
 		if ( strpos( $query, $this->prefix . 'iaq_books' ) !== false ) {
@@ -2151,6 +2240,46 @@ class Mock_WPDB {
 		// COUNT queries
 		if ( strpos( $query, 'COUNT(*)' ) !== false ) {
 			if ( strpos( $query, $this->prefix . 'iaq_quizzes' ) !== false ) {
+				$filter_type = preg_match( "/quiz_type = '([^']+)'/", $query, $qtm ) ? $qtm[1] : null;
+				$scope_book  = ( strpos( $query, 'iaq_book_quizzes' ) !== false && strpos( $query, 'q.id IN' ) !== false );
+				$scope_exam  = ( strpos( $query, 'iaq_exam_subject_quizzes' ) !== false && strpos( $query, 'q.id IN' ) !== false );
+				$scope_subj  = ( strpos( $query, 'iaq_book_quizzes' ) !== false && strpos( $query, 'q.id NOT IN' ) !== false );
+
+				if ( $filter_type || $scope_book || $scope_exam || $scope_subj ) {
+					$cnt = 0;
+					foreach ( $this->tables[ $this->prefix . 'iaq_quizzes' ] as $qz ) {
+						if ( $filter_type && ( ! isset( $qz->quiz_type ) || $qz->quiz_type !== $filter_type ) ) continue;
+						if ( $scope_book ) {
+							$in_b = false;
+							foreach ( $this->tables[ $this->prefix . 'iaq_book_quizzes' ] as $bq ) {
+								if ( (int) $bq->quiz_id === (int) $qz->id ) { $in_b = true; break; }
+							}
+							if ( ! $in_b ) continue;
+						}
+						if ( $scope_exam ) {
+							$in_e = false;
+							foreach ( $this->tables[ $this->prefix . 'iaq_exam_subject_quizzes' ] as $esq ) {
+								if ( (int) $esq->quiz_id === (int) $qz->id ) { $in_e = true; break; }
+							}
+							if ( ! $in_e ) continue;
+						}
+						if ( $scope_subj ) {
+							if ( ! isset( $qz->quiz_type ) || 'practice' !== $qz->quiz_type || empty( $qz->subject_id ) ) continue;
+							$in_b = false;
+							foreach ( $this->tables[ $this->prefix . 'iaq_book_quizzes' ] as $bq ) {
+								if ( (int) $bq->quiz_id === (int) $qz->id ) { $in_b = true; break; }
+							}
+							if ( $in_b ) continue;
+							$in_e = false;
+							foreach ( $this->tables[ $this->prefix . 'iaq_exam_subject_quizzes' ] as $esq ) {
+								if ( (int) $esq->quiz_id === (int) $qz->id ) { $in_e = true; break; }
+							}
+							if ( $in_e ) continue;
+						}
+						$cnt++;
+					}
+					return $cnt;
+				}
 				return count( $this->tables[ $this->prefix . 'iaq_quizzes' ] );
 			}
 			if ( strpos( $query, $this->prefix . 'iaq_questions' ) !== false ) {

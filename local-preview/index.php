@@ -828,12 +828,28 @@ class Local_Persistent_WPDB {
 			}
 			$not_archived = ( strpos( $query, "q.status != 'archived'" ) !== false );
 			$list = array();
+			$exclude_book = ( strpos( $query, 'wp_iaq_book_quizzes' ) !== false );
+			$exclude_esq  = ( strpos( $query, 'wp_iaq_exam_subject_quizzes' ) !== false );
 			foreach ( $this->data['tables']['wp_iaq_quizzes'] as $qz ) {
 				$t = isset( $qz['quiz_type'] ) ? $qz['quiz_type'] : 'practice';
 				if ( isset( $qz['subject_id'] ) && (int) $qz['subject_id'] === $sid && 'practice' === $t ) {
 					$st = isset( $qz['status'] ) ? $qz['status'] : 'published';
 					if ( $status_match && $st !== $status_match ) continue;
 					if ( $not_archived && 'archived' === $st ) continue;
+					if ( $exclude_book && isset( $this->data['tables']['wp_iaq_book_quizzes'] ) ) {
+						$in_b = false;
+						foreach ( $this->data['tables']['wp_iaq_book_quizzes'] as $bq ) {
+							if ( (int) $bq['quiz_id'] === (int) $qz['id'] ) { $in_b = true; break; }
+						}
+						if ( $in_b ) continue;
+					}
+					if ( $exclude_esq && isset( $this->data['tables']['wp_iaq_exam_subject_quizzes'] ) ) {
+						$in_e = false;
+						foreach ( $this->data['tables']['wp_iaq_exam_subject_quizzes'] as $esq ) {
+							if ( (int) $esq['quiz_id'] === (int) $qz['id'] ) { $in_e = true; break; }
+						}
+						if ( $in_e ) continue;
+					}
 					$clone = (object) $qz;
 					$clone->subject_name = ( ! empty( $clone->subject_id ) && isset( $this->data['tables']['wp_iaq_subjects'][ $clone->subject_id ] ) ) ? $this->data['tables']['wp_iaq_subjects'][ $clone->subject_id ]['name'] : '';
 					$clone->topic_name   = ( ! empty( $clone->topic_id ) && isset( $this->data['tables']['wp_iaq_topics'][ $clone->topic_id ] ) ) ? $this->data['tables']['wp_iaq_topics'][ $clone->topic_id ]['name'] : '';
@@ -1124,6 +1140,36 @@ class Local_Persistent_WPDB {
 	}
 
 	public function get_row( $query ) {
+		// Match quiz practice scope: Book quiz relation lookup
+		if ( strpos( $query, 'wp_iaq_book_quizzes' ) !== false && preg_match( "/bq\.quiz_id = (\d+)/", $query, $m ) ) {
+			$qid = (int) $m[1];
+			if ( isset( $this->data['tables']['wp_iaq_book_quizzes'] ) ) {
+				foreach ( $this->data['tables']['wp_iaq_book_quizzes'] as $bq ) {
+					if ( (int) $bq['quiz_id'] === $qid ) {
+						$bid = (int) $bq['book_id'];
+						$title = isset( $this->data['tables']['wp_iaq_books'][ $bid ]['title'] ) ? $this->data['tables']['wp_iaq_books'][ $bid ]['title'] : 'Reference Book';
+						return (object) array( 'book_id' => $bid, 'title' => $title );
+					}
+				}
+			}
+			return null;
+		}
+
+		// Match quiz practice scope: Exam quiz relation lookup
+		if ( strpos( $query, 'wp_iaq_exam_subject_quizzes' ) !== false && preg_match( "/esq\.quiz_id = (\d+)/", $query, $m ) ) {
+			$qid = (int) $m[1];
+			if ( isset( $this->data['tables']['wp_iaq_exam_subject_quizzes'] ) ) {
+				foreach ( $this->data['tables']['wp_iaq_exam_subject_quizzes'] as $esq ) {
+					if ( (int) $esq['quiz_id'] === $qid ) {
+						$eid = (int) $esq['exam_id'];
+						$name = isset( $this->data['tables']['wp_iaq_examinations'][ $eid ]['name'] ) ? $this->data['tables']['wp_iaq_examinations'][ $eid ]['name'] : 'Competitive Exam';
+						return (object) array( 'exam_id' => $eid, 'exam_name' => $name );
+					}
+				}
+			}
+			return null;
+		}
+
 		// Match single book
 		if ( strpos( $query, 'wp_iaq_books' ) !== false ) {
 			if ( preg_match( "/WHERE (?:b\.)?id = (\d+)/", $query, $m ) ) {

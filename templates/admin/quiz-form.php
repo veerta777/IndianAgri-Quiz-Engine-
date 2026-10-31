@@ -28,11 +28,38 @@ $selected_subj   = $is_edit ? $quiz->subject_id : ( isset( $_GET['subject_id'] )
 $topics          = $selected_subj ? IAQ_Question_Bank::get_topics( $selected_subj ) : array();
 
 $all_books       = class_exists( 'IAQ_Practice_Sets' ) ? IAQ_Practice_Sets::get_books( array( 'status' => 'published' ) ) : array();
-$selected_book   = isset( $_GET['book_id'] ) ? absint( $_GET['book_id'] ) : 0;
-if ( $is_edit && ! $selected_book ) {
+$all_exams       = class_exists( 'IAQ_Examinations' ) ? IAQ_Examinations::get_examinations( array( 'status' => 'active' ) ) : array();
+
+$selected_book    = isset( $_GET['book_id'] ) ? absint( $_GET['book_id'] ) : 0;
+$selected_exam_id = isset( $_GET['exam_id'] ) ? absint( $_GET['exam_id'] ) : 0;
+$selected_scope   = 'subject';
+
+if ( $is_edit ) {
 	global $wpdb;
-	$t_bq = IAQ_Database::get_table_name( 'book_quizzes' );
-	$selected_book = (int) $wpdb->get_var( $wpdb->prepare( "SELECT book_id FROM {$t_bq} WHERE quiz_id = %d LIMIT 1", $quiz->id ) );
+	$t_bq  = IAQ_Database::get_table_name( 'book_quizzes' );
+	$t_esq = IAQ_Database::get_table_name( 'exam_subject_quizzes' );
+
+	if ( ! $selected_book ) {
+		$selected_book = (int) $wpdb->get_var( $wpdb->prepare( "SELECT book_id FROM {$t_bq} WHERE quiz_id = %d LIMIT 1", $quiz->id ) );
+	}
+
+	if ( $selected_book ) {
+		$selected_scope = 'book';
+	} else {
+		$esq_row = $wpdb->get_row( $wpdb->prepare( "SELECT exam_id, subject_id FROM {$t_esq} WHERE quiz_id = %d LIMIT 1", $quiz->id ) );
+		if ( $esq_row ) {
+			$selected_scope   = 'exam';
+			$selected_exam_id = (int) $esq_row->exam_id;
+		} elseif ( 'mock' === $quiz->quiz_type ) {
+			$selected_scope = 'mock';
+		} else {
+			$selected_scope = 'subject';
+		}
+	}
+} elseif ( $selected_book ) {
+	$selected_scope = 'book';
+} elseif ( $selected_exam_id ) {
+	$selected_scope = 'exam';
 }
 
 $default_marks     = 1.00;
@@ -260,14 +287,85 @@ if ( ! empty( $settings['default_duration'] ) ) $default_duration = $settings['d
 					</div>
 				</div>
 
-				<!-- Taxonomy & Category -->
+				<!-- Practice Set Classification & Scope -->
 				<div class="iaq-card">
 					<div class="iaq-card-header">
-						<h2><span class="dashicons dashicons-category"></span> <?php esc_html_e( 'Target Exam & Subject', 'indianagri-quiz-engine' ); ?></h2>
+						<h2><span class="dashicons dashicons-category"></span> <?php esc_html_e( 'Classification & Practice Scope', 'indianagri-quiz-engine' ); ?></h2>
 					</div>
 					<div class="iaq-card-body">
 						<div class="iaq-form-group">
-							<label for="quiz-exam-cat"><?php esc_html_e( 'Examination Category', 'indianagri-quiz-engine' ); ?></label>
+							<label><strong><?php esc_html_e( 'Practice Set Pathway / Scope', 'indianagri-quiz-engine' ); ?></strong> <span class="iaq-required">*</span></label>
+							<div style="display:grid;grid-template-columns:1fr;gap:8px;margin-top:6px;">
+								<label style="border:1px solid <?php echo ( 'subject' === $selected_scope ) ? '#117E3A' : '#cbd5e1'; ?>;background:<?php echo ( 'subject' === $selected_scope ) ? '#f0fdf4' : '#ffffff'; ?>;padding:10px 12px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:10px;">
+									<input type="radio" name="practice_scope" value="subject" <?php checked( 'subject' === $selected_scope ); ?> onchange="iaqToggleScope(this.value)">
+									<div>
+										<strong style="color:#0f172a;"><?php esc_html_e( '🌿 Practice by Subject', 'indianagri-quiz-engine' ); ?></strong>
+										<span style="display:block;font-size:12px;color:#64748b;"><?php esc_html_e( 'Stand-alone discipline drills (Agronomy, Horticulture, Soil Science). Excluded from books & exams.', 'indianagri-quiz-engine' ); ?></span>
+									</div>
+								</label>
+
+								<label style="border:1px solid <?php echo ( 'book' === $selected_scope ) ? '#117E3A' : '#cbd5e1'; ?>;background:<?php echo ( 'book' === $selected_scope ) ? '#f0fdf4' : '#ffffff'; ?>;padding:10px 12px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:10px;">
+									<input type="radio" name="practice_scope" value="book" <?php checked( 'book' === $selected_scope ); ?> onchange="iaqToggleScope(this.value)">
+									<div>
+										<strong style="color:#0f172a;"><?php esc_html_e( '📚 Practice by Book', 'indianagri-quiz-engine' ); ?></strong>
+										<span style="display:block;font-size:12px;color:#64748b;"><?php esc_html_e( 'Chapter-wise test inside a reference textbook (Nem Raj Sundha, S N Gupta). Excluded from general subjects.', 'indianagri-quiz-engine' ); ?></span>
+									</div>
+								</label>
+
+								<label style="border:1px solid <?php echo ( 'exam' === $selected_scope ) ? '#117E3A' : '#cbd5e1'; ?>;background:<?php echo ( 'exam' === $selected_scope ) ? '#f0fdf4' : '#ffffff'; ?>;padding:10px 12px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:10px;">
+									<input type="radio" name="practice_scope" value="exam" <?php checked( 'exam' === $selected_scope ); ?> onchange="iaqToggleScope(this.value)">
+									<div>
+										<strong style="color:#0f172a;"><?php esc_html_e( '🎓 Browse by Examination', 'indianagri-quiz-engine' ); ?></strong>
+										<span style="display:block;font-size:12px;color:#64748b;"><?php esc_html_e( 'Targeted test mapped to a specific entrance examination syllabus (ICAR JRF, UPCATET, BHU).', 'indianagri-quiz-engine' ); ?></span>
+									</div>
+								</label>
+							</div>
+						</div>
+
+						<!-- Book Selection Wrapper -->
+						<div class="iaq-form-group" id="iaq-scope-book-wrap" style="<?php echo ( 'book' === $selected_scope ) ? '' : 'display:none;'; ?>">
+							<label for="quiz-book"><strong><?php esc_html_e( 'Assign to Practice Book', 'indianagri-quiz-engine' ); ?></strong> <span class="iaq-required">*</span></label>
+							<select name="book_id" id="quiz-book" class="iaq-select iaq-full-width">
+								<option value="0"><?php esc_html_e( '— Select Reference Book —', 'indianagri-quiz-engine' ); ?></option>
+								<?php foreach ( $all_books as $bk ) : ?>
+									<option value="<?php echo esc_attr( $bk->id ); ?>" <?php selected( $selected_book, $bk->id ); ?>>
+										<?php echo esc_html( $bk->title ); ?> (<?php echo esc_html( $bk->author ? $bk->author : 'Author' ); ?>)
+									</option>
+								<?php endforeach; ?>
+							</select>
+							<span class="iaq-card-help"><?php esc_html_e( 'Only appears under this book on the website and mobile app.', 'indianagri-quiz-engine' ); ?></span>
+						</div>
+
+						<!-- Examination Selection Wrapper -->
+						<div class="iaq-form-group" id="iaq-scope-exam-wrap" style="<?php echo ( 'exam' === $selected_scope ) ? '' : 'display:none;'; ?>">
+							<label for="quiz-exam-id"><strong><?php esc_html_e( 'Assign to Target Examination', 'indianagri-quiz-engine' ); ?></strong> <span class="iaq-required">*</span></label>
+							<select name="exam_id" id="quiz-exam-id" class="iaq-select iaq-full-width">
+								<option value="0"><?php esc_html_e( '— Select Competitive Examination —', 'indianagri-quiz-engine' ); ?></option>
+								<?php foreach ( $all_exams as $ex_item ) : ?>
+									<option value="<?php echo esc_attr( $ex_item->id ); ?>" <?php selected( $selected_exam_id, $ex_item->id ); ?>>
+										<?php echo esc_html( $ex_item->name ); ?> (<?php echo esc_html( $ex_item->code ); ?>)
+									</option>
+								<?php endforeach; ?>
+							</select>
+							<span class="iaq-card-help"><?php esc_html_e( 'Only appears under this examination on the website and mobile app.', 'indianagri-quiz-engine' ); ?></span>
+						</div>
+
+						<!-- Subject Selection -->
+						<div class="iaq-form-group">
+							<label for="quiz-subject"><strong><?php esc_html_e( 'Agricultural Subject', 'indianagri-quiz-engine' ); ?></strong></label>
+							<select name="subject_id" id="quiz-subject" class="iaq-select iaq-full-width">
+								<option value=""><?php esc_html_e( '— All Subjects / General —', 'indianagri-quiz-engine' ); ?></option>
+								<?php foreach ( $subjects as $subj ) : ?>
+									<option value="<?php echo esc_attr( $subj->id ); ?>" <?php selected( $selected_subj, $subj->id ); ?>>
+										<?php echo esc_html( $subj->name ); ?>
+									</option>
+								<?php endforeach; ?>
+							</select>
+						</div>
+
+						<!-- Legacy Exam Category (Taxonomy Fallback) -->
+						<div class="iaq-form-group">
+							<label for="quiz-exam-cat"><?php esc_html_e( 'Examination Category Tag', 'indianagri-quiz-engine' ); ?></label>
 							<select name="exam_category" id="quiz-exam-cat" class="iaq-select iaq-full-width">
 								<?php
 								$current_exam = $is_edit ? $quiz->exam_category : 'General Agriculture';
@@ -281,37 +379,21 @@ if ( ! empty( $settings['default_duration'] ) ) $default_duration = $settings['d
 						</div>
 
 						<div class="iaq-form-group">
-							<label for="quiz-subject"><?php esc_html_e( 'Subject Filter (Optional)', 'indianagri-quiz-engine' ); ?></label>
-							<select name="subject_id" id="quiz-subject" class="iaq-select iaq-full-width">
-								<option value=""><?php esc_html_e( '— All Subjects / General —', 'indianagri-quiz-engine' ); ?></option>
-								<?php foreach ( $subjects as $subj ) : ?>
-									<option value="<?php echo esc_attr( $subj->id ); ?>" <?php selected( $selected_subj, $subj->id ); ?>>
-										<?php echo esc_html( $subj->name ); ?>
-									</option>
-								<?php endforeach; ?>
-							</select>
-						</div>
-
-						<div class="iaq-form-group">
-							<label for="quiz-book"><?php esc_html_e( 'Assign to Practice Book (Optional)', 'indianagri-quiz-engine' ); ?></label>
-							<select name="book_id" id="quiz-book" class="iaq-select iaq-full-width">
-								<option value="0"><?php esc_html_e( '— None / Standalone Practice Set —', 'indianagri-quiz-engine' ); ?></option>
-								<?php foreach ( $all_books as $bk ) : ?>
-									<option value="<?php echo esc_attr( $bk->id ); ?>" <?php selected( $selected_book, $bk->id ); ?>>
-										<?php echo esc_html( $bk->title ); ?> (<?php echo esc_html( $bk->author ? $bk->author : 'Author' ); ?>)
-									</option>
-								<?php endforeach; ?>
-							</select>
-							<span class="iaq-card-help"><?php esc_html_e( 'Allows students to find and solve this practice set under Practice by Book.', 'indianagri-quiz-engine' ); ?></span>
-						</div>
-
-						<div class="iaq-form-group">
 							<label for="quiz-display-order"><?php esc_html_e( 'Display Order', 'indianagri-quiz-engine' ); ?></label>
 							<input type="number" min="0" name="display_order" id="quiz-display-order" class="iaq-input iaq-full-width" value="<?php echo esc_attr( $is_edit && isset( $quiz->display_order ) ? $quiz->display_order : 0 ); ?>">
-							<span class="iaq-card-help"><?php esc_html_e( 'Controls the sequence in Subject & Exam-Subject practice set listings (Set 1, 2, 3...).', 'indianagri-quiz-engine' ); ?></span>
+							<span class="iaq-card-help"><?php esc_html_e( 'Sequence number in the practice sets list (Set 1, 2, 3...).', 'indianagri-quiz-engine' ); ?></span>
 						</div>
 					</div>
 				</div>
+
+				<script>
+				function iaqToggleScope(scope) {
+					var bookWrap = document.getElementById('iaq-scope-book-wrap');
+					var examWrap = document.getElementById('iaq-scope-exam-wrap');
+					if (bookWrap) bookWrap.style.display = (scope === 'book') ? 'block' : 'none';
+					if (examWrap) examWrap.style.display = (scope === 'exam') ? 'block' : 'none';
+				}
+				</script>
 
 				<!-- Access Control -->
 				<div class="iaq-card">
