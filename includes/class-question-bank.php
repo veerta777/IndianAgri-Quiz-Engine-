@@ -74,11 +74,13 @@ class IAQ_Question_Bank {
 		$table_subjects  = IAQ_Database::get_table_name( 'subjects' );
 		$table_questions = IAQ_Database::get_table_name( 'questions' );
 		$table_topics    = IAQ_Database::get_table_name( 'topics' );
+		$table_quizzes   = IAQ_Database::get_table_name( 'quizzes' );
 
 		$query = "
 			SELECT s.*, 
 				(SELECT COUNT(*) FROM {$table_questions} q WHERE q.subject_id = s.id) AS question_count,
-				(SELECT COUNT(*) FROM {$table_topics} t WHERE t.subject_id = s.id) AS topic_count
+				(SELECT COUNT(*) FROM {$table_topics} t WHERE t.subject_id = s.id) AS topic_count,
+				(SELECT COUNT(*) FROM {$table_quizzes} qz WHERE qz.subject_id = s.id AND (qz.quiz_type = 'practice' OR qz.quiz_type = '' OR qz.quiz_type IS NULL) AND qz.status != 'archived') AS practice_sets_count
 			FROM {$table_subjects} s
 			ORDER BY s.name ASC
 		";

@@ -1039,7 +1039,30 @@ class Mock_WPDB {
 
 		// Handle quizzes query
 		if ( strpos( $query, 'FROM ' . $this->prefix . 'iaq_quizzes' ) !== false && strpos( $query, 'SELECT q.*' ) !== false && strpos( $query, 'mock_test_relations' ) === false && strpos( $query, 'INNER JOIN' ) === false ) {
+			$filter_subj_id = null;
+			if ( preg_match( '/q\.subject_id\s*=\s*(\d+)/', $query, $sm ) ) {
+				$filter_subj_id = (int) $sm[1];
+			}
+			$filter_quiz_type = null;
+			if ( preg_match( "/q\.quiz_type\s*=\s*'([^']+)'/", $query, $qtm ) ) {
+				$filter_quiz_type = $qtm[1];
+			}
+			$filter_status = null;
+			if ( preg_match( "/q\.status\s*=\s*'([^']+)'/", $query, $stm ) ) {
+				$filter_status = $stm[1];
+			}
+
 			foreach ( $this->tables[ $this->prefix . 'iaq_quizzes' ] as $qz ) {
+				if ( null !== $filter_subj_id && ( ! isset( $qz->subject_id ) || (int) $qz->subject_id !== $filter_subj_id ) ) {
+					continue;
+				}
+				if ( null !== $filter_quiz_type && ( ! isset( $qz->quiz_type ) || $qz->quiz_type !== $filter_quiz_type ) ) {
+					continue;
+				}
+				if ( null !== $filter_status && ( ! isset( $qz->status ) || $qz->status !== $filter_status ) ) {
+					continue;
+				}
+
 				$subj = ( ! empty( $qz->subject_id ) && isset( $this->tables[ $this->prefix . 'iaq_subjects' ][ $qz->subject_id ] ) ) ? $this->tables[ $this->prefix . 'iaq_subjects' ][ $qz->subject_id ]->name : '';
 				$top  = ( ! empty( $qz->topic_id ) && isset( $this->tables[ $this->prefix . 'iaq_topics' ][ $qz->topic_id ] ) ) ? $this->tables[ $this->prefix . 'iaq_topics' ][ $qz->topic_id ]->name : '';
 
@@ -1054,7 +1077,7 @@ class Mock_WPDB {
 				$clone->assigned_questions_count = $q_count;
 				$results[] = $clone;
 			}
-			return array_reverse( $results );
+			return $filter_subj_id !== null ? $results : array_reverse( $results );
 		}
 
 		// Handle quiz_questions query

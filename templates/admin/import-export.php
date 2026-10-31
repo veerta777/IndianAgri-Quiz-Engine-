@@ -67,18 +67,48 @@ $expected_cols = IAQ_Import_Export::get_expected_headers();
 							<span id="iaq-file-name-display"></span>
 						</div>
 
-						<?php $all_quizzes = IAQ_Quiz_Builder::get_quizzes( array( 'per_page' => 200, 'orderby' => 'title', 'order' => 'ASC' ) ); ?>
-						<div class="iaq-form-group" style="margin-top: 16px;">
-							<label for="assign-quiz-id" style="font-weight:600;display:block;margin-bottom:6px;"><?php esc_html_e( 'Auto-Assign to Practice Set / Quiz (Optional)', 'indianagri-quiz-engine' ); ?></label>
-							<select name="assign_quiz_id" id="assign-quiz-id" class="iaq-select iaq-full-width">
-								<option value="0"><?php esc_html_e( '— None (Import into Question Bank Only) —', 'indianagri-quiz-engine' ); ?></option>
-								<?php foreach ( $all_quizzes as $qz ) : ?>
-									<option value="<?php echo esc_attr( $qz->id ); ?>">
-										#<?php echo esc_html( $qz->id ); ?>: <?php echo esc_html( $qz->title ); ?> (<?php echo esc_html( ucfirst( $qz->quiz_type ) ); ?>)
-									</option>
-								<?php endforeach; ?>
-							</select>
-							<span class="iaq-card-help" style="display:block;margin-top:4px;"><?php esc_html_e( 'All imported MCQs will be immediately linked to this Practice Set / Quiz upon upload.', 'indianagri-quiz-engine' ); ?></span>
+						<?php 
+						$all_quizzes  = IAQ_Quiz_Builder::get_quizzes( array( 'per_page' => 200, 'orderby' => 'title', 'order' => 'ASC' ) ); 
+						$all_subjects = IAQ_Question_Bank::get_subjects();
+						?>
+						<div style="background:#f8fafc;padding:14px;border:1px solid #e2e8f0;border-radius:6px;margin-top:16px;">
+							<label style="font-weight:700;display:block;margin-bottom:8px;color:#0f172a;">
+								<span class="dashicons dashicons-portfolio" style="color:#117E3A;vertical-align:middle;"></span>
+								<?php esc_html_e( 'Auto-Assign to Practice Set / Quiz (Optional)', 'indianagri-quiz-engine' ); ?>
+							</label>
+
+							<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+								<div class="iaq-form-group" style="margin:0;">
+									<label for="import-filter-subject" style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:4px;"><?php esc_html_e( 'Filter Practice Sets by Subject:', 'indianagri-quiz-engine' ); ?></label>
+									<select id="import-filter-subject" class="iaq-select iaq-full-width" style="font-size:13px;">
+										<option value="0"><?php esc_html_e( '— All Subjects —', 'indianagri-quiz-engine' ); ?></option>
+										<?php foreach ( $all_subjects as $subj ) : ?>
+											<option value="<?php echo esc_attr( $subj->id ); ?>">
+												<?php echo esc_html( $subj->name ); ?> (<?php echo (int) $subj->practice_sets_count; ?> <?php esc_html_e( 'Sets', 'indianagri-quiz-engine' ); ?>)
+											</option>
+										<?php endforeach; ?>
+									</select>
+								</div>
+								<div class="iaq-form-group" style="margin:0;">
+									<label for="import-filter-topic" style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:4px;"><?php esc_html_e( 'Filter by Topic (Optional):', 'indianagri-quiz-engine' ); ?></label>
+									<select id="import-filter-topic" class="iaq-select iaq-full-width" style="font-size:13px;">
+										<option value="0"><?php esc_html_e( '— All Topics —', 'indianagri-quiz-engine' ); ?></option>
+									</select>
+								</div>
+							</div>
+
+							<div class="iaq-form-group" style="margin:0;">
+								<label for="assign-quiz-id" style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:4px;"><?php esc_html_e( 'Target Practice Set / Quiz:', 'indianagri-quiz-engine' ); ?></label>
+								<select name="assign_quiz_id" id="assign-quiz-id" class="iaq-select iaq-full-width">
+									<option value="0"><?php esc_html_e( '— None (Import into Question Bank Only) —', 'indianagri-quiz-engine' ); ?></option>
+									<?php foreach ( $all_quizzes as $qz ) : ?>
+										<option value="<?php echo esc_attr( $qz->id ); ?>" data-subject-id="<?php echo esc_attr( $qz->subject_id ); ?>" data-topic-id="<?php echo esc_attr( $qz->topic_id ); ?>">
+											#<?php echo esc_html( $qz->id ); ?>: <?php echo esc_html( $qz->title ); ?> (<?php echo esc_html( ucfirst( $qz->quiz_type ) ); ?><?php echo ! empty( $qz->subject_name ) ? ' &bull; ' . esc_html( $qz->subject_name ) : ''; ?>)
+										</option>
+									<?php endforeach; ?>
+								</select>
+								<span class="iaq-card-help" style="display:block;margin-top:4px;"><?php esc_html_e( 'All imported MCQs will be immediately linked to this Practice Set / Quiz upon upload.', 'indianagri-quiz-engine' ); ?></span>
+							</div>
 						</div>
 
 						<div class="iaq-form-group" style="margin-top: 16px;">

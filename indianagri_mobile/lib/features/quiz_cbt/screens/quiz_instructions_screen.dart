@@ -41,10 +41,23 @@ class _QuizInstructionsScreenState extends State<QuizInstructionsScreen> {
     try {
       final res = await ApiClient.get(ApiEndpoints.quizInstructions(widget.quizId));
       if (res is Map<String, dynamic>) {
+        var sampleQs = (res['sample_questions'] as List<dynamic>?) ?? [];
+        if (sampleQs.isEmpty && res['questions'] is List) {
+          sampleQs = res['questions'];
+        }
+        if (sampleQs.isEmpty) {
+          try {
+            final qRes = await ApiClient.get(ApiEndpoints.quizQuestions(widget.quizId));
+            if (qRes is Map<String, dynamic> && qRes['questions'] is List) {
+              sampleQs = qRes['questions'];
+            }
+          } catch (_) {}
+        }
+
         setState(() {
           _quiz = res['quiz'] as Map<String, dynamic>?;
           _entitlement = res['entitlement'] as Map<String, dynamic>?;
-          _sampleQuestions = (res['sample_questions'] as List<dynamic>?) ?? [];
+          _sampleQuestions = sampleQs;
           _isLoading = false;
         });
         return;

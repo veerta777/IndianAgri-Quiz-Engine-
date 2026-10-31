@@ -465,59 +465,161 @@ $subscription_plans_html = isset( $subscription_plans_html ) ? $subscription_pla
 					<?php endif; ?>
 
 					<!-- QUICK PREPARATION ACTIONS / BROWSE PRACTICE SETS -->
-					<section class="iaq-dashboard-block iaq-quick-actions-section">
-						<div class="iaq-block-header-wrap">
-							<div class="iaq-header-title-row">
-								<span class="iaq-lightning-icon">⚡</span>
-								<h3 class="iaq-block-title"><?php esc_html_e( 'Browse Practice Sets & Learning Pathways', 'indianagri-quiz-engine' ); ?></h3>
+					<section class="iaq-dashboard-block iaq-quick-actions-section iaq-pathways-container">
+						<div class="iaq-pathways-header">
+							<div class="iaq-pathways-title-wrap">
+								<div class="iaq-pathways-bar"></div>
+								<div>
+									<h3 class="iaq-pathways-heading">
+										<?php esc_html_e( 'Browse Practice Sets & Learning Pathways', 'indianagri-quiz-engine' ); ?>
+										<span class="iaq-pathway-accent-leaf">🍃</span>
+									</h3>
+									<p class="iaq-pathways-subtext">
+										<?php esc_html_e( 'Choose your preferred practice pathway: solve chapter-wise books, master core subjects, or target competitive exams.', 'indianagri-quiz-engine' ); ?>
+									</p>
+								</div>
 							</div>
-							<p class="iaq-block-subtitle"><?php esc_html_e( 'Choose your preferred practice pathway: solve chapter-wise books, master core subjects, or target competitive exams.', 'indianagri-quiz-engine' ); ?></p>
+							<div class="iaq-pathways-badge">
+								<span class="iaq-badge-trophy">🏆</span>
+								<span><?php esc_html_e( 'Practice Smarter | Score Higher | Achieve Your Goals', 'indianagri-quiz-engine' ); ?></span>
+							</div>
 						</div>
 
-						<div class="iaq-quick-actions-row">
+						<?php
+						$iaq_img_base     = defined( 'IAQ_PLUGIN_URL' ) ? rtrim( IAQ_PLUGIN_URL, '/' ) : '';
+						$iaq_books_img    = $iaq_img_base . '/assets/images/pathway_books.jpg';
+						$iaq_subjects_img = $iaq_img_base . '/assets/images/pathway_subjects.jpg';
+						$iaq_exams_img    = $iaq_img_base . '/assets/images/pathway_exams.jpg';
+						$books_link       = add_query_arg( array( 'iaq_ps_view' => 'books' ), get_permalink() );
+						$subjects_link    = add_query_arg( array( 'iaq_ps_view' => 'subjects' ), get_permalink() );
+						$exams_link       = add_query_arg( array( 'iaq_ps_view' => 'exams' ), get_permalink() );
+						?>
+
+						<div class="iaq-pathways-grid iaq-quick-actions-row">
 							<!-- Card 1: Practice by Books -->
-							<div class="iaq-qa-pill-card is-green" style="cursor:pointer;" onclick="window.location.href='<?php echo esc_url( add_query_arg( array( 'iaq_ps_view' => 'books' ), get_permalink() ) ); ?>';">
-								<div class="iaq-qa-badge-icon">
-									<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/>
-									</svg>
+							<div class="iaq-pathway-card is-books iaq-qa-pill-card is-green" onclick="window.location.href='<?php echo esc_url( $books_link ); ?>';">
+								<div class="iaq-pathway-card-top">
+									<div class="iaq-pathway-info">
+										<div class="iaq-pathway-icon-squircle">
+											<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+												<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/>
+											</svg>
+										</div>
+										<span class="iaq-pathway-overline"><?php esc_html_e( 'CHAPTER-WISE PRACTICE', 'indianagri-quiz-engine' ); ?></span>
+										<h4 class="iaq-pathway-name"><?php esc_html_e( 'Practice by', 'indianagri-quiz-engine' ); ?> <span class="iaq-accent-text is-green"><?php esc_html_e( 'Books', 'indianagri-quiz-engine' ); ?></span></h4>
+										<p class="iaq-pathway-desc"><?php esc_html_e( 'Chapter-wise MCQs from standard reference literature & textbooks.', 'indianagri-quiz-engine' ); ?></p>
+									</div>
+									<div class="iaq-pathway-art">
+										<img src="<?php echo esc_url( $iaq_books_img ); ?>" alt="<?php esc_attr_e( 'Practice by Books', 'indianagri-quiz-engine' ); ?>" loading="lazy" />
+									</div>
 								</div>
-								<h4 class="iaq-qa-card-name"><?php esc_html_e( 'Practice by Books', 'indianagri-quiz-engine' ); ?></h4>
-								<p class="iaq-qa-card-desc"><?php esc_html_e( 'Chapter-wise MCQs from standard reference literature & textbooks.', 'indianagri-quiz-engine' ); ?></p>
-								<a href="<?php echo esc_url( add_query_arg( array( 'iaq_ps_view' => 'books' ), get_permalink() ) ); ?>" class="iaq-qa-action-pill is-green" onclick="event.stopPropagation();">
-									<?php esc_html_e( 'Browse Practice Books', 'indianagri-quiz-engine' ); ?> &rarr;
+
+								<div class="iaq-pathway-features">
+									<span class="iaq-pathway-feat">
+										<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+										<?php esc_html_e( 'Standard Books', 'indianagri-quiz-engine' ); ?>
+									</span>
+									<span class="iaq-pathway-feat">
+										<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+										<?php esc_html_e( 'Chapter-wise MCQs', 'indianagri-quiz-engine' ); ?>
+									</span>
+									<span class="iaq-pathway-feat">
+										<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+										<?php esc_html_e( 'Build Strong Basics', 'indianagri-quiz-engine' ); ?>
+									</span>
+								</div>
+
+								<a href="<?php echo esc_url( $books_link ); ?>" class="iaq-pathway-btn is-green iaq-qa-action-pill" onclick="event.stopPropagation();">
+									<span class="iaq-pathway-btn-text"><?php esc_html_e( 'Browse Practice Books &rarr;', 'indianagri-quiz-engine' ); ?></span>
+									<span class="iaq-pathway-btn-arrow">
+										<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+									</span>
 								</a>
 							</div>
 
 							<!-- Card 2: Practice by Subjects -->
-							<div class="iaq-qa-pill-card is-blue" style="cursor:pointer;" onclick="window.location.href='<?php echo esc_url( add_query_arg( array( 'iaq_ps_view' => 'subjects' ), get_permalink() ) ); ?>';">
-								<div class="iaq-qa-badge-icon">
-									<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<rect width="7" height="7" x="3" y="3" rx="1.5"/>
-										<rect width="7" height="7" x="14" y="3" rx="1.5"/>
-										<rect width="7" height="7" x="14" y="14" rx="1.5"/>
-										<rect width="7" height="7" x="3" y="14" rx="1.5"/>
-									</svg>
+							<div class="iaq-pathway-card is-subjects iaq-qa-pill-card is-blue" onclick="window.location.href='<?php echo esc_url( $subjects_link ); ?>';">
+								<div class="iaq-pathway-card-top">
+									<div class="iaq-pathway-info">
+										<div class="iaq-pathway-icon-squircle">
+											<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+												<rect width="7" height="7" x="3" y="3" rx="1.5"/>
+												<rect width="7" height="7" x="14" y="3" rx="1.5"/>
+												<rect width="7" height="7" x="14" y="14" rx="1.5"/>
+												<rect width="7" height="7" x="3" y="14" rx="1.5"/>
+											</svg>
+										</div>
+										<span class="iaq-pathway-overline"><?php esc_html_e( 'TOPIC-WISE PRACTICE', 'indianagri-quiz-engine' ); ?></span>
+										<h4 class="iaq-pathway-name"><?php esc_html_e( 'Practice by', 'indianagri-quiz-engine' ); ?> <span class="iaq-accent-text is-blue"><?php esc_html_e( 'Subjects', 'indianagri-quiz-engine' ); ?></span></h4>
+										<p class="iaq-pathway-desc"><?php esc_html_e( 'Topic-wise chapter drills arranged sequentially across core disciplines.', 'indianagri-quiz-engine' ); ?></p>
+									</div>
+									<div class="iaq-pathway-art">
+										<img src="<?php echo esc_url( $iaq_subjects_img ); ?>" alt="<?php esc_attr_e( 'Practice by Subjects', 'indianagri-quiz-engine' ); ?>" loading="lazy" />
+									</div>
 								</div>
-								<h4 class="iaq-qa-card-name"><?php esc_html_e( 'Practice by Subjects', 'indianagri-quiz-engine' ); ?></h4>
-								<p class="iaq-qa-card-desc"><?php esc_html_e( 'Topic-wise chapter drills arranged sequentially across core disciplines.', 'indianagri-quiz-engine' ); ?></p>
-								<a href="<?php echo esc_url( add_query_arg( array( 'iaq_ps_view' => 'subjects' ), get_permalink() ) ); ?>" class="iaq-qa-action-pill is-blue" onclick="event.stopPropagation();">
-									<?php esc_html_e( 'Browse by Subject', 'indianagri-quiz-engine' ); ?> &rarr;
+
+								<div class="iaq-pathway-features">
+									<span class="iaq-pathway-feat">
+										<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+										<?php esc_html_e( 'Topic-wise Drills', 'indianagri-quiz-engine' ); ?>
+									</span>
+									<span class="iaq-pathway-feat">
+										<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+										<?php esc_html_e( 'All Major Subjects', 'indianagri-quiz-engine' ); ?>
+									</span>
+									<span class="iaq-pathway-feat">
+										<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+										<?php esc_html_e( 'Strengthen Key Concepts', 'indianagri-quiz-engine' ); ?>
+									</span>
+								</div>
+
+								<a href="<?php echo esc_url( $subjects_link ); ?>" class="iaq-pathway-btn is-blue iaq-qa-action-pill" onclick="event.stopPropagation();">
+									<span class="iaq-pathway-btn-text"><?php esc_html_e( 'Browse by Subject &rarr;', 'indianagri-quiz-engine' ); ?></span>
+									<span class="iaq-pathway-btn-arrow">
+										<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+									</span>
 								</a>
 							</div>
 
 							<!-- Card 3: Browse by Examination -->
-							<div class="iaq-qa-pill-card is-teal" style="cursor:pointer;" onclick="window.location.href='<?php echo esc_url( add_query_arg( array( 'iaq_ps_view' => 'exams' ), get_permalink() ) ); ?>';">
-								<div class="iaq-qa-badge-icon">
-									<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<circle cx="12" cy="8" r="6"/>
-										<path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
-									</svg>
+							<div class="iaq-pathway-card is-exams iaq-qa-pill-card is-teal" onclick="window.location.href='<?php echo esc_url( $exams_link ); ?>';">
+								<div class="iaq-pathway-card-top">
+									<div class="iaq-pathway-info">
+										<div class="iaq-pathway-icon-squircle">
+											<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+												<circle cx="12" cy="8" r="6"/>
+												<path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
+											</svg>
+										</div>
+										<span class="iaq-pathway-overline"><?php esc_html_e( 'COMPETITIVE EXAMS', 'indianagri-quiz-engine' ); ?></span>
+										<h4 class="iaq-pathway-name"><?php esc_html_e( 'Browse by', 'indianagri-quiz-engine' ); ?> <span class="iaq-accent-text is-orange"><?php esc_html_e( 'Examination', 'indianagri-quiz-engine' ); ?></span></h4>
+										<p class="iaq-pathway-desc"><span class="iaq-sr-only" style="display:none;">Practice by Exams: </span><?php esc_html_e( 'Target competitive entrance tests like ICAR JRF, ASRB NET, CUET PG & IBPS AFO.', 'indianagri-quiz-engine' ); ?></p>
+									</div>
+									<div class="iaq-pathway-art">
+										<img src="<?php echo esc_url( $iaq_exams_img ); ?>" alt="<?php esc_attr_e( 'Browse by Examination', 'indianagri-quiz-engine' ); ?>" loading="lazy" />
+									</div>
 								</div>
-								<h4 class="iaq-qa-card-name"><?php esc_html_e( 'Browse by Examination', 'indianagri-quiz-engine' ); ?></h4>
-								<p class="iaq-qa-card-desc"><?php esc_html_e( 'Target competitive entrance tests like ICAR JRF, ASRB NET, CUET PG & IBPS AFO.', 'indianagri-quiz-engine' ); ?></p>
-								<a href="<?php echo esc_url( add_query_arg( array( 'iaq_ps_view' => 'exams' ), get_permalink() ) ); ?>" class="iaq-qa-action-pill is-teal" onclick="event.stopPropagation();">
-									<?php esc_html_e( 'Browse by Examination', 'indianagri-quiz-engine' ); ?> &rarr;
+
+								<div class="iaq-pathway-features">
+									<span class="iaq-pathway-feat">
+										<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+										<?php esc_html_e( 'Exam-wise Practice Sets', 'indianagri-quiz-engine' ); ?>
+									</span>
+									<span class="iaq-pathway-feat">
+										<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+										<?php esc_html_e( 'Previous Year Papers (PYQs)', 'indianagri-quiz-engine' ); ?>
+									</span>
+									<span class="iaq-pathway-feat">
+										<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+										<?php esc_html_e( 'Mock Tests & Analysis', 'indianagri-quiz-engine' ); ?>
+									</span>
+								</div>
+
+								<a href="<?php echo esc_url( $exams_link ); ?>" class="iaq-pathway-btn is-orange iaq-qa-action-pill" onclick="event.stopPropagation();">
+									<span class="iaq-pathway-btn-text"><?php esc_html_e( 'Browse by Examination &rarr;', 'indianagri-quiz-engine' ); ?></span>
+									<span class="iaq-pathway-btn-arrow">
+										<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+									</span>
 								</a>
 							</div>
 						</div>

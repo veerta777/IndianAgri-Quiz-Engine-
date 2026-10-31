@@ -45,6 +45,7 @@ class ApiEndpoints {
 
   // 6. Quiz CBT Attempt Engine
   static String quizInstructions(int id) => '$activeBaseUrl/quiz/$id/instructions';
+  static String quizQuestions(int id) => '$activeBaseUrl/quiz/$id/questions';
   static String startQuiz(int id) => '$activeBaseUrl/quiz/$id/start';
   static String saveAnswer(int attemptId) => '$activeBaseUrl/quiz/attempt/$attemptId/save-answer';
   static String submitQuiz(int attemptId) => '$activeBaseUrl/quiz/attempt/$attemptId/submit';

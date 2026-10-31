@@ -219,6 +219,16 @@ class IAQ_Rest_Api {
 
 		register_rest_route(
 			self::NAMESPACE,
+			'/quiz/(?P<id>\d+)/questions',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( __CLASS__, 'get_quiz_questions_catalog' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
 			'/quiz/(?P<id>\d+)/start',
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
@@ -1107,16 +1117,45 @@ class IAQ_Rest_Api {
 
 		// Sample questions preview (first 5 questions) for syllabus transparency
 		$raw_questions   = IAQ_Quiz_Builder::get_quiz_questions( $quiz_id );
+		if ( empty( $raw_questions ) && ! empty( $quiz->subject_id ) ) {
+			global $wpdb;
+			$table_q    = IAQ_Database::get_table_name( 'questions' );
+			$table_subj = IAQ_Database::get_table_name( 'subjects' );
+			$table_top  = IAQ_Database::get_table_name( 'topics' );
+			$sql = $wpdb->prepare(
+				"SELECT q.*, s.name AS subject_name, t.name AS topic_name
+				 FROM {$table_q} q
+				 LEFT JOIN {$table_subj} s ON q.subject_id = s.id
+				 LEFT JOIN {$table_top} t ON q.topic_id = t.id
+				 WHERE q.subject_id = %d
+				 ORDER BY q.id ASC
+				 LIMIT 10",
+				$quiz->subject_id
+			);
+			$raw_questions = $wpdb->get_results( $sql );
+		}
+
 		$sample_preview = array();
 		if ( ! empty( $raw_questions ) ) {
 			$s_idx = 1;
-			foreach ( array_slice( $raw_questions, 0, 5 ) as $sq ) {
+			foreach ( array_slice( $raw_questions, 0, 10 ) as $sq ) {
 				$sample_preview[] = array(
 					'index'            => $s_idx++,
 					'id'               => (int) $sq->id,
 					'question_text'    => $sq->question_text,
 					'question_text_hi' => ! empty( $sq->question_text_hi ) ? $sq->question_text_hi : '',
 					'subject_name'     => isset( $sq->subject_name ) ? $sq->subject_name : '',
+					'topic_name'       => isset( $sq->topic_name ) ? $sq->topic_name : '',
+					'marks'            => ! empty( $sq->marks ) ? (float) $sq->marks : 1.0,
+					'negative_marks'   => ! empty( $sq->negative_marks ) ? (float) $sq->negative_marks : 0.25,
+					'options'          => array(
+						array( 'key' => 'A', 'text' => $sq->option_a, 'text_hi' => ! empty( $sq->option_a_hi ) ? $sq->option_a_hi : '' ),
+						array( 'key' => 'B', 'text' => $sq->option_b, 'text_hi' => ! empty( $sq->option_b_hi ) ? $sq->option_b_hi : '' ),
+						array( 'key' => 'C', 'text' => $sq->option_c, 'text_hi' => ! empty( $sq->option_c_hi ) ? $sq->option_c_hi : '' ),
+						array( 'key' => 'D', 'text' => $sq->option_d, 'text_hi' => ! empty( $sq->option_d_hi ) ? $sq->option_d_hi : '' ),
+					),
+					'demo_answer'      => strtoupper( trim( $sq->correct_option ) ),
+					'demo_explanation' => IAQ_Quiz_Attempt::clean_explanation( $sq->explanation ),
 				);
 			}
 		}
@@ -1140,6 +1179,100 @@ class IAQ_Rest_Api {
 				),
 				'entitlement'      => $entitlement,
 				'sample_questions' => $sample_preview,
+				'questions'        => $sample_preview,
+			)
+		);
+	}
+
+	/**
+	 * Get MCQs / Questions catalog for a Quiz or Practice Set.
+	 * Publicly accessible endpoint returning full question details, bilingual text,
+	 * options A-D, marks, and explanations for practice sets.
+	 *
+	 * @param WP_REST_Request $request
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function get_quiz_questions_catalog( $request ) {
+		$quiz_id = absint( $request->get_param( 'id' ) );
+		$quiz    = IAQ_Quiz_Builder::get_quiz( $quiz_id );
+
+		if ( ! $quiz ) {
+			return new WP_Error( 'not_found', __( 'Quiz not found.', 'indianagri-quiz-engine' ), array( 'status' => 404 ) );
+		}
+
+		$user_id = get_current_user_id();
+		$raw_questions = IAQ_Quiz_Builder::get_quiz_questions( $quiz_id );
+
+		// Fallback: If no direct links, query questions from Question Bank matching quiz subject
+		if ( empty( $raw_questions ) && ! empty( $quiz->subject_id ) ) {
+			global $wpdb;
+			$table_q    = IAQ_Database::get_table_name( 'questions' );
+			$table_subj = IAQ_Database::get_table_name( 'subjects' );
+			$table_top  = IAQ_Database::get_table_name( 'topics' );
+			$sql = $wpdb->prepare(
+				"SELECT q.*, s.name AS subject_name, t.name AS topic_name
+				 FROM {$table_q} q
+				 LEFT JOIN {$table_subj} s ON q.subject_id = s.id
+				 LEFT JOIN {$table_top} t ON q.topic_id = t.id
+				 WHERE q.subject_id = %d
+				 ORDER BY q.id ASC
+				 LIMIT 50",
+				$quiz->subject_id
+			);
+			$raw_questions = $wpdb->get_results( $sql );
+		}
+
+		$is_practice = ( 'practice' === $quiz->quiz_type || 'immediate' === $quiz->show_answers_mode );
+		$safe_questions = array();
+		$index = 1;
+
+		foreach ( $raw_questions as $q ) {
+			$opts = array(
+				array( 'key' => 'A', 'text' => $q->option_a, 'text_hi' => ! empty( $q->option_a_hi ) ? $q->option_a_hi : '' ),
+				array( 'key' => 'B', 'text' => $q->option_b, 'text_hi' => ! empty( $q->option_b_hi ) ? $q->option_b_hi : '' ),
+				array( 'key' => 'C', 'text' => $q->option_c, 'text_hi' => ! empty( $q->option_c_hi ) ? $q->option_c_hi : '' ),
+				array( 'key' => 'D', 'text' => $q->option_d, 'text_hi' => ! empty( $q->option_d_hi ) ? $q->option_d_hi : '' ),
+			);
+
+			$item = array(
+				'index'            => $index++,
+				'id'               => (int) $q->id,
+				'question_text'    => $q->question_text,
+				'question_text_hi' => ! empty( $q->question_text_hi ) ? $q->question_text_hi : '',
+				'subject_name'     => isset( $q->subject_name ) ? $q->subject_name : '',
+				'topic_name'       => isset( $q->topic_name ) ? $q->topic_name : '',
+				'marks'            => ! empty( $q->custom_marks ) ? (float) $q->custom_marks : ( ! empty( $q->marks ) ? (float) $q->marks : 1.0 ),
+				'negative_marks'   => ! empty( $q->custom_negative_marks ) ? (float) $q->custom_negative_marks : ( ! empty( $q->negative_marks ) ? (float) $q->negative_marks : 0.25 ),
+				'options'          => $opts,
+				'correct_option'   => strtoupper( trim( $q->correct_option ) ),
+				'explanation'      => IAQ_Quiz_Attempt::clean_explanation( $q->explanation ),
+				'demo_answer'      => strtoupper( trim( $q->correct_option ) ),
+				'demo_explanation' => IAQ_Quiz_Attempt::clean_explanation( $q->explanation ),
+			);
+
+			if ( $is_practice ) {
+				$item['immediate_feedback'] = array(
+					'is_immediate'     => true,
+					'is_locked'        => false,
+					'correct_option'   => strtoupper( trim( $q->correct_option ) ),
+					'explanation'      => IAQ_Quiz_Attempt::clean_explanation( $q->explanation ),
+					'feedback_message' => __( 'Review explanation to master this concept.', 'indianagri-quiz-engine' ),
+				);
+			}
+
+			$safe_questions[] = $item;
+		}
+
+		return rest_ensure_response(
+			array(
+				'attempt_id'       => 9999000 + $quiz_id,
+				'quiz_id'          => (int) $quiz->id,
+				'quiz_title'       => $quiz->title,
+				'quiz_type'        => $quiz->quiz_type,
+				'total_questions'  => count( $safe_questions ),
+				'duration_minutes' => (int) $quiz->duration_minutes,
+				'is_immediate'     => $is_practice,
+				'questions'        => $safe_questions,
 			)
 		);
 	}
@@ -1164,7 +1297,24 @@ class IAQ_Rest_Api {
 			}
 
 			$raw_questions  = IAQ_Quiz_Builder::get_quiz_questions( $quiz_id );
-			$demo_questions = array_slice( $raw_questions, 0, 10 );
+			if ( empty( $raw_questions ) && ! empty( $quiz->subject_id ) ) {
+				global $wpdb;
+				$table_q    = IAQ_Database::get_table_name( 'questions' );
+				$table_subj = IAQ_Database::get_table_name( 'subjects' );
+				$table_top  = IAQ_Database::get_table_name( 'topics' );
+				$sql = $wpdb->prepare(
+					"SELECT q.*, s.name AS subject_name, t.name AS topic_name
+					 FROM {$table_q} q
+					 LEFT JOIN {$table_subj} s ON q.subject_id = s.id
+					 LEFT JOIN {$table_top} t ON q.topic_id = t.id
+					 WHERE q.subject_id = %d
+					 ORDER BY q.id ASC
+					 LIMIT 50",
+					$quiz->subject_id
+				);
+				$raw_questions = $wpdb->get_results( $sql );
+			}
+			$demo_questions = ( 'practice' === $quiz->quiz_type ) ? $raw_questions : array_slice( $raw_questions, 0, 10 );
 			$safe_questions = array();
 			$index          = 1;
 

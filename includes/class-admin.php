@@ -32,6 +32,7 @@ class IAQ_Admin {
 
 		// AJAX endpoints.
 		add_action( 'wp_ajax_iaq_get_topics_by_subject', array( $this, 'ajax_get_topics_by_subject' ) );
+		add_action( 'wp_ajax_iaq_get_subject_practice_sets', array( $this, 'ajax_get_subject_practice_sets' ) );
 	}
 
 	/**
@@ -836,6 +837,16 @@ class IAQ_Admin {
 								),
 								admin_url( 'admin.php' )
 							);
+						} elseif ( $s_id || ! empty( $_POST['from_subjects_topics'] ) ) {
+							$redirect = add_query_arg(
+								array(
+									'page'       => 'iaq-subjects-topics',
+									'subject_id' => $s_id,
+									'message'    => 'practice_set_imported',
+									'count'      => (int) $import_res['imported'],
+								),
+								admin_url( 'admin.php' )
+							);
 						} else {
 							$redirect = add_query_arg(
 								array(
@@ -851,6 +862,86 @@ class IAQ_Admin {
 					}
 				}
 			}
+		}
+
+		// 28d. Create Practice Set for Subject (with optional Bulk CSV/JSON Import).
+		if ( isset( $_POST['iaq_create_subject_practice_set'] ) ) {
+			check_admin_referer( 'iaq_create_subject_practice_set_nonce' );
+			$s_id       = absint( $_POST['subject_id'] );
+			$t_id       = isset( $_POST['topic_id'] ) ? absint( $_POST['topic_id'] ) : 0;
+			$subject    = IAQ_Question_Bank::get_subject( $s_id );
+			$sort_order = isset( $_POST['sort_order'] ) ? max( 1, intval( $_POST['sort_order'] ) ) : 1;
+			$set_title  = ! empty( $_POST['set_title'] ) ? sanitize_text_field( wp_unslash( $_POST['set_title'] ) ) : sprintf( __( '%s - Practice Set %d', 'indianagri-quiz-engine' ), ( $subject ? $subject->name : 'Practice Set' ), $sort_order );
+
+			$quiz_data = array(
+				'title'             => $set_title,
+				'slug'              => sanitize_title( ( $subject ? $subject->slug . '-' : '' ) . $set_title ),
+				'quiz_type'         => 'practice',
+				'subject_id'        => $s_id,
+				'topic_id'          => $t_id,
+				'duration_minutes'  => isset( $_POST['duration_minutes'] ) ? absint( $_POST['duration_minutes'] ) : 20,
+				'correct_marks'     => isset( $_POST['correct_marks'] ) ? floatval( $_POST['correct_marks'] ) : 1.00,
+				'negative_marks'    => isset( $_POST['negative_marks'] ) ? floatval( $_POST['negative_marks'] ) : 0.25,
+				'pass_percentage'   => isset( $_POST['pass_percentage'] ) ? floatval( $_POST['pass_percentage'] ) : 50.00,
+				'show_answers_mode' => 'immediate',
+				'status'            => 'published',
+				'access_type'       => isset( $_POST['access_type'] ) && in_array( sanitize_text_field( $_POST['access_type'] ), array( 'free', 'paid' ), true ) ? sanitize_text_field( $_POST['access_type'] ) : 'paid',
+				'shuffle_questions' => 1,
+				'shuffle_options'   => 1,
+				'display_order'     => $sort_order,
+			);
+
+			$quiz_id = IAQ_Quiz_Builder::save_quiz( $quiz_data );
+			if ( is_wp_error( $quiz_id ) ) {
+				$this->add_notice( 'error', $quiz_id->get_error_message() );
+			} else {
+				$imported_count = 0;
+				if ( ! empty( $_FILES['csv_file']['tmp_name'] ) && is_uploaded_file( $_FILES['csv_file']['tmp_name'] ) ) {
+					$ext = strtolower( pathinfo( $_FILES['csv_file']['name'], PATHINFO_EXTENSION ) );
+					if ( in_array( $ext, array( 'csv', 'json' ), true ) ) {
+						$import_res = IAQ_Import_Export::import_from_file( $_FILES['csv_file']['tmp_name'], $quiz_id, null, $_FILES['csv_file']['name'] );
+						if ( ! empty( $import_res['success'] ) ) {
+							$imported_count = (int) $import_res['imported'];
+						}
+					}
+				}
+
+				if ( $imported_count > 0 ) {
+					wp_safe_redirect(
+						add_query_arg(
+							array(
+								'page'       => 'iaq-subjects-topics',
+								'subject_id' => $s_id,
+								'message'    => 'practice_set_created_with_import',
+								'count'      => $imported_count,
+							),
+							admin_url( 'admin.php' )
+						)
+					);
+				} else {
+					wp_safe_redirect(
+						add_query_arg(
+							array(
+								'page'       => 'iaq-subjects-topics',
+								'subject_id' => $s_id,
+								'message'    => 'practice_set_created',
+							),
+							admin_url( 'admin.php' )
+						)
+					);
+				}
+				exit;
+			}
+		}
+
+		// 28e. Delete Practice Set from Subject View.
+		if ( isset( $_GET['iaq_action'] ) && 'delete_subject_practice_set' === $_GET['iaq_action'] && isset( $_GET['quiz_id'] ) ) {
+			$quiz_id = absint( $_GET['quiz_id'] );
+			$s_id    = isset( $_GET['subject_id'] ) ? absint( $_GET['subject_id'] ) : 0;
+			check_admin_referer( 'iaq_delete_subject_quiz_' . $quiz_id );
+			IAQ_Quiz_Builder::delete_quiz( $quiz_id );
+			wp_safe_redirect( add_query_arg( array( 'page' => 'iaq-subjects-topics', 'subject_id' => $s_id, 'message' => 'quiz_deleted' ), admin_url( 'admin.php' ) ) );
+			exit;
 		}
 
 		// 29. Remove Quiz from Book.
@@ -1321,6 +1412,22 @@ class IAQ_Admin {
 		$topics     = IAQ_Question_Bank::get_topics( $subject_id );
 
 		wp_send_json_success( array( 'topics' => $topics ) );
+	}
+
+	/**
+	 * AJAX endpoint to return practice sets JSON for selected subject.
+	 */
+	public function ajax_get_subject_practice_sets() {
+		check_ajax_referer( 'iaq_admin_ajax_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_iaq_quizzes' ) ) {
+			wp_send_json_error( array( 'message' => 'Unauthorized' ) );
+		}
+
+		$subject_id = isset( $_GET['subject_id'] ) ? absint( $_GET['subject_id'] ) : 0;
+		$quizzes    = IAQ_Practice_Sets::get_subject_quizzes( $subject_id, '' );
+
+		wp_send_json_success( array( 'quizzes' => $quizzes ) );
 	}
 
 	/**

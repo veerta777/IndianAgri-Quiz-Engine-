@@ -144,12 +144,13 @@ class ApiClient {
   /// HTTP POST with connection reuse and automatic cache invalidation
   static Future<dynamic> post(String url, {Map<String, dynamic>? body}) async {
     try {
-      final headers = await _getHeaders(isJson: true);
+      final hasBody = body != null && body.isNotEmpty;
+      final headers = await _getHeaders(isJson: hasBody);
       final response = await _httpClient
           .post(
             Uri.parse(url),
             headers: headers,
-            body: body != null ? jsonEncode(body) : null,
+            body: hasBody ? jsonEncode(body) : null,
           )
           .timeout(timeoutDuration);
 

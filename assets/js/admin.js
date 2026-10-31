@@ -355,5 +355,84 @@
 				scrollTop: $('#iaq-topic-form-card').offset().top - 30
 			}, 300);
 		}
+
+		/* =========================================================================
+		 * 9. Subject Practice Sets Selector & Inline Bulk Upload Handlers
+		 * ========================================================================= */
+		$('#iaq-ps-subject-picker').on('change', function () {
+			var subjId = $(this).val();
+			if (subjId && parseInt(subjId, 10) > 0) {
+				var baseUrl = window.location.pathname;
+				var url = baseUrl + '?page=iaq-subjects-topics&subject_id=' + subjId + '#practice-sets';
+				window.location.href = url;
+			} else {
+				window.location.href = window.location.pathname + '?page=iaq-subjects-topics';
+			}
+		});
+
+		$(document).on('click', '.iaq-toggle-bulk-upload-btn', function (e) {
+			e.preventDefault();
+			var targetId = $(this).attr('data-target');
+			if (targetId) {
+				$('#' + targetId).slideToggle(200);
+			}
+		});
+
+		// Import / Export: Filter Quizzes by Subject and Topic
+		$('#import-filter-subject').on('change', function () {
+			var selectedSubjId = $(this).val();
+			var $topicSelect = $('#import-filter-topic');
+			var $quizSelect = $('#assign-quiz-id');
+
+			// Update topics dropdown
+			fetchTopics(selectedSubjId, $topicSelect, '— All Topics —');
+
+			// Filter quizzes
+			$quizSelect.find('option').each(function () {
+				var $opt = $(this);
+				var qSubjId = $opt.attr('data-subject-id');
+
+				if ($opt.val() === '0') {
+					$opt.show();
+					return;
+				}
+
+				if (!selectedSubjId || selectedSubjId === '0' || qSubjId === selectedSubjId) {
+					$opt.show();
+				} else {
+					$opt.hide();
+				}
+			});
+
+			$quizSelect.val('0');
+		});
+
+		$('#import-filter-topic').on('change', function () {
+			var selectedTopicId = $(this).val();
+			var selectedSubjId = $('#import-filter-subject').val();
+			var $quizSelect = $('#assign-quiz-id');
+
+			$quizSelect.find('option').each(function () {
+				var $opt = $(this);
+				var qSubjId = $opt.attr('data-subject-id');
+				var qTopicId = $opt.attr('data-topic-id');
+
+				if ($opt.val() === '0') {
+					$opt.show();
+					return;
+				}
+
+				var matchSubj = (!selectedSubjId || selectedSubjId === '0' || qSubjId === selectedSubjId);
+				var matchTopic = (!selectedTopicId || selectedTopicId === '0' || qTopicId === selectedTopicId);
+
+				if (matchSubj && matchTopic) {
+					$opt.show();
+				} else {
+					$opt.hide();
+				}
+			});
+
+			$quizSelect.val('0');
+		});
 	});
 })(jQuery);

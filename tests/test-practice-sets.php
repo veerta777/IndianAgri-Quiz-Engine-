@@ -22,6 +22,7 @@ class Test_Practice_Sets {
 		self::test_access_control_gating();
 		self::test_frontend_shortcode_rendering();
 		self::test_exam_subject_practice_set_creation_and_import();
+		self::test_subject_practice_sets_management_and_bulk_upload();
 
 		echo "Test_Practice_Sets: ALL PASS\n";
 	}
@@ -594,6 +595,134 @@ class Test_Practice_Sets {
 		}
 
 		echo "  [PASS] Exam-Subject Practice Set 1-Click creation and Bulk Import verified.\n";
+	}
+
+	/**
+	 * 10. Verify Subject Practice Set listing, title display, and bulk import.
+	 */
+	private static function test_subject_practice_sets_management_and_bulk_upload() {
+		// 1. Create a dedicated test subject
+		$subject_id = IAQ_Question_Bank::save_subject(
+			array(
+				'name'        => 'Agricultural Meteorology',
+				'slug'        => 'agri-meteorology',
+				'description' => 'Atmospheric and weather science applied to agriculture.',
+			)
+		);
+
+		if ( ! $subject_id || is_wp_error( $subject_id ) ) {
+			throw new Exception( 'Failed to create test subject for practice sets.' );
+		}
+
+		// 2. Create Practice Set 1 for this subject
+		$quiz_id_1 = IAQ_Quiz_Builder::save_quiz(
+			array(
+				'title'            => 'Agri-Meteorology Practice Set 1',
+				'quiz_type'        => 'practice',
+				'subject_id'       => $subject_id,
+				'topic_id'         => 0,
+				'duration_minutes' => 25,
+				'correct_marks'    => 1.0,
+				'negative_marks'   => 0.25,
+				'status'           => 'published',
+				'access_type'      => 'paid',
+				'display_order'    => 1,
+			)
+		);
+
+		if ( ! $quiz_id_1 || is_wp_error( $quiz_id_1 ) ) {
+			throw new Exception( 'Failed to create Practice Set 1 for subject.' );
+		}
+
+		// 3. Create Practice Set 2 for this subject
+		$quiz_id_2 = IAQ_Quiz_Builder::save_quiz(
+			array(
+				'title'            => 'Agri-Meteorology Practice Set 2',
+				'quiz_type'        => 'practice',
+				'subject_id'       => $subject_id,
+				'topic_id'         => 0,
+				'duration_minutes' => 30,
+				'correct_marks'    => 2.0,
+				'negative_marks'   => 0.5,
+				'status'           => 'published',
+				'access_type'      => 'free',
+				'display_order'    => 2,
+			)
+		);
+
+		if ( ! $quiz_id_2 || is_wp_error( $quiz_id_2 ) ) {
+			throw new Exception( 'Failed to create Practice Set 2 for subject.' );
+		}
+
+		// 4. Retrieve practice sets for this subject
+		$sets = IAQ_Practice_Sets::get_subject_quizzes( $subject_id, '' );
+		if ( count( $sets ) !== 2 ) {
+			throw new Exception( 'Expected 2 practice sets for subject, got ' . count( $sets ) );
+		}
+
+		if ( 'Agri-Meteorology Practice Set 1' !== $sets[0]->title || 'Agri-Meteorology Practice Set 2' !== $sets[1]->title ) {
+			throw new Exception( 'Practice set names do not match expected titles.' );
+		}
+
+		// 5. Bulk upload questions into Practice Set 1
+		$bulk_json = json_encode(
+			array(
+				array(
+					'question_text' => 'Which instrument measures photosynthetically active radiation (PAR)?',
+					'option_a'      => 'Quantum Sensor',
+					'option_b'      => 'Pyranometer',
+					'option_c'      => 'Anemometer',
+					'option_d'      => 'Hygrometer',
+					'correct_option'=> 'A',
+					'explanation'   => 'Quantum sensors measure PAR in micromoles per square meter per second.',
+					'marks'         => 1.0,
+					'negative_marks'=> 0.25,
+				),
+				array(
+					'question_text' => 'What is the standard height of an anemometer in an agromet observatory?',
+					'option_a'      => '1 meter',
+					'option_b'      => '2 meters',
+					'option_c'      => '5 meters',
+					'option_d'      => '10 meters',
+					'correct_option'=> 'B',
+					'explanation'   => 'Agrometeorological standard height for anemometers is 2 meters above ground level.',
+					'marks'         => 1.0,
+					'negative_marks'=> 0.25,
+				),
+			)
+		);
+
+		$tmp_file = tempnam( sys_get_temp_dir(), 'iaq_test_subj_ps_' ) . '.json';
+		file_put_contents( $tmp_file, $bulk_json );
+
+		$import_res = IAQ_Import_Export::import_from_file( $tmp_file, $quiz_id_1, null, 'meteorology_mcqs.json' );
+		@unlink( $tmp_file );
+
+		if ( empty( $import_res['success'] ) || 2 !== (int) $import_res['imported'] ) {
+			throw new Exception( 'Failed to bulk import questions into subject practice set.' );
+		}
+
+		// Verify practice set question count
+		$updated_q1 = IAQ_Quiz_Builder::get_quiz( $quiz_id_1 );
+		if ( 2 !== (int) $updated_q1->total_questions ) {
+			throw new Exception( 'Practice Set 1 total_questions was not incremented to 2 after bulk import.' );
+		}
+
+		// 6. Verify get_subjects() returns updated practice_sets_count
+		$subjects = IAQ_Question_Bank::get_subjects();
+		$found_subject = null;
+		foreach ( $subjects as $s ) {
+			if ( (int) $s->id === (int) $subject_id ) {
+				$found_subject = $s;
+				break;
+			}
+		}
+
+		if ( ! $found_subject || (int) $found_subject->practice_sets_count < 2 ) {
+			throw new Exception( 'Subject practice_sets_count was not correctly populated in get_subjects().' );
+		}
+
+		echo "  [PASS] Subject Practice Sets listing, title display, and Bulk Import verified.\n";
 	}
 }
 
