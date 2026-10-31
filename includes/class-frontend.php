@@ -75,7 +75,7 @@ class IAQ_Frontend {
 			null
 		);
 
-		wp_register_style(
+		wp_enqueue_style(
 			'iaq-frontend-styles',
 			IAQ_PLUGIN_URL . 'assets/css/frontend.css',
 			array( 'dashicons', 'iaq-google-fonts' ),

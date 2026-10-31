@@ -270,6 +270,232 @@ $page_url = function( $subview = '', $params = array() ) {
 		$iaq_img_base  = defined( 'IAQ_PLUGIN_URL' ) ? rtrim( IAQ_PLUGIN_URL, '/' ) : '';
 		$iaq_books_img = $iaq_img_base . '/assets/images/hero_book_stack.jpg';
 		?>
+		<style>
+		.iaq-book-catalog-hero {
+			background: linear-gradient(135deg, rgba(240, 253, 244, 0.95) 0%, rgba(220, 252, 231, 0.55) 50%, rgba(255, 255, 255, 0.98) 100%) !important;
+			border: 1.5px solid rgba(187, 247, 208, 0.85) !important;
+			border-radius: 20px !important;
+			padding: 24px 28px !important;
+			display: flex !important;
+			flex-direction: row !important;
+			align-items: center !important;
+			justify-content: space-between !important;
+			gap: 24px !important;
+			margin-bottom: 24px !important;
+			position: relative !important;
+			overflow: hidden !important;
+			box-shadow: 0 10px 28px -6px rgba(22, 163, 74, 0.08) !important;
+		}
+		.iaq-book-hero-left {
+			flex: 1 1 auto !important;
+			min-width: 0 !important;
+		}
+		.iaq-book-hero-breadcrumb {
+			display: inline-flex !important;
+			align-items: center !important;
+			gap: 6px !important;
+			background: #ffffff !important;
+			border: 1px solid #dcfce7 !important;
+			padding: 4px 12px !important;
+			border-radius: 20px !important;
+			margin-bottom: 12px !important;
+			font-size: 13px !important;
+		}
+		.iaq-book-hero-title {
+			font-size: 26px !important;
+			font-weight: 800 !important;
+			color: #0f172a !important;
+			margin: 0 0 8px 0 !important;
+			line-height: 1.25 !important;
+			letter-spacing: -0.02em !important;
+		}
+		.iaq-book-hero-sub {
+			font-size: 14px !important;
+			color: #475569 !important;
+			margin: 0 0 16px 0 !important;
+			line-height: 1.5 !important;
+		}
+		.iaq-book-hero-pills {
+			display: flex !important;
+			flex-direction: row !important;
+			align-items: center !important;
+			gap: 10px !important;
+			flex-wrap: wrap !important;
+		}
+		.iaq-hero-pill {
+			display: inline-flex !important;
+			align-items: center !important;
+			gap: 6px !important;
+			background: #ffffff !important;
+			border: 1px solid rgba(187, 247, 208, 0.9) !important;
+			padding: 6px 14px !important;
+			border-radius: 9999px !important;
+			font-size: 12.5px !important;
+			font-weight: 700 !important;
+			color: #166534 !important;
+			box-shadow: 0 2px 6px rgba(22, 163, 74, 0.06) !important;
+		}
+		.iaq-book-hero-right {
+			flex: 0 0 180px !important;
+			width: 180px !important;
+			max-width: 180px !important;
+			height: 155px !important;
+			max-height: 155px !important;
+			display: flex !important;
+			align-items: center !important;
+			justify-content: center !important;
+		}
+		.iaq-book-hero-art {
+			max-width: 180px !important;
+			max-height: 155px !important;
+			width: auto !important;
+			height: auto !important;
+			object-fit: contain !important;
+			filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.08)) !important;
+		}
+		.iaq-book-filter-bar {
+			display: flex !important;
+			align-items: center !important;
+			justify-content: space-between !important;
+			gap: 16px !important;
+			margin-bottom: 24px !important;
+			flex-wrap: wrap !important;
+		}
+		.iaq-ps-books-grid {
+			display: grid !important;
+			grid-template-columns: repeat(3, 1fr) !important;
+			gap: 22px !important;
+			margin-top: 10px !important;
+		}
+		@media (max-width: 991px) {
+			.iaq-ps-books-grid {
+				grid-template-columns: repeat(2, 1fr) !important;
+			}
+		}
+		@media (max-width: 640px) {
+			.iaq-book-catalog-hero {
+				flex-direction: column-reverse !important;
+				text-align: center !important;
+				padding: 18px !important;
+			}
+			.iaq-book-hero-pills {
+				justify-content: center !important;
+			}
+			.iaq-ps-books-grid {
+				grid-template-columns: 1fr !important;
+			}
+		}
+		.iaq-premium-book-card {
+			background: #ffffff !important;
+			border: 1px solid #e2e8f0 !important;
+			border-radius: 18px !important;
+			overflow: hidden !important;
+			display: flex !important;
+			flex-direction: column !important;
+			box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04) !important;
+			transition: transform 0.2s, box-shadow 0.2s !important;
+			cursor: pointer;
+		}
+		.iaq-premium-book-card:hover {
+			transform: translateY(-3px) !important;
+			box-shadow: 0 10px 24px rgba(22, 163, 74, 0.12) !important;
+			border-color: #86efac !important;
+		}
+		.iaq-pbc-cover-wrap {
+			position: relative !important;
+			width: 100% !important;
+			height: 190px !important;
+			background: #f8fafc !important;
+			overflow: hidden !important;
+		}
+		.iaq-pbc-cover-img {
+			width: 100% !important;
+			height: 100% !important;
+			object-fit: cover !important;
+			display: block !important;
+		}
+		.iaq-pbc-body {
+			padding: 18px 20px 20px !important;
+			display: flex !important;
+			flex-direction: column !important;
+			flex: 1 1 auto !important;
+		}
+		.iaq-pbc-title {
+			font-size: 18px !important;
+			font-weight: 800 !important;
+			color: #0f172a !important;
+			line-height: 1.3 !important;
+			margin: 0 0 6px 0 !important;
+		}
+		.iaq-pbc-title a {
+			color: #0f172a !important;
+			text-decoration: none !important;
+		}
+		.iaq-pbc-author {
+			display: flex !important;
+			align-items: center !important;
+			gap: 6px !important;
+			font-size: 13px !important;
+			font-weight: 600 !important;
+			color: #475569 !important;
+			margin-bottom: 8px !important;
+		}
+		.iaq-pbc-desc {
+			font-size: 13px !important;
+			line-height: 1.55 !important;
+			color: #64748b !important;
+			margin: 0 0 16px 0 !important;
+			flex: 1 1 auto !important;
+		}
+		.iaq-pbc-meta-row {
+			display: flex !important;
+			align-items: center !important;
+			justify-content: space-between !important;
+			gap: 6px !important;
+			padding: 12px 0 !important;
+			border-top: 1px solid #f1f5f9 !important;
+			margin-bottom: 16px !important;
+			flex-wrap: wrap !important;
+		}
+		.iaq-pbc-meta-item {
+			display: inline-flex !important;
+			align-items: center !important;
+			gap: 6px !important;
+			font-size: 11.5px !important;
+			font-weight: 650 !important;
+			color: #334155 !important;
+			white-space: nowrap !important;
+		}
+		.iaq-pbc-btn {
+			width: 100% !important;
+			display: flex !important;
+			align-items: center !important;
+			justify-content: space-between !important;
+			padding: 10px 10px 10px 22px !important;
+			border-radius: 9999px !important;
+			text-decoration: none !important;
+			font-size: 14.5px !important;
+			font-weight: 700 !important;
+			color: #ffffff !important;
+			border: none !important;
+			background: linear-gradient(135deg, #065f46 0%, #047857 100%) !important;
+			box-shadow: 0 4px 14px rgba(6, 95, 70, 0.28) !important;
+			box-sizing: border-box !important;
+		}
+		.iaq-pbc-btn:hover {
+			background: linear-gradient(135deg, #047857 0%, #065f46 100%) !important;
+		}
+		.iaq-pbc-btn-arrow {
+			width: 32px !important;
+			height: 32px !important;
+			border-radius: 50% !important;
+			background: rgba(255, 255, 255, 0.9) !important;
+			color: #065f46 !important;
+			display: inline-flex !important;
+			align-items: center !important;
+			justify-content: center !important;
+		}
+		</style>
 		<div class="iaq-book-catalog-hero">
 			<div class="iaq-book-hero-left">
 				<div class="iaq-book-hero-breadcrumb">

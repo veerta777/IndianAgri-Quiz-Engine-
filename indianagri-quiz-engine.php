@@ -3,7 +3,7 @@
  * Plugin Name:       IndianAgri Quiz Engine
  * Plugin URI:        https://indianagriexam.com
  * Description:       Secure, high-performance MCQ Question Bank, Quiz Builder, and Mock Test Engine tailored for agricultural competitive examinations.
- * Version:           1.0.0
+ * Version:           3.2.0
  * Author:            IndianAgriExam.com
  * Author URI:        https://indianagriexam.com
  * License:           GPL-2.0+
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Plugin constants.
 if ( ! defined( 'IAQ_VERSION' ) ) {
-	define( 'IAQ_VERSION', '1.2.0' );
+	define( 'IAQ_VERSION', '3.2.0' );
 }
 
 if ( ! defined( 'IAQ_DB_VERSION' ) ) {
