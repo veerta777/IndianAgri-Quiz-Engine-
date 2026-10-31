@@ -51,7 +51,10 @@ $subscription_plans_html = isset( $subscription_plans_html ) ? $subscription_pla
 <div class="iaq-student-portal iaq-portal-fullscreen" id="iaq-student-portal">
 	<div class="iaq-student-dashboard iaq-student-dashboard-layout" id="iaq-student-dashboard">
 
-	<?php if ( ! is_user_logged_in() ) : ?>
+	<?php
+	$is_guest_allowed_view = in_array( $active_tab, array( 'practice-sets', 'mock-tests', 'examinations', 'subscriptions' ), true ) || isset( $_GET['iaq_ps_view'] ) || isset( $_GET['iaq_mt_view'] );
+	if ( ! is_user_logged_in() && ! $is_guest_allowed_view ) :
+	?>
 		<!-- Non-Logged In Guest State (Server-Side Enforced) -->
 		<div class="iaq-portal-card iaq-guest-gate">
 			<div class="iaq-gate-icon">
@@ -68,10 +71,10 @@ $subscription_plans_html = isset( $subscription_plans_html ) ? $subscription_pla
 	<?php else : ?>
 
 		<?php
-		$current_user  = wp_get_current_user();
-		$display_name  = ! empty( $current_user->display_name ) ? $current_user->display_name : ( ! empty( $current_user->user_login ) ? $current_user->user_login : __( 'Candidate', 'indianagri-quiz-engine' ) );
+		$current_user  = is_user_logged_in() ? wp_get_current_user() : null;
+		$display_name  = ( $current_user && ! empty( $current_user->display_name ) ) ? $current_user->display_name : ( ( $current_user && ! empty( $current_user->user_login ) ) ? $current_user->user_login : __( 'Indianagriexam.com', 'indianagri-quiz-engine' ) );
 		$is_subscribed = ! empty( $subscriptions );
-		$user_initials = 'ST';
+		$user_initials = 'IA';
 		if ( ! empty( $display_name ) ) {
 			$name_parts = explode( ' ', trim( $display_name ) );
 			$user_initials = strtoupper( substr( $name_parts[0], 0, 1 ) . ( isset( $name_parts[1] ) ? substr( $name_parts[1], 0, 1 ) : '' ) );
@@ -81,8 +84,8 @@ $subscription_plans_html = isset( $subscription_plans_html ) ? $subscription_pla
 		// Formatted subscription status and validity
 		$sub_plan_name           = __( 'Standard Free Membership', 'indianagri-quiz-engine' );
 		$sub_valid_until         = __( 'Standard Access', 'indianagri-quiz-engine' );
-		$is_student_active       = IAQ_Access_Control::is_student_active( $current_user->ID );
-		$is_subscription_expired = ( ! $is_student_active && 'expired' === get_user_meta( $current_user->ID, '_iaq_subscription_status', true ) );
+		$is_student_active       = $current_user ? IAQ_Access_Control::is_student_active( $current_user->ID ) : false;
+		$is_subscription_expired = ( $current_user && ! $is_student_active && 'expired' === get_user_meta( $current_user->ID, '_iaq_subscription_status', true ) );
 
 		if ( $is_subscribed && ! empty( $subscriptions[0] ) ) {
 			$first_sub       = $subscriptions[0];
@@ -1210,34 +1213,12 @@ $subscription_plans_html = isset( $subscription_plans_html ) ? $subscription_pla
 
 				<!-- VIEW PANE: PRACTICE SETS (INTEGRATED) -->
 				<div class="iaq-dashboard-view-pane <?php echo 'practice-sets' === $active_tab ? 'is-active' : ''; ?>" id="iaq-pane-practice-sets">
-					<div class="iaq-pane-content-card" style="padding: 20px 24px;">
-						<div class="iaq-pane-head-row" style="margin-bottom: 20px;">
-							<div>
-								<h3 class="iaq-pane-title"><?php esc_html_e( 'Agricultural Practice Sets Hub', 'indianagri-quiz-engine' ); ?></h3>
-								<p class="iaq-pane-subtitle"><?php esc_html_e( 'Practice high-yield agricultural MCQs categorized by authoritative books, core subjects, and competitive exams.', 'indianagri-quiz-engine' ); ?></p>
-							</div>
-							<button type="button" class="iaq-btn-back-dash iaq-dash-nav-trigger" data-target="dashboard">
-								&larr; <?php esc_html_e( 'Back to Dashboard', 'indianagri-quiz-engine' ); ?>
-							</button>
-						</div>
-						<?php echo $practice_sets_html; ?>
-					</div>
+					<?php echo $practice_sets_html; ?>
 				</div>
 
 				<!-- VIEW PANE: MOCK TESTS (INTEGRATED) -->
 				<div class="iaq-dashboard-view-pane <?php echo 'mock-tests' === $active_tab ? 'is-active' : ''; ?>" id="iaq-pane-mock-tests">
-					<div class="iaq-pane-content-card" style="padding: 20px 24px;">
-						<div class="iaq-pane-head-row" style="margin-bottom: 20px;">
-							<div>
-								<h3 class="iaq-pane-title"><?php esc_html_e( 'Full-Length Mock Test Examinations', 'indianagri-quiz-engine' ); ?></h3>
-								<p class="iaq-pane-subtitle"><?php esc_html_e( 'Realistic exam-pattern mock tests with negative marking, time countdowns, and instant scorecard rankings.', 'indianagri-quiz-engine' ); ?></p>
-							</div>
-							<button type="button" class="iaq-btn-back-dash iaq-dash-nav-trigger" data-target="dashboard">
-								&larr; <?php esc_html_e( 'Back to Dashboard', 'indianagri-quiz-engine' ); ?>
-							</button>
-						</div>
-						<?php echo $mock_tests_html; ?>
-					</div>
+					<?php echo $mock_tests_html; ?>
 				</div>
 
 				<!-- VIEW PANE: EXAMINATIONS (INTEGRATED) -->
