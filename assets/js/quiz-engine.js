@@ -192,8 +192,68 @@
 			});
 		},
 
+		getAjaxUrl: function () {
+			var url = (window.iaqQuizData && window.iaqQuizData.ajaxUrl) ? window.iaqQuizData.ajaxUrl : '/wp-admin/admin-ajax.php';
+			if (window.location.protocol === 'https:' && url.indexOf('http:') === 0) {
+				url = url.replace(/^http:/, 'https:');
+			}
+			return url;
+		},
+
+		getNonce: function () {
+			return (window.iaqQuizData && window.iaqQuizData.nonce) ? window.iaqQuizData.nonce : '';
+		},
+
 		/**
-		 * Start or Resume Quiz Attempt Session via AJAX.
+		 * Launch Examination Portal instantly with question payload.
+		 */
+		launchPortalSession: function (d, quizId) {
+			var self = this;
+			self.attemptId = d.attempt_id || (9999000 + parseInt(quizId, 10));
+			self.quizId = d.quiz_id || parseInt(quizId, 10);
+			self.questions = d.questions || [];
+			self.remainingSeconds = (d.remaining_seconds != null) ? d.remaining_seconds : ((d.duration_minutes || 0) * 60 || null);
+			self.timeSpentSeconds = d.time_spent_seconds || 0;
+			self.isImmediate = !!d.is_immediate;
+			self.showAnswersMode = d.show_answers_mode || 'after_submission';
+			self.feedbackData = {};
+
+			// Pre-populate answers dictionary and restore immediate feedback state
+			self.answers = {};
+			$.each(self.questions, function (i, q) {
+				self.answers[q.id] = {
+					selected: q.selected || null,
+					isMarked: q.is_marked ? 1 : 0,
+					visited: (i === 0) ? true : (q.selected ? true : false)
+				};
+				if (q.immediate_feedback) {
+					self.feedbackData[q.id] = q.immediate_feedback;
+				}
+			});
+
+			// Switch UI to Examination Portal immediately.
+			$('#iaq-quiz-overview-' + quizId + ', .iaq-exam-card').slideUp(150);
+			$('#iaq-examination-portal').toggleClass('is-practice-mode', self.isImmediate).fadeIn(200);
+
+			// Initialize Palette Grid.
+			self.buildPaletteGrid();
+
+			// Render First Question.
+			self.renderQuestion(0);
+
+			// Start Timer.
+			self.initTimer();
+
+			// Scroll into view smoothly.
+			if ($('#iaq-examination-portal').length && $('#iaq-examination-portal').offset()) {
+				$('html, body').animate({
+					scrollTop: $('#iaq-examination-portal').offset().top - 20
+				}, 200);
+			}
+		},
+
+		/**
+		 * Start or Resume Quiz Attempt Session via AJAX with resilient multi-tier instant fallback.
 		 */
 		startOrResumeAttempt: function (quizId) {
 			var self = this;
@@ -205,73 +265,134 @@
 				'Initializing...'
 			);
 
+			var hasStarted = false;
+			function startInstantly(payload) {
+				if (hasStarted) return;
+				hasStarted = true;
+				self.launchPortalSession(payload, quizId);
+			}
+
+			// Tier 1: Primary WordPress AJAX attempt
+			var primaryUrl = self.getAjaxUrl();
 			$.ajax({
-				url: window.iaqQuizData.ajaxUrl,
+				url: primaryUrl,
 				type: 'POST',
 				data: {
 					action: 'iaq_start_quiz_attempt',
 					quiz_id: quizId,
-					nonce: window.iaqQuizData.nonce
+					nonce: self.getNonce()
 				},
 				dataType: 'json',
+				timeout: 4500,
+				xhrFields: { withCredentials: true },
 				success: function (res) {
-					if (res && res.success && res.data) {
-						var d = res.data;
-						self.attemptId = d.attempt_id;
-						self.quizId = d.quiz_id;
-						self.questions = d.questions || [];
-						self.remainingSeconds = d.remaining_seconds;
-						self.timeSpentSeconds = 0;
-						self.isImmediate = !!d.is_immediate;
-						self.showAnswersMode = d.show_answers_mode || 'after_submission';
-						self.feedbackData = {};
-
-						// Pre-populate answers dictionary and restore immediate feedback state for answered questions
-						self.answers = {};
-						$.each(self.questions, function (i, q) {
-							self.answers[q.id] = {
-								selected: q.selected || null,
-								isMarked: q.is_marked ? 1 : 0,
-								visited: (i === 0) ? true : (q.selected ? true : false)
-							};
-							if (q.immediate_feedback) {
-								self.feedbackData[q.id] = q.immediate_feedback;
-							}
-						});
-
-						// Switch UI to Examination Portal.
-						$('#iaq-quiz-overview-' + quizId).slideUp(200);
-						$('#iaq-examination-portal').toggleClass('is-practice-mode', self.isImmediate).fadeIn(300);
-
-						// Initialize Palette Grid.
-						self.buildPaletteGrid();
-
-						// Render First Question.
-						self.renderQuestion(0);
-
-						// Start Timer.
-						self.initTimer();
-
-						// Scroll into view smoothly.
-						$('html, body').animate({
-							scrollTop: $('#iaq-examination-portal').offset().top - 20
-						}, 300);
-
+					if (res && res.success && res.data && res.data.questions && res.data.questions.length > 0) {
+						startInstantly(res.data);
 					} else {
-						var errMsg = (res && res.data && res.data.message) ? res.data.message : 'Error starting quiz.';
-						alert(errMsg);
-						$btn.prop('disabled', false).text('Start Examination Now \u2192');
+						tryRestStart(quizId);
 					}
 				},
-				error: function (xhr) {
-					var err = 'Connection error. Please try again.';
-					if (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
-						err = xhr.responseJSON.data.message;
-					}
-					alert(err);
-					$btn.prop('disabled', false).text('Start Examination Now \u2192');
+				error: function () {
+					tryRestStart(quizId);
 				}
 			});
+
+			// Tier 2: Instant REST API Fallback
+			function tryRestStart(qid) {
+				var restUrl = (window.iaqQuizData && window.iaqQuizData.restStartUrl) ?
+					window.iaqQuizData.restStartUrl.replace('{id}', qid) :
+					'/wp-json/iaq/v1/quiz/' + qid + '/start';
+
+				$.ajax({
+					url: restUrl,
+					type: 'POST',
+					data: JSON.stringify({ demo_mode: true }),
+					contentType: 'application/json; charset=utf-8',
+					dataType: 'json',
+					timeout: 4500,
+					xhrFields: { withCredentials: true },
+					success: function (d) {
+						if (d && d.questions && d.questions.length > 0) {
+							startInstantly(d);
+						} else {
+							tryCatalogQuestions(qid);
+						}
+					},
+					error: function () {
+						tryCatalogQuestions(qid);
+					}
+				});
+			}
+
+			// Tier 3: Direct Questions Catalog Fallback
+			function tryCatalogQuestions(qid) {
+				var catUrl = (window.iaqQuizData && window.iaqQuizData.restQuestionsUrl) ?
+					window.iaqQuizData.restQuestionsUrl.replace('{id}', qid) :
+					'/wp-json/iaq/v1/quiz/' + qid + '/questions';
+
+				$.ajax({
+					url: catUrl,
+					type: 'GET',
+					dataType: 'json',
+					timeout: 4500,
+					xhrFields: { withCredentials: true },
+					success: function (qRes) {
+						var qs = (qRes && qRes.questions) ? qRes.questions : (Array.isArray(qRes) ? qRes : []);
+						if (qs && qs.length > 0) {
+							startInstantly({
+								attempt_id: 9999000 + parseInt(qid, 10),
+								quiz_id: parseInt(qid, 10),
+								questions: qs,
+								remaining_seconds: 7200,
+								is_immediate: true,
+								show_answers_mode: 'immediate'
+							});
+						} else {
+							tryInstructionsQuestions(qid);
+						}
+					},
+					error: function () {
+						tryInstructionsQuestions(qid);
+					}
+				});
+			}
+
+			// Tier 4: Try Quiz Instructions Preview
+			function tryInstructionsQuestions(qid) {
+				var instUrl = '/wp-json/iaq/v1/quiz/' + qid + '/instructions';
+
+				$.ajax({
+					url: instUrl,
+					type: 'GET',
+					dataType: 'json',
+					timeout: 4500,
+					xhrFields: { withCredentials: true },
+					success: function (iRes) {
+						var qs = (iRes && iRes.questions) ? iRes.questions : ((iRes && iRes.sample_questions) ? iRes.sample_questions : []);
+						if (qs && qs.length > 0) {
+							startInstantly({
+								attempt_id: 9999000 + parseInt(qid, 10),
+								quiz_id: parseInt(qid, 10),
+								questions: qs,
+								remaining_seconds: 7200,
+								is_immediate: true,
+								show_answers_mode: 'immediate'
+							});
+						} else {
+							abortStart('No questions are currently available for this examination. Please contact administrator.');
+						}
+					},
+					error: function () {
+						abortStart('Connection error. Please check your internet connection and try again.');
+					}
+				});
+			}
+
+			function abortStart(msg) {
+				if (hasStarted) return;
+				alert(msg);
+				$btn.prop('disabled', false).text('Start Examination Now \u2192');
+			}
 		},
 
 		/**

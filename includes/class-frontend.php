@@ -94,9 +94,11 @@ class IAQ_Frontend {
 			'iaq-quiz-engine',
 			'iaqQuizData',
 			array(
-				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-				'nonce'   => wp_create_nonce( 'iaq_quiz_nonce' ),
-				'i18n'    => array(
+				'ajaxUrl'          => admin_url( 'admin-ajax.php', is_ssl() ? 'https' : 'admin' ),
+				'restStartUrl'     => esc_url_raw( rest_url( 'iaq/v1/quiz/{id}/start' ) ),
+				'restQuestionsUrl' => esc_url_raw( rest_url( 'iaq/v1/quiz/{id}/questions' ) ),
+				'nonce'            => wp_create_nonce( 'iaq_quiz_nonce' ),
+				'i18n'             => array(
 					'starting'      => __( 'Initializing examination session...', 'indianagri-quiz-engine' ),
 					'saving'        => __( 'Saving...', 'indianagri-quiz-engine' ),
 					'saved'         => __( 'Synchronized', 'indianagri-quiz-engine' ),

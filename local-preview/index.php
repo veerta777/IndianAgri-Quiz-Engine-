@@ -2337,6 +2337,8 @@ $current_page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : 'iaq-qu
 		};
 		window.iaqQuizData = {
 			ajaxUrl: '/',
+			restStartUrl: '/?action=iaq_start_quiz_attempt&quiz_id={id}',
+			restQuestionsUrl: '/?action=iaq_get_quiz_questions&quiz_id={id}',
 			nonce: '<?php echo wp_create_nonce( 'iaq_quiz_nonce' ); ?>',
 			i18n: {
 				starting: 'Initializing examination session...',

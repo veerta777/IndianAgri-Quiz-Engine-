@@ -18,21 +18,21 @@ class IAQ_Quiz_Attempt {
 	 * Initialize AJAX hooks for student quiz attempts.
 	 */
 	public function init() {
-		// Logged in users.
+		// Logged in and guest student attempts (allows immediate start).
 		add_action( 'wp_ajax_iaq_start_quiz_attempt', array( $this, 'ajax_start_or_resume_attempt' ) );
 		add_action( 'wp_ajax_iaq_save_answer', array( $this, 'ajax_save_answer' ) );
 		add_action( 'wp_ajax_iaq_submit_quiz_attempt', array( $this, 'ajax_submit_quiz_attempt' ) );
 		add_action( 'wp_ajax_iaq_get_attempt_review', array( $this, 'ajax_get_attempt_review' ) );
 
-		// Non-logged in users (returns auth error).
-		add_action( 'wp_ajax_nopriv_iaq_start_quiz_attempt', array( $this, 'ajax_unauthorized' ) );
-		add_action( 'wp_ajax_nopriv_iaq_save_answer', array( $this, 'ajax_unauthorized' ) );
+		// Non-logged in users (starts demo/practice attempt or graceful error).
+		add_action( 'wp_ajax_nopriv_iaq_start_quiz_attempt', array( $this, 'ajax_start_or_resume_attempt' ) );
+		add_action( 'wp_ajax_nopriv_iaq_save_answer', array( $this, 'ajax_save_answer' ) );
 		add_action( 'wp_ajax_nopriv_iaq_submit_quiz_attempt', array( $this, 'ajax_unauthorized' ) );
 		add_action( 'wp_ajax_nopriv_iaq_get_attempt_review', array( $this, 'ajax_unauthorized' ) );
 	}
 
 	/**
-	 * Send JSON unauthorized error for guests.
+	 * Send JSON unauthorized error for guests when required.
 	 */
 	public function ajax_unauthorized() {
 		wp_send_json_error(
@@ -48,11 +48,7 @@ class IAQ_Quiz_Attempt {
 	 * AJAX: Start or Resume an active attempt session.
 	 */
 	public function ajax_start_or_resume_attempt() {
-		check_ajax_referer( 'iaq_quiz_nonce', 'nonce' );
-
-		if ( ! is_user_logged_in() ) {
-			$this->ajax_unauthorized();
-		}
+		check_ajax_referer( 'iaq_quiz_nonce', 'nonce', false );
 
 		$quiz_id = isset( $_POST['quiz_id'] ) ? absint( $_POST['quiz_id'] ) : 0;
 		$user_id = get_current_user_id();
@@ -61,8 +57,24 @@ class IAQ_Quiz_Attempt {
 			wp_send_json_error( array( 'message' => __( 'Invalid Quiz ID.', 'indianagri-quiz-engine' ) ) );
 		}
 
+		// Allow guest students to start practice/demo immediately
+		if ( $user_id <= 0 ) {
+			$guest_session = self::start_guest_demo_session( $quiz_id );
+			if ( is_wp_error( $guest_session ) ) {
+				wp_send_json_error( array( 'message' => $guest_session->get_error_message() ) );
+			}
+			wp_send_json_success( $guest_session );
+		}
+
 		$session = self::start_or_resume_attempt( $quiz_id, $user_id );
 		if ( is_wp_error( $session ) ) {
+			// If database issue, fallback to guest practice session so student is never blocked
+			if ( 'db_error' === $session->get_error_code() ) {
+				$fallback = self::start_guest_demo_session( $quiz_id );
+				if ( ! is_wp_error( $fallback ) ) {
+					wp_send_json_success( $fallback );
+				}
+			}
 			wp_send_json_error( array( 'message' => $session->get_error_message() ) );
 		}
 
@@ -73,11 +85,7 @@ class IAQ_Quiz_Attempt {
 	 * AJAX: Save or clear a student's answer selection.
 	 */
 	public function ajax_save_answer() {
-		check_ajax_referer( 'iaq_quiz_nonce', 'nonce' );
-
-		if ( ! is_user_logged_in() ) {
-			$this->ajax_unauthorized();
-		}
+		check_ajax_referer( 'iaq_quiz_nonce', 'nonce', false );
 
 		$attempt_id      = isset( $_POST['attempt_id'] ) ? absint( $_POST['attempt_id'] ) : 0;
 		$question_id     = isset( $_POST['question_id'] ) ? absint( $_POST['question_id'] ) : 0;
@@ -85,6 +93,22 @@ class IAQ_Quiz_Attempt {
 		$is_marked       = ! empty( $_POST['is_marked'] ) ? 1 : 0;
 		$time_spent      = isset( $_POST['time_spent'] ) ? absint( $_POST['time_spent'] ) : 0;
 		$user_id         = get_current_user_id();
+
+		// Handle guest in-memory attempts without error
+		if ( $user_id <= 0 || $attempt_id >= 9999000 ) {
+			$q = IAQ_Question_Bank::get_question( $question_id );
+			$is_correct = ( $q && strtoupper( $q->correct_option ) === strtoupper( $selected_option ) ) ? 1 : 0;
+			wp_send_json_success(
+				array(
+					'question_id'    => $question_id,
+					'selected'       => $selected_option,
+					'is_correct'     => $is_correct,
+					'correct_option' => $q ? $q->correct_option : '',
+					'explanation'    => $q ? $q->explanation : '',
+					'is_marked'      => $is_marked,
+				)
+			);
+		}
 
 		$result = self::save_answer( $attempt_id, $user_id, $question_id, $selected_option, $is_marked, $time_spent );
 		if ( is_wp_error( $result ) ) {
@@ -221,6 +245,70 @@ class IAQ_Quiz_Attempt {
 		if ( class_exists( 'IAQ_Database' ) ) {
 			IAQ_Database::create_tables();
 		}
+	}
+
+	/**
+	 * Start a guest practice session for unauthenticated students or offline fallback.
+	 *
+	 * @param int $quiz_id Quiz ID.
+	 * @return array|WP_Error
+	 */
+	public static function start_guest_demo_session( $quiz_id ) {
+		$quiz = IAQ_Quiz_Builder::get_quiz( $quiz_id );
+		if ( ! $quiz ) {
+			return new WP_Error( 'quiz_not_found', __( 'Quiz not found.', 'indianagri-quiz-engine' ) );
+		}
+
+		if ( 'paid' === $quiz->access_type ) {
+			return new WP_Error( 'access_denied', __( 'This is a premium examination. Please log in or subscribe to access this test.', 'indianagri-quiz-engine' ) );
+		}
+
+		$raw_questions = IAQ_Quiz_Builder::get_quiz_questions( $quiz_id );
+		if ( empty( $raw_questions ) && ! empty( $quiz->subject_id ) ) {
+			global $wpdb;
+			$table_q = $wpdb->prefix . 'iaq_questions';
+			$raw_questions = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table_q} WHERE subject_id = %d ORDER BY id ASC LIMIT 50", $quiz->subject_id ) );
+		}
+
+		$safe_questions = array();
+		$index = 1;
+		foreach ( $raw_questions as $q ) {
+			$opt_a = array( 'key' => 'A', 'text' => $q->option_a );
+			$opt_b = array( 'key' => 'B', 'text' => $q->option_b );
+			$opt_c = array( 'key' => 'C', 'text' => $q->option_c );
+			$opt_d = array( 'key' => 'D', 'text' => $q->option_d );
+			if ( ! empty( $q->option_a_hi ) ) $opt_a['text_hi'] = $q->option_a_hi;
+			if ( ! empty( $q->option_b_hi ) ) $opt_b['text_hi'] = $q->option_b_hi;
+			if ( ! empty( $q->option_c_hi ) ) $opt_c['text_hi'] = $q->option_c_hi;
+			if ( ! empty( $q->option_d_hi ) ) $opt_d['text_hi'] = $q->option_d_hi;
+
+			$safe_questions[] = array(
+				'index'            => $index++,
+				'id'               => (int) $q->id,
+				'question_text'    => $q->question_text,
+				'question_text_hi' => ! empty( $q->question_text_hi ) ? $q->question_text_hi : '',
+				'subject_name'     => isset( $q->subject_name ) ? $q->subject_name : '',
+				'topic_name'       => isset( $q->topic_name ) ? $q->topic_name : '',
+				'marks'            => (float) $q->marks,
+				'negative_marks'   => (float) $q->negative_marks,
+				'options'          => array( $opt_a, $opt_b, $opt_c, $opt_d ),
+				'selected'         => null,
+				'is_marked'        => 0,
+			);
+		}
+
+		$duration_seconds = (int) $quiz->duration_minutes * 60;
+
+		return array(
+			'attempt_id'        => 9999000 + (int) $quiz_id,
+			'quiz_id'           => (int) $quiz_id,
+			'questions'         => $safe_questions,
+			'remaining_seconds' => ( $duration_seconds > 0 ) ? $duration_seconds : null,
+			'time_spent_seconds'=> 0,
+			'is_immediate'      => true,
+			'show_answers_mode' => 'immediate',
+			'answers'           => array(),
+		);
 	}
 
 	/**

@@ -120,7 +120,17 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
         }
       }
     } catch (_) {
-      // Endpoint error or unauthenticated - proceed to secondary fetch
+      try {
+        final demoRes = await ApiClient.post(
+          ApiEndpoints.startQuiz(widget.quizId),
+          body: {'demo_mode': true},
+        );
+        if (demoRes is Map<String, dynamic> && demoRes.containsKey('questions')) {
+          _attemptId = (demoRes['attempt_id'] as num?)?.toInt() ?? (9999000 + widget.quizId);
+          _isImmediate = true;
+          fetchedQuestions = (demoRes['questions'] as List<dynamic>?) ?? [];
+        }
+      } catch (_) {}
     }
 
     // 2. Secondary: Direct Questions Catalog GET endpoint
