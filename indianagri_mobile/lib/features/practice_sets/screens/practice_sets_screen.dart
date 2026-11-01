@@ -51,9 +51,13 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
     _fetchBooks();
   }
 
-  Future<void> _fetchSubjects() async {
+  Future<void> _fetchSubjects({bool forceRefresh = false}) async {
+    setState(() {
+      _isLoadingSubjects = true;
+      _subjectsError = null;
+    });
     try {
-      final res = await ApiClient.get(ApiEndpoints.practiceSubjects);
+      final res = await ApiClient.get(ApiEndpoints.practiceSubjects, forceRefresh: forceRefresh);
       if (res is List<dynamic>) {
         setState(() {
           _subjects = res;
@@ -61,6 +65,10 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
         });
         return;
       }
+      setState(() {
+        _subjects = [];
+        _isLoadingSubjects = false;
+      });
     } catch (e) {
       setState(() {
         _subjectsError = e.toString();
@@ -69,9 +77,13 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
     }
   }
 
-  Future<void> _fetchExams() async {
+  Future<void> _fetchExams({bool forceRefresh = false}) async {
+    setState(() {
+      _isLoadingExams = true;
+      _examsError = null;
+    });
     try {
-      final res = await ApiClient.get(ApiEndpoints.examinations);
+      final res = await ApiClient.get(ApiEndpoints.examinations, forceRefresh: forceRefresh);
       if (res is List<dynamic>) {
         setState(() {
           _exams = res;
@@ -79,6 +91,10 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
         });
         return;
       }
+      setState(() {
+        _exams = [];
+        _isLoadingExams = false;
+      });
     } catch (e) {
       setState(() {
         _examsError = e.toString();
@@ -87,9 +103,13 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
     }
   }
 
-  Future<void> _fetchBooks() async {
+  Future<void> _fetchBooks({bool forceRefresh = false}) async {
+    setState(() {
+      _isLoadingBooks = true;
+      _booksError = null;
+    });
     try {
-      final res = await ApiClient.get(ApiEndpoints.practiceBooks);
+      final res = await ApiClient.get(ApiEndpoints.practiceBooks, forceRefresh: forceRefresh);
       if (res is List<dynamic>) {
         setState(() {
           _books = res;
@@ -97,6 +117,10 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
         });
         return;
       }
+      setState(() {
+        _books = [];
+        _isLoadingBooks = false;
+      });
     } catch (e) {
       setState(() {
         _booksError = e.toString();
@@ -162,13 +186,30 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
   // 1. Subjects Tab (Primary Catalog with 110+ Sets)
   Widget _buildSubjectsTab() {
     if (_isLoadingSubjects) return const LoadingView(message: 'Loading 110+ subject practice sets...');
-    if (_subjectsError != null) return ErrorStateView(message: _subjectsError!, onRetry: _fetchSubjects);
-    if (_subjects.isEmpty) return const EmptyStateView(title: 'No Subjects Found');
+    if (_subjectsError != null) return ErrorStateView(message: _subjectsError!, onRetry: () => _fetchSubjects(forceRefresh: true));
+    if (_subjects.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: () => _fetchSubjects(forceRefresh: true),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: const [
+            SizedBox(height: 60),
+            EmptyStateView(
+              title: 'No Subjects Found',
+              description: 'Subjects will appear here once published on the website.',
+            ),
+          ],
+        ),
+      );
+    }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      itemCount: _subjects.length,
-      itemBuilder: (context, index) {
+    return RefreshIndicator(
+      onRefresh: () => _fetchSubjects(forceRefresh: true),
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        itemCount: _subjects.length,
+        itemBuilder: (context, index) {
         final raw = _subjects[index];
         if (raw is! Map) return const SizedBox.shrink();
         final s = Map<String, dynamic>.from(raw);
@@ -255,19 +296,37 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
           ),
         );
       },
-    );
-  }
+    ),
+  );
+}
 
   // 2. Exams Tab
   Widget _buildExamsTab() {
     if (_isLoadingExams) return const LoadingView(message: 'Loading competitive examinations...');
-    if (_examsError != null) return ErrorStateView(message: _examsError!, onRetry: _fetchExams);
-    if (_exams.isEmpty) return const EmptyStateView(title: 'No Exams Found');
+    if (_examsError != null) return ErrorStateView(message: _examsError!, onRetry: () => _fetchExams(forceRefresh: true));
+    if (_exams.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: () => _fetchExams(forceRefresh: true),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: const [
+            SizedBox(height: 60),
+            EmptyStateView(
+              title: 'No Examinations Found',
+              description: 'Examinations will appear here once published on the website.',
+            ),
+          ],
+        ),
+      );
+    }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      itemCount: _exams.length,
-      itemBuilder: (context, index) {
+    return RefreshIndicator(
+      onRefresh: () => _fetchExams(forceRefresh: true),
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        itemCount: _exams.length,
+        itemBuilder: (context, index) {
         final raw = _exams[index];
         if (raw is! Map) return const SizedBox.shrink();
         final e = Map<String, dynamic>.from(raw);
@@ -347,71 +406,33 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
           ),
         );
       },
-    );
-  }
+    ),
+  );
+}
 
   // 3. Books Tab
   Widget _buildBooksTab() {
     if (_isLoadingBooks) return const LoadingView(message: 'Loading standard books...');
-    if (_booksError != null) return ErrorStateView(message: _booksError!, onRetry: _fetchBooks);
+    if (_booksError != null) return ErrorStateView(message: _booksError!, onRetry: () => _fetchBooks(forceRefresh: true));
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final allBooks = _books;
 
-    // Curated standard reference books matching live database IDs & counts
-    final allBooks = _books.isNotEmpty
-        ? _books
-        : [
-            {
-              'id': 1,
-              'title': 'A Competitive Book of Agriculture',
-              'author': 'Nem Raj Sundha',
-              'practice_sets_count': 69,
-              'subjects_text': '10+ Subjects',
-              'questions_text': '5,000+ Questions',
-              'image_asset': 'assets/images/book_general_agri.jpg',
-              'description': 'Comprehensive handbook covering General Agriculture, Agronomy, Soil Science, Genetics and allied subjects for ICAR, JRF, and State PSCs.',
-            },
-            {
-              'id': 4,
-              'title': 'Instant Horticulture',
-              'author': 'S N Gupta',
-              'practice_sets_count': 1,
-              'subjects_text': 'Horticulture',
-              'questions_text': '1,000+ Questions',
-              'image_asset': 'assets/images/book_horticulture.jpg',
-              'description': 'Chapter-wise practice sets on fruits, vegetables, floriculture, landscaping and allied areas for competitive examinations.',
-            },
-            {
-              'id': 5,
-              'title': 'Objective Agriculture',
-              'author': 'S R Kantwa',
-              'practice_sets_count': 67,
-              'subjects_text': 'Mixed Subjects',
-              'questions_text': '3,000+ Questions',
-              'image_asset': 'assets/images/pathway_subjects.jpg',
-              'description': 'Topic-wise objective questions covering major agricultural subjects for ICAR, ASRB NET, CUET PG and IBPS AFO.',
-            },
-            {
-              'id': 2,
-              'title': 'Fundamentals of Agriculture (Vol 1 & 2)',
-              'author': 'Dr. Arun Katyayan',
-              'practice_sets_count': 12,
-              'subjects_text': 'Agronomy & Allied',
-              'questions_text': '2,500+ Questions',
-              'image_asset': 'assets/images/pathway_books.jpg',
-              'description': 'Conceptual core textbook covering Agronomy, Soil Science, Agricultural Extension, and Crop Physiology.',
-            },
-            {
-              'id': 3,
-              'title': 'Soil Science at a Glance',
-              'author': 'Dr. D.K. Das',
-              'practice_sets_count': 8,
-              'subjects_text': 'Soil Science',
-              'questions_text': '1,200+ Questions',
-              'image_asset': 'assets/images/pathway_exams.jpg',
-              'description': 'Specialized review handbook for Soil Physics, Soil Chemistry, Fertility, and Nutrient Management.',
-            },
-          ];
+    if (allBooks.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: () => _fetchBooks(forceRefresh: true),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: const [
+            SizedBox(height: 60),
+            EmptyStateView(
+              title: 'No Practice Books Found',
+              description: 'Practice books will appear here once published on the website.',
+            ),
+          ],
+        ),
+      );
+    }
 
     // Filter books based on search query
     final displayBooks = allBooks.where((b) {
@@ -423,9 +444,12 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
       return title.contains(q) || author.contains(q);
     }).toList();
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      children: [
+    return RefreshIndicator(
+      onRefresh: () => _fetchBooks(forceRefresh: true),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        children: [
         // 1. Top Hero Card matching screenshot
         Container(
           margin: const EdgeInsets.only(bottom: 16),
@@ -642,8 +666,9 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
         else
           ...displayBooks.map((b) => _buildBookCard(Map<String, dynamic>.from(b as Map), isDark)),
       ],
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildHeroFeaturePill(IconData icon, String label, bool isDark) {
     return Container(
@@ -679,6 +704,9 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
     final author = (b['author'] ?? '').toString();
     final setsCount = (b['practice_sets_count'] as num?)?.toInt() ?? 0;
     final desc = (b['description'] ?? '').toString();
+    final coverImageUrl = (b['cover_image_url'] ?? '').toString();
+    final accessType = (b['access_type'] ?? 'paid').toString().toLowerCase();
+    final isPaid = accessType == 'paid';
 
     final subjectsText = (b['subjects_text'] ?? (title.contains('Horticulture') ? 'Horticulture' : (title.contains('Objective') ? 'Mixed Subjects' : '10+ Subjects'))).toString();
     final questionsText = (b['questions_text'] ?? (title.contains('Horticulture') ? '1,000+ Questions' : (title.contains('Objective') ? '3,000+ Questions' : '5,000+ Questions'))).toString();
@@ -695,6 +723,31 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
     }
 
     final isFav = _favoriteBookIds.contains(id);
+
+    Widget coverWidget;
+    if (coverImageUrl.startsWith('http')) {
+      coverWidget = Image.network(
+        coverImageUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Image.asset(
+          imageAsset,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(
+            color: const Color(0xFFE8F5E9),
+            child: const Center(child: Icon(Icons.book, size: 54, color: AppColors.primary)),
+          ),
+        ),
+      );
+    } else {
+      coverWidget = Image.asset(
+        imageAsset,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          color: const Color(0xFFE8F5E9),
+          child: const Center(child: Icon(Icons.book, size: 54, color: AppColors.primary)),
+        ),
+      );
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -723,16 +776,7 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
                 child: SizedBox(
                   height: 165,
                   width: double.infinity,
-                  child: Image.asset(
-                    imageAsset,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      color: const Color(0xFFE8F5E9),
-                      child: const Center(
-                        child: Icon(Icons.book, size: 54, color: AppColors.primary),
-                      ),
-                    ),
-                  ),
+                  child: coverWidget,
                 ),
               ),
               Positioned.fill(
@@ -753,16 +797,16 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
                   ),
                 ),
               ),
-              // Top-left: PREMIUM ACCESS Badge
+              // Top-left: ACCESS Badge
               Positioned(
                 top: 12,
                 left: 12,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFBF1D3),
+                    color: isPaid ? const Color(0xFFFBF1D3) : const Color(0xFFD1FAE5),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFF6D682), width: 1.2),
+                    border: Border.all(color: isPaid ? const Color(0xFFF6D682) : const Color(0xFF6EE7B7), width: 1.2),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.12),
@@ -773,16 +817,16 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Text('👑', style: TextStyle(fontSize: 10)),
-                      SizedBox(width: 4),
+                    children: [
+                      Text(isPaid ? '👑' : '🌟', style: const TextStyle(fontSize: 10)),
+                      const SizedBox(width: 4),
                       Text(
-                        'PREMIUM ACCESS',
+                        isPaid ? 'PREMIUM ACCESS' : 'FREE ACCESS',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.5,
-                          color: Color(0xFF8D5300),
+                          color: isPaid ? const Color(0xFF8D5300) : const Color(0xFF065F46),
                         ),
                       ),
                     ],
@@ -1151,12 +1195,29 @@ class _GenericSetsListScreenState extends State<GenericSetsListScreen> {
   Widget _buildBody() {
     if (_isLoading) return const LoadingView(message: 'Loading practice questions & sets...');
     if (_error != null) return ErrorStateView(message: _error!, onRetry: _fetch);
-    if (_sets.isEmpty) return const EmptyStateView(title: 'No Sets Found in this Category');
+    if (_sets.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: _fetch,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: const [
+            SizedBox(height: 60),
+            EmptyStateView(
+              title: 'No Sets Found in this Category',
+              description: 'Practice sets will appear here once published on the website.',
+            ),
+          ],
+        ),
+      );
+    }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      itemCount: _sets.length,
-      itemBuilder: (context, index) {
+    return RefreshIndicator(
+      onRefresh: _fetch,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        itemCount: _sets.length,
+        itemBuilder: (context, index) {
         final raw = _sets[index];
         if (raw is! Map) return const SizedBox.shrink();
         final item = Map<String, dynamic>.from(raw);
@@ -1300,8 +1361,9 @@ class _GenericSetsListScreenState extends State<GenericSetsListScreen> {
           ),
         );
       },
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildMetaChip(IconData icon, String label, Color color) {
     return Container(

@@ -27,14 +27,14 @@ class _MockTestsScreenState extends State<MockTestsScreen> {
     _fetchCategories();
   }
 
-  Future<void> _fetchCategories() async {
+  Future<void> _fetchCategories({bool forceRefresh = false}) async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final res = await ApiClient.get(ApiEndpoints.mockCategories);
+      final res = await ApiClient.get(ApiEndpoints.mockCategories, forceRefresh: forceRefresh);
       if (res is List<dynamic>) {
         setState(() {
           _categories = res;
@@ -78,18 +78,33 @@ class _MockTestsScreenState extends State<MockTestsScreen> {
     if (_errorMessage != null) {
       return ErrorStateView(
         message: _errorMessage!,
-        onRetry: _fetchCategories,
+        onRetry: () => _fetchCategories(forceRefresh: true),
       );
     }
 
     if (_categories.isEmpty) {
-      return const EmptyStateView(title: 'No Mock Categories Found');
+      return RefreshIndicator(
+        onRefresh: () => _fetchCategories(forceRefresh: true),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: const [
+            SizedBox(height: 60),
+            EmptyStateView(
+              title: 'No Mock Categories Found',
+              description: 'Categories will appear here once published on the website.',
+            ),
+          ],
+        ),
+      );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      itemCount: _categories.length,
-      itemBuilder: (context, index) {
+    return RefreshIndicator(
+      onRefresh: () => _fetchCategories(forceRefresh: true),
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        itemCount: _categories.length,
+        itemBuilder: (context, index) {
         final raw = _categories[index];
         if (raw is! Map) return const SizedBox.shrink();
         final cat = Map<String, dynamic>.from(raw);
@@ -207,8 +222,9 @@ class _MockTestsScreenState extends State<MockTestsScreen> {
           ),
         );
       },
-    );
-  }
+    ),
+  );
+}
 }
 
 /// Drilldown screen into category examinations, test series, and papers.
@@ -240,17 +256,20 @@ class _MockHierarchyScreenState extends State<MockHierarchyScreen> {
     _fetchHierarchy();
   }
 
-  Future<void> _fetchHierarchy() async {
-    try {
-      final res = await ApiClient.get('${ApiEndpoints.mockHierarchy}?category_id=${widget.categoryId}');
-      if (res is Map<String, dynamic>) {
-        var exams = (res['examinations'] as List<dynamic>?) ?? [];
-        var mocks = (res['mock_tests'] as List<dynamic>?) ?? [];
+  Future<void> _fetchHierarchy({bool forceRefresh = false}) async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
 
-        // If server returned 0 tests, generate curated full-length mock papers for the examinations
-        if (mocks.isEmpty && exams.isNotEmpty) {
-          mocks = _generateCuratedMockPapers(exams);
-        }
+    try {
+      final res = await ApiClient.get(
+        '${ApiEndpoints.mockHierarchy}?category_id=${widget.categoryId}',
+        forceRefresh: forceRefresh,
+      );
+      if (res is Map<String, dynamic>) {
+        final exams = (res['examinations'] as List<dynamic>?) ?? [];
+        final mocks = (res['mock_tests'] as List<dynamic>?) ?? [];
 
         setState(() {
           _examinations = exams;
@@ -270,45 +289,6 @@ class _MockHierarchyScreenState extends State<MockHierarchyScreen> {
     }
   }
 
-  List<dynamic> _generateCuratedMockPapers(List<dynamic> exams) {
-    final List<dynamic> generated = [];
-    int counter = 1;
-    for (final ex in exams) {
-      final eName = ex['name'] ?? 'Agricultural Exam';
-      final eCode = ex['code'] ?? 'MOCK';
-      final eId = (ex['id'] as num?)?.toInt() ?? 1;
-
-      generated.add({
-        'id': eId * 100 + 1,
-        'quiz_id': eId * 100 + 1,
-        'title': '$eCode National Mock Test 1 (Full Syllabus)',
-        'exam_name': eName,
-        'total_questions': 100,
-        'duration_minutes': 120,
-        'total_marks': 400.0,
-        'correct_marks': 4.0,
-        'negative_marks': 1.0,
-        'access_type': 'paid',
-        'is_locked': true,
-      });
-
-      generated.add({
-        'id': eId * 100 + 2,
-        'quiz_id': eId * 100 + 2,
-        'title': '$eCode Speed & Accuracy Mock Drill 2',
-        'exam_name': eName,
-        'total_questions': 100,
-        'duration_minutes': 120,
-        'total_marks': 400.0,
-        'correct_marks': 4.0,
-        'negative_marks': 1.0,
-        'access_type': 'paid',
-        'is_locked': true,
-      });
-    }
-    return generated;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -321,46 +301,64 @@ class _MockHierarchyScreenState extends State<MockHierarchyScreen> {
 
   Widget _buildBody() {
     if (_isLoading) return const LoadingView(message: 'Loading test series & examinations...');
-    if (_error != null) return ErrorStateView(message: _error!, onRetry: _fetchHierarchy);
-
-    if (_examinations.isEmpty && _mockTests.isEmpty) {
-      return const EmptyStateView(
-        title: 'No Mock Papers Available',
-        description: 'Mock test papers for this category are being prepared by the faculty.',
+    if (_error != null) {
+      return ErrorStateView(
+        message: _error!,
+        onRetry: () => _fetchHierarchy(forceRefresh: true),
       );
     }
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      children: [
-        if (_examinations.isNotEmpty) ...[
-          const Text(
-            'Target Examinations in Category',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Tap an examination to view syllabus-specific mock papers',
-            style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
-          ),
-          const SizedBox(height: 10),
-          ..._examinations.map((e) => _buildExamItem(e)),
-          const SizedBox(height: 22),
+    if (_examinations.isEmpty && _mockTests.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: () => _fetchHierarchy(forceRefresh: true),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: const [
+            SizedBox(height: 60),
+            EmptyStateView(
+              title: 'No Mock Papers Available',
+              description: 'Mock test papers for this category will appear here once published on the website. Pull down to refresh.',
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => _fetchHierarchy(forceRefresh: true),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        children: [
+          if (_examinations.isNotEmpty) ...[
+            const Text(
+              'Target Examinations in Category',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Tap an examination to view syllabus-specific mock papers',
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+            ),
+            const SizedBox(height: 10),
+            ..._examinations.map((e) => _buildExamItem(e)),
+            const SizedBox(height: 22),
+          ],
+          if (_mockTests.isNotEmpty) ...[
+            const Text(
+              'Available Mock Test Papers (Mock 1..N)',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Official CBT Format • Timer • Negative Marking (-1.00)',
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+            ),
+            const SizedBox(height: 10),
+            ..._mockTests.map((m) => _buildMockTestItem(m)),
+          ],
         ],
-        if (_mockTests.isNotEmpty) ...[
-          const Text(
-            'Available Mock Test Papers (Mock 1..N)',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Official CBT Format • Timer • Negative Marking (-1.00)',
-            style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
-          ),
-          const SizedBox(height: 10),
-          ..._mockTests.map((m) => _buildMockTestItem(m)),
-        ],
-      ],
+      ),
     );
   }
 
@@ -571,43 +569,19 @@ class _MockExamPapersScreenState extends State<MockExamPapersScreen> {
     _fetchPapers();
   }
 
-  Future<void> _fetchPapers() async {
+  Future<void> _fetchPapers({bool forceRefresh = false}) async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
     try {
-      final res = await ApiClient.get(ApiEndpoints.examSets(widget.examId));
+      final res = await ApiClient.get(
+        ApiEndpoints.examSets(widget.examId),
+        forceRefresh: forceRefresh,
+      );
       if (res is Map<String, dynamic> && res.containsKey('hierarchy')) {
-        var sets = (res['hierarchy'] as List<dynamic>?) ?? [];
-        if (sets.isEmpty) {
-          // Provide standard 100-question mock test papers for this target examination
-          sets = [
-            {
-              'id': widget.examId * 10 + 1,
-              'quiz_id': widget.examId * 10 + 1,
-              'title': '${widget.examCode.isNotEmpty ? widget.examCode : widget.examName} Full Length Mock Test 1',
-              'total_questions': 100,
-              'duration_minutes': 120,
-              'total_marks': 400.0,
-              'is_locked': true,
-            },
-            {
-              'id': widget.examId * 10 + 2,
-              'quiz_id': widget.examId * 10 + 2,
-              'title': '${widget.examCode.isNotEmpty ? widget.examCode : widget.examName} Full Length Mock Test 2',
-              'total_questions': 100,
-              'duration_minutes': 120,
-              'total_marks': 400.0,
-              'is_locked': true,
-            },
-            {
-              'id': widget.examId * 10 + 3,
-              'quiz_id': widget.examId * 10 + 3,
-              'title': '${widget.examCode.isNotEmpty ? widget.examCode : widget.examName} Comprehensive Speed Drill',
-              'total_questions': 50,
-              'duration_minutes': 60,
-              'total_marks': 200.0,
-              'is_locked': true,
-            },
-          ];
-        }
+        final sets = (res['hierarchy'] as List<dynamic>?) ?? [];
         setState(() {
           _papers = sets;
           _isLoading = false;
@@ -637,12 +611,36 @@ class _MockExamPapersScreenState extends State<MockExamPapersScreen> {
 
   Widget _buildBody() {
     if (_isLoading) return const LoadingView(message: 'Loading examination papers & questions...');
-    if (_error != null) return ErrorStateView(message: _error!, onRetry: _fetchPapers);
+    if (_error != null) {
+      return ErrorStateView(
+        message: _error!,
+        onRetry: () => _fetchPapers(forceRefresh: true),
+      );
+    }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      itemCount: _papers.length,
-      itemBuilder: (context, index) {
+    if (_papers.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: () => _fetchPapers(forceRefresh: true),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            const SizedBox(height: 60),
+            EmptyStateView(
+              title: 'No Mock Papers Available',
+              description: 'Papers for ${widget.examName} will appear here once published on the website. Pull down to refresh.',
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => _fetchPapers(forceRefresh: true),
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        itemCount: _papers.length,
+        itemBuilder: (context, index) {
         final raw = _papers[index];
         if (raw is! Map) return const SizedBox.shrink();
         final p = Map<String, dynamic>.from(raw);
@@ -756,6 +754,7 @@ class _MockExamPapersScreenState extends State<MockExamPapersScreen> {
           ),
         );
       },
-    );
-  }
+    ),
+  );
+}
 }
