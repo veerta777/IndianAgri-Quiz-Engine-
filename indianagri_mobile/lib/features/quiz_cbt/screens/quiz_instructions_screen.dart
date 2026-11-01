@@ -55,8 +55,8 @@ class _QuizInstructionsScreenState extends State<QuizInstructionsScreen> {
         }
 
         setState(() {
-          _quiz = res['quiz'] as Map<String, dynamic>?;
-          _entitlement = res['entitlement'] as Map<String, dynamic>?;
+          _quiz = res['quiz'] != null && res['quiz'] is Map ? Map<String, dynamic>.from(res['quiz'] as Map) : null;
+          _entitlement = res['entitlement'] != null && res['entitlement'] is Map ? Map<String, dynamic>.from(res['entitlement'] as Map) : null;
           _sampleQuestions = sampleQs;
           _isLoading = false;
         });

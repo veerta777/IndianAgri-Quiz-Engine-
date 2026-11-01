@@ -519,7 +519,7 @@ class IAQ_Access_Control {
 		}
 
 		// 2. Administrators always have access
-		if ( user_can( $user_id, 'manage_options' ) ) {
+		if ( user_can( $user_id, 'manage_options' ) || user_can( $user_id, 'manage_iaq_quizzes' ) || user_can( $user_id, 'administrator' ) || ( function_exists( 'is_super_admin' ) && is_super_admin( $user_id ) ) ) {
 			return array(
 				'allowed' => true,
 				'reason'  => __( 'Administrator bypass.', 'indianagri-quiz-engine' ),
@@ -1094,7 +1094,7 @@ class IAQ_Access_Control {
 		}
 
 		// Administrators and instructors are exempt from student deactivation.
-		if ( user_can( $user_id, 'manage_options' ) || user_can( $user_id, 'manage_iaq_quizzes' ) ) {
+		if ( user_can( $user_id, 'manage_options' ) || user_can( $user_id, 'manage_iaq_quizzes' ) || user_can( $user_id, 'administrator' ) || ( function_exists( 'is_super_admin' ) && is_super_admin( $user_id ) ) ) {
 			update_user_meta( $user_id, '_iaq_student_active', 1 );
 			update_user_meta( $user_id, '_iaq_subscription_status', 'active' );
 			return true;
@@ -1140,7 +1140,7 @@ class IAQ_Access_Control {
 		if ( empty( $user_id ) ) {
 			return false;
 		}
-		if ( function_exists( 'user_can' ) && ( user_can( $user_id, 'manage_options' ) || user_can( $user_id, 'manage_iaq_quizzes' ) ) ) {
+		if ( function_exists( 'user_can' ) && ( user_can( $user_id, 'manage_options' ) || user_can( $user_id, 'manage_iaq_quizzes' ) || user_can( $user_id, 'administrator' ) || ( function_exists( 'is_super_admin' ) && is_super_admin( $user_id ) ) ) ) {
 			return true;
 		}
 		self::sync_expired_subscriptions( $user_id );

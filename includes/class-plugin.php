@@ -69,6 +69,7 @@ class IAQ_Plugin {
 	public function run() {
 		add_action( 'init', array( $this, 'load_textdomain' ) );
 		add_action( 'init', array( $this, 'maybe_update_db' ), 5 );
+		add_action( 'init', array( $this, 'ensure_admin_capabilities' ), 10 );
 
 		// Always initialize frontend shortcodes, access control, and attempt handlers.
 		IAQ_Access_Control::init();
@@ -78,6 +79,19 @@ class IAQ_Plugin {
 
 		if ( is_admin() ) {
 			$this->admin->init();
+		}
+	}
+
+	/**
+	 * Ensure administrator role has the required IAQ management capability.
+	 * Persists to DB on upgrades where activation hook is bypassed by zip overwrite.
+	 */
+	public function ensure_admin_capabilities() {
+		if ( function_exists( 'get_role' ) ) {
+			$admin_role = get_role( 'administrator' );
+			if ( $admin_role && ! $admin_role->has_cap( 'manage_iaq_quizzes' ) ) {
+				$admin_role->add_cap( 'manage_iaq_quizzes' );
+			}
 		}
 	}
 

@@ -157,10 +157,12 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
             padding: const EdgeInsets.all(16),
             itemCount: _bookmarks.length,
             itemBuilder: (context, index) {
-              final b = _bookmarks[index] as Map<String, dynamic>;
+              final raw = _bookmarks[index];
+              if (raw is! Map) return const SizedBox.shrink();
+              final b = Map<String, dynamic>.from(raw);
               final qId = (b['question_id'] ?? b['id'] as num?)?.toInt() ?? 0;
-              final qText = b['question_text'] ?? 'Question';
-              final subject = b['subject_name'] ?? 'General Agriculture';
+              final qText = (b['question_text'] ?? 'Question').toString();
+              final subject = (b['subject_name'] ?? 'General Agriculture').toString();
               final notes = b['notes']?.toString() ?? '';
 
               return Container(

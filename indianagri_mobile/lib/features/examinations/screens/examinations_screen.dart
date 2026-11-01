@@ -91,11 +91,13 @@ class _ExaminationsScreenState extends State<ExaminationsScreen> {
       padding: const EdgeInsets.all(16),
       itemCount: _examinations.length,
       itemBuilder: (context, index) {
-        final exam = _examinations[index] as Map<String, dynamic>;
+        final raw = _examinations[index];
+        if (raw is! Map) return const SizedBox.shrink();
+        final exam = Map<String, dynamic>.from(raw);
         final id = (exam['id'] as num?)?.toInt() ?? 0;
-        final name = exam['name'] ?? 'Agricultural Examination';
-        final code = exam['code'] ?? '';
-        final description = exam['description'] ?? '';
+        final name = (exam['name'] ?? 'Agricultural Examination').toString();
+        final code = (exam['code'] ?? '').toString();
+        final description = (exam['description'] ?? '').toString();
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),

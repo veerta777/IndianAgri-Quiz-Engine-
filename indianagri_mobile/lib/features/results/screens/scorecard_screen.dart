@@ -39,7 +39,7 @@ class _ScorecardScreenState extends State<ScorecardScreen> {
       final res = await ApiClient.get(ApiEndpoints.scorecard(widget.attemptId));
       if (res is Map<String, dynamic>) {
         setState(() {
-          _scorecard = res['scorecard'] as Map<String, dynamic>?;
+          _scorecard = res['scorecard'] != null && res['scorecard'] is Map ? Map<String, dynamic>.from(res['scorecard'] as Map) : null;
           _breakdown = (res['breakdown'] as List<dynamic>?) ?? [];
           _isLoading = false;
         });

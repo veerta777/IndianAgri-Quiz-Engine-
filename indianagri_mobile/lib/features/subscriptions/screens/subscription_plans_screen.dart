@@ -116,15 +116,17 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
       padding: const EdgeInsets.all(16),
       itemCount: _plans.length,
       itemBuilder: (context, index) {
-        final plan = _plans[index] as Map<String, dynamic>;
-        final id = (plan['id'] as num).toInt();
-        final name = plan['name'] ?? 'Membership Plan';
+        final raw = _plans[index];
+        if (raw is! Map) return const SizedBox.shrink();
+        final plan = Map<String, dynamic>.from(raw);
+        final id = (plan['id'] as num?)?.toInt() ?? 0;
+        final name = (plan['name'] ?? 'Membership Plan').toString();
         final price = (plan['price'] as num?)?.toDouble() ?? 0.0;
-        final currency = plan['currency'] ?? 'INR';
+        final currency = (plan['currency'] ?? 'INR').toString();
         final durationVal = plan['duration_value'] ?? 1;
-        final durationUnit = plan['duration_unit'] ?? 'months';
-        final accessType = plan['access_type'] ?? 'all_access';
-        final description = plan['description'] ?? '';
+        final durationUnit = (plan['duration_unit'] ?? 'months').toString();
+        final accessType = (plan['access_type'] ?? 'all_access').toString();
+        final description = (plan['description'] ?? '').toString();
         final isFeatured = plan['is_featured'] == 1;
 
         return Container(

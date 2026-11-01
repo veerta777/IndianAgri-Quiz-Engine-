@@ -35,7 +35,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       if (res is Map<String, dynamic>) {
         setState(() {
           _rankings = (res['rankings'] as List<dynamic>?) ?? [];
-          _userRank = res['current_user_rank'] as Map<String, dynamic>?;
+          _userRank = res['current_user_rank'] != null && res['current_user_rank'] is Map
+              ? Map<String, dynamic>.from(res['current_user_rank'] as Map)
+              : null;
           _isLoading = false;
         });
         return;
@@ -117,9 +119,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             padding: const EdgeInsets.all(16),
             itemCount: _rankings.length,
             itemBuilder: (context, index) {
-              final rank = _rankings[index] as Map<String, dynamic>;
+              final raw = _rankings[index];
+              if (raw is! Map) return const SizedBox.shrink();
+              final rank = Map<String, dynamic>.from(raw);
               final rankNum = rank['rank'] ?? (index + 1);
-              final name = rank['display_name'] ?? 'Scholar';
+              final name = (rank['display_name'] ?? 'Scholar').toString();
               final score = (rank['total_score'] as num?)?.toDouble() ?? 0.0;
               final accuracy = (rank['accuracy'] as num?)?.toDouble() ?? 0.0;
               final isTop3 = index < 3;

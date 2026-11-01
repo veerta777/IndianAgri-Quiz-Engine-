@@ -52,7 +52,9 @@ class _StudyStreaksScreenState extends State<StudyStreaksScreen> {
           _currentStreak = (res['current_streak'] as num?)?.toInt() ?? 0;
           _bestStreak = (res['best_streak'] as num?)?.toInt() ?? 0;
           _calendar = (res['calendar'] as List<dynamic>?) ?? [];
-          _goals = res['goals'] as Map<String, dynamic>?;
+          _goals = res['goals'] != null && res['goals'] is Map
+              ? Map<String, dynamic>.from(res['goals'] as Map)
+              : null;
 
           if (_goals != null) {
             _testsGoalController.text = (_goals!['weekly_tests_target'] ?? 5).toString();

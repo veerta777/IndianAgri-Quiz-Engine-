@@ -42,7 +42,7 @@ class IAQ_Import_Export {
 	 * Generate and stream downloadable sample CSV template containing both English & Hindi agriculture MCQs.
 	 */
 	public static function generate_sample_csv() {
-		if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_iaq_quizzes' ) ) {
+		if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_iaq_quizzes' ) && ! current_user_can( 'administrator' ) ) {
 			wp_die( esc_html__( 'Unauthorized access.', 'indianagri-quiz-engine' ) );
 		}
 
@@ -162,7 +162,7 @@ class IAQ_Import_Export {
 	 * Generate and stream downloadable sample JSON template containing sample agriculture MCQs in exact requested schema.
 	 */
 	public static function generate_sample_json() {
-		if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_iaq_quizzes' ) ) {
+		if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_iaq_quizzes' ) && ! current_user_can( 'administrator' ) ) {
 			wp_die( esc_html__( 'Unauthorized access.', 'indianagri-quiz-engine' ) );
 		}
 
@@ -312,7 +312,7 @@ class IAQ_Import_Export {
 	 * @param array $filter_args Filter arguments matching Question Bank query.
 	 */
 	public static function export_to_csv( $filter_args = array() ) {
-		if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_iaq_quizzes' ) ) {
+		if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_iaq_quizzes' ) && ! current_user_can( 'administrator' ) ) {
 			wp_die( esc_html__( 'Unauthorized access.', 'indianagri-quiz-engine' ) );
 		}
 

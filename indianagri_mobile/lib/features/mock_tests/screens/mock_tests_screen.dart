@@ -16,10 +16,7 @@ class MockTestsScreen extends StatefulWidget {
   State<MockTestsScreen> createState() => _MockTestsScreenState();
 }
 
-class _MockTestsScreenState extends State<MockTestsScreen> with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
-
+class _MockTestsScreenState extends State<MockTestsScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   List<dynamic> _categories = [];
@@ -59,7 +56,6 @@ class _MockTestsScreenState extends State<MockTestsScreen> with AutomaticKeepAli
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mock Test Series', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -94,12 +90,14 @@ class _MockTestsScreenState extends State<MockTestsScreen> with AutomaticKeepAli
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       itemCount: _categories.length,
       itemBuilder: (context, index) {
-        final cat = _categories[index] as Map<String, dynamic>;
+        final raw = _categories[index];
+        if (raw is! Map) return const SizedBox.shrink();
+        final cat = Map<String, dynamic>.from(raw);
         final id = (cat['id'] as num?)?.toInt() ?? 0;
-        final name = cat['name'] ?? 'Mock Category';
-        final description = cat['description'] ?? '';
-        final badge = cat['badge_text'] ?? '';
-        final code = cat['code'] ?? '';
+        final name = (cat['name'] ?? 'Mock Category').toString();
+        final description = (cat['description'] ?? '').toString();
+        final badge = (cat['badge_text'] ?? '').toString();
+        final code = (cat['code'] ?? '').toString();
 
         return Container(
           margin: const EdgeInsets.only(bottom: 14),
@@ -367,9 +365,11 @@ class _MockHierarchyScreenState extends State<MockHierarchyScreen> {
   }
 
   // Interactive Examination Item: allows tapping to open that exam's mock papers!
-  Widget _buildExamItem(dynamic exam) {
-    final title = exam['name'] ?? 'Exam';
-    final code = exam['code'] ?? '';
+  Widget _buildExamItem(dynamic rawExam) {
+    if (rawExam is! Map) return const SizedBox.shrink();
+    final exam = Map<String, dynamic>.from(rawExam);
+    final title = (exam['name'] ?? 'Exam').toString();
+    final code = (exam['code'] ?? '').toString();
     final id = (exam['id'] as num?)?.toInt() ?? 0;
 
     return Container(
@@ -430,8 +430,10 @@ class _MockHierarchyScreenState extends State<MockHierarchyScreen> {
     );
   }
 
-  Widget _buildMockTestItem(dynamic test) {
-    final title = test['title'] ?? 'Mock Test';
+  Widget _buildMockTestItem(dynamic rawTest) {
+    if (rawTest is! Map) return const SizedBox.shrink();
+    final test = Map<String, dynamic>.from(rawTest);
+    final title = (test['title'] ?? 'Mock Test').toString();
     final quizId = (test['quiz_id'] ?? test['id'] as num?)?.toInt() ?? 1;
     final totalQ = test['total_questions'] ?? 100;
     final duration = test['duration_minutes'] ?? 120;
@@ -641,9 +643,11 @@ class _MockExamPapersScreenState extends State<MockExamPapersScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       itemCount: _papers.length,
       itemBuilder: (context, index) {
-        final p = _papers[index] as Map<String, dynamic>;
+        final raw = _papers[index];
+        if (raw is! Map) return const SizedBox.shrink();
+        final p = Map<String, dynamic>.from(raw);
         final quizId = (p['quiz_id'] ?? p['id'] as num?)?.toInt() ?? 1;
-        final title = p['title'] ?? 'Mock Test Paper ${index + 1}';
+        final title = (p['title'] ?? 'Mock Test Paper ${index + 1}').toString();
         final totalQ = p['total_questions'] ?? 100;
         final duration = p['duration_minutes'] ?? 120;
         final isLocked = p['is_locked'] == true;

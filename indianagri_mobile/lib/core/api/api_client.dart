@@ -174,6 +174,21 @@ class ApiClient {
     }
   }
 
+  /// Deeply normalize any decoded JSON structure so all Maps become Map<String, dynamic>
+  /// and all nested lists/maps are safe from Dart subtype casting errors.
+  static dynamic _normalizeJson(dynamic value) {
+    if (value is Map) {
+      final Map<String, dynamic> normalized = {};
+      value.forEach((key, val) {
+        normalized[key.toString()] = _normalizeJson(val);
+      });
+      return normalized;
+    } else if (value is List) {
+      return value.map((item) => _normalizeJson(item)).toList();
+    }
+    return value;
+  }
+
   /// Process HTTP Response and throw formatted ApiException on non-200.
   static dynamic _processResponse(http.Response response) {
     dynamic decoded;
@@ -188,10 +203,7 @@ class ApiClient {
     }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      if (decoded is Map) {
-        return Map<String, dynamic>.from(decoded);
-      }
-      return decoded;
+      return _normalizeJson(decoded);
     }
 
     String message = 'An error occurred (${response.statusCode})';

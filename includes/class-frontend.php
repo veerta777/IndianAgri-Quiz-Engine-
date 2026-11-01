@@ -140,7 +140,7 @@ class IAQ_Frontend {
 		}
 
 		$quiz = IAQ_Quiz_Builder::get_quiz( $quiz_id );
-		if ( ! $quiz || ( 'published' !== $quiz->status && ! current_user_can( 'manage_options' ) ) ) {
+		if ( ! $quiz || ( 'published' !== $quiz->status && ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_iaq_quizzes' ) && ! current_user_can( 'administrator' ) ) ) {
 			return '<div class="iaq-notice-box iaq-notice-error">' . esc_html__( 'The requested quiz was not found or is currently unpublished.', 'indianagri-quiz-engine' ) . '</div>';
 		}
 

@@ -187,10 +187,12 @@ class _WrongNotebookScreenState extends State<WrongNotebookScreen> {
                           padding: const EdgeInsets.all(16),
                           itemCount: _entries.length,
                           itemBuilder: (context, index) {
-                            final entry = _entries[index] as Map<String, dynamic>;
+                            final raw = _entries[index];
+                            if (raw is! Map) return const SizedBox.shrink();
+                            final entry = Map<String, dynamic>.from(raw);
                             final qId = (entry['question_id'] ?? entry['id'] as num?)?.toInt() ?? 0;
-                            final qText = entry['question_text'] ?? 'Question';
-                            final subject = entry['subject_name'] ?? 'Agronomy';
+                            final qText = (entry['question_text'] ?? 'Question').toString();
+                            final subject = (entry['subject_name'] ?? 'Agronomy').toString();
                             final explanation = entry['explanation']?.toString() ?? '';
                             final timesIncorrect = entry['times_incorrect'] ?? 1;
 

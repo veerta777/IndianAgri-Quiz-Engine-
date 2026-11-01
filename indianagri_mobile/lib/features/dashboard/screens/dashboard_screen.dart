@@ -195,9 +195,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
-    final stats = _summary?['stats'] as Map<String, dynamic>?;
-    final streaks = _summary?['streaks'] as Map<String, dynamic>?;
-    final activeAttempt = _summary?['active_attempt'] as Map<String, dynamic>?;
+    final stats = _summary?['stats'] != null && _summary!['stats'] is Map ? Map<String, dynamic>.from(_summary!['stats'] as Map) : null;
+    final streaks = _summary?['streaks'] != null && _summary!['streaks'] is Map ? Map<String, dynamic>.from(_summary!['streaks'] as Map) : null;
+    final activeAttempt = _summary?['active_attempt'] != null && _summary!['active_attempt'] is Map ? Map<String, dynamic>.from(_summary!['active_attempt'] as Map) : null;
     final continueQuizzes = (_summary?['continue_quizzes'] as List<dynamic>?) ?? [];
     final subjectMastery = (_summary?['subject_mastery'] as List<dynamic>?) ?? [];
 

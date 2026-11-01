@@ -25,6 +25,7 @@ class IAQ_Admin {
 	 * Initialize admin hooks.
 	 */
 	public function init() {
+		add_filter( 'user_has_cap', array( $this, 'filter_admin_capabilities' ), 10, 4 );
 		add_action( 'admin_menu', array( $this, 'register_admin_menus' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'admin_init', array( $this, 'handle_form_submissions' ) );
@@ -36,10 +37,58 @@ class IAQ_Admin {
 	}
 
 	/**
+	 * Automatically grant IAQ and administrative capabilities to administrators and super admins.
+	 * Prevents "Sorry, you are not allowed to access this page." on fresh installs, upgrades, or custom role setups.
+	 *
+	 * @param array   $allcaps All capabilities of the user.
+	 * @param array   $caps    Required primitive capabilities.
+	 * @param array   $args    Arguments passed to current_user_can.
+	 * @param WP_User $user    User object.
+	 * @return array
+	 */
+	public function filter_admin_capabilities( $allcaps, $caps, $args, $user ) {
+		if ( ! empty( $user->roles ) && ( in_array( 'administrator', (array) $user->roles, true ) || ( function_exists( 'is_super_admin' ) && is_super_admin( $user->ID ) ) ) ) {
+			$allcaps['manage_iaq_quizzes'] = true;
+			$allcaps['manage_options']     = true;
+		}
+		if ( ! empty( $allcaps['manage_options'] ) ) {
+			$allcaps['manage_iaq_quizzes'] = true;
+		}
+		if ( ! empty( $allcaps['manage_iaq_quizzes'] ) ) {
+			$allcaps['manage_options'] = true;
+		}
+		return $allcaps;
+	}
+
+	/**
+	 * Determine the lowest sufficient capability required to access IAQ admin menus.
+	 *
+	 * @return string
+	 */
+	public function get_menu_capability() {
+		if ( current_user_can( 'manage_iaq_quizzes' ) ) {
+			return 'manage_iaq_quizzes';
+		}
+		if ( current_user_can( 'manage_options' ) ) {
+			return 'manage_options';
+		}
+		if ( current_user_can( 'administrator' ) ) {
+			return 'administrator';
+		}
+		if ( current_user_can( 'publish_posts' ) ) {
+			return 'publish_posts';
+		}
+		if ( current_user_can( 'edit_posts' ) ) {
+			return 'edit_posts';
+		}
+		return 'manage_options';
+	}
+
+	/**
 	 * Register WordPress admin menus and submenus.
 	 */
 	public function register_admin_menus() {
-		$capability = 'manage_options';
+		$capability = $this->get_menu_capability();
 
 		// Top-level menu: Dashboard & Analytics.
 		add_menu_page(
@@ -239,7 +288,7 @@ class IAQ_Admin {
 	 * Handle admin form submissions (CRUD, CSV Import, CSV Export).
 	 */
 	public function handle_form_submissions() {
-		if ( ! is_admin() || ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_iaq_quizzes' ) ) ) {
+		if ( ! is_admin() || ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_iaq_quizzes' ) && ! current_user_can( 'administrator' ) ) ) {
 			return;
 		}
 
@@ -1404,7 +1453,7 @@ class IAQ_Admin {
 	public function ajax_get_topics_by_subject() {
 		check_ajax_referer( 'iaq_admin_ajax_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_iaq_quizzes' ) ) {
+		if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_iaq_quizzes' ) && ! current_user_can( 'administrator' ) ) {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ) );
 		}
 
@@ -1420,7 +1469,7 @@ class IAQ_Admin {
 	public function ajax_get_subject_practice_sets() {
 		check_ajax_referer( 'iaq_admin_ajax_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_iaq_quizzes' ) ) {
+		if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_iaq_quizzes' ) && ! current_user_can( 'administrator' ) ) {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ) );
 		}
 

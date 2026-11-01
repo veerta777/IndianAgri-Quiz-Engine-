@@ -17,12 +17,7 @@ class PracticeSetsScreen extends StatefulWidget {
   State<PracticeSetsScreen> createState() => _PracticeSetsScreenState();
 }
 
-class _PracticeSetsScreenState extends State<PracticeSetsScreen> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
-
-  late TabController _tabController;
-
+class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
   bool _isLoadingSubjects = true;
   List<dynamic> _subjects = [];
   String? _subjectsError;
@@ -47,7 +42,6 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> with SingleTick
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this, initialIndex: widget.initialTab);
     _loadAllCatalogs();
   }
 
@@ -113,37 +107,38 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> with SingleTick
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Practice Question Drills', style: TextStyle(fontWeight: FontWeight.bold)),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 14.0),
-            child: LanguageToggle(),
+    return DefaultTabController(
+      length: 3,
+      initialIndex: widget.initialTab.clamp(0, 2),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Practice Question Drills', style: TextStyle(fontWeight: FontWeight.bold)),
+          actions: const [
+            Padding(
+              padding: EdgeInsets.only(right: 14.0),
+              child: LanguageToggle(),
+            ),
+          ],
+          bottom: const TabBar(
+            labelColor: AppColors.primary,
+            unselectedLabelColor: AppColors.textSecondaryLight,
+            indicatorColor: AppColors.primary,
+            indicatorWeight: 3,
+            labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            tabs: [
+              Tab(icon: Icon(Icons.menu_book, size: 20), text: 'By Subjects'),
+              Tab(icon: Icon(Icons.school, size: 20), text: 'By Exams'),
+              Tab(icon: Icon(Icons.library_books, size: 20), text: 'By Books'),
+            ],
           ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.textSecondaryLight,
-          indicatorColor: AppColors.primary,
-          indicatorWeight: 3,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-          tabs: const [
-            Tab(icon: Icon(Icons.menu_book, size: 20), text: 'By Subjects'),
-            Tab(icon: Icon(Icons.school, size: 20), text: 'By Exams'),
-            Tab(icon: Icon(Icons.library_books, size: 20), text: 'By Books'),
+        ),
+        body: TabBarView(
+          children: [
+            _buildSubjectsTab(),
+            _buildExamsTab(),
+            _buildBooksTab(),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildSubjectsTab(),
-          _buildExamsTab(),
-          _buildBooksTab(),
-        ],
       ),
     );
   }
@@ -174,10 +169,12 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> with SingleTick
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       itemCount: _subjects.length,
       itemBuilder: (context, index) {
-        final s = _subjects[index] as Map<String, dynamic>;
+        final raw = _subjects[index];
+        if (raw is! Map) return const SizedBox.shrink();
+        final s = Map<String, dynamic>.from(raw);
         final id = (s['id'] as num?)?.toInt() ?? 0;
-        final name = s['name'] ?? 'Subject';
-        final description = s['description'] ?? '';
+        final name = (s['name'] ?? 'Subject').toString();
+        final description = (s['description'] ?? '').toString();
         final setsCount = (s['practice_sets_count'] as num?)?.toInt() ?? 0;
         final icon = _getSubjectIcon(name);
 
@@ -271,11 +268,13 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> with SingleTick
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       itemCount: _exams.length,
       itemBuilder: (context, index) {
-        final e = _exams[index] as Map<String, dynamic>;
+        final raw = _exams[index];
+        if (raw is! Map) return const SizedBox.shrink();
+        final e = Map<String, dynamic>.from(raw);
         final id = (e['id'] as num?)?.toInt() ?? 0;
-        final name = e['name'] ?? 'Exam';
-        final code = e['code'] ?? '';
-        final desc = e['description'] ?? '';
+        final name = (e['name'] ?? 'Exam').toString();
+        final code = (e['code'] ?? '').toString();
+        final desc = (e['description'] ?? '').toString();
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -416,6 +415,7 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> with SingleTick
 
     // Filter books based on search query
     final displayBooks = allBooks.where((b) {
+      if (b is! Map) return false;
       if (_bookSearchQuery.trim().isEmpty) return true;
       final q = _bookSearchQuery.toLowerCase().trim();
       final title = (b['title'] ?? '').toString().toLowerCase();
@@ -640,7 +640,7 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> with SingleTick
             ),
           )
         else
-          ...displayBooks.map((b) => _buildBookCard(b as Map<String, dynamic>, isDark)),
+          ...displayBooks.map((b) => _buildBookCard(Map<String, dynamic>.from(b as Map), isDark)),
       ],
     );
   }
@@ -1157,7 +1157,9 @@ class _GenericSetsListScreenState extends State<GenericSetsListScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       itemCount: _sets.length,
       itemBuilder: (context, index) {
-        final item = _sets[index] as Map<String, dynamic>;
+        final raw = _sets[index];
+        if (raw is! Map) return const SizedBox.shrink();
+        final item = Map<String, dynamic>.from(raw);
         final quizId = (item['quiz_id'] ?? item['id'] as num?)?.toInt() ?? 0;
         final setNumber = (item['practice_set_number'] as num?)?.toInt() ?? (index + 1);
         final rawTitle = item['title']?.toString() ?? 'Practice Set $setNumber';

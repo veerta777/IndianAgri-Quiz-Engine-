@@ -28,7 +28,7 @@ class IAQ_Custom_Practice {
 			);
 		}
 
-		if ( user_can( $user_id, 'manage_options' ) ) {
+		if ( user_can( $user_id, 'manage_options' ) || user_can( $user_id, 'manage_iaq_quizzes' ) || user_can( $user_id, 'administrator' ) || ( function_exists( 'is_super_admin' ) && is_super_admin( $user_id ) ) ) {
 			return array(
 				'allowed' => true,
 				'reason'  => __( 'Administrator bypass.', 'indianagri-quiz-engine' ),

@@ -234,7 +234,7 @@ class IAQ_Quiz_Attempt {
 		global $wpdb;
 
 		$quiz = IAQ_Quiz_Builder::get_quiz( $quiz_id );
-		if ( ! $quiz || ( 'published' !== $quiz->status && ! current_user_can( 'manage_options' ) ) ) {
+		if ( ! $quiz || ( 'published' !== $quiz->status && ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_iaq_quizzes' ) && ! current_user_can( 'administrator' ) ) ) {
 			return new WP_Error( 'quiz_not_found', __( 'Quiz not found or not published.', 'indianagri-quiz-engine' ) );
 		}
 
@@ -274,7 +274,7 @@ class IAQ_Quiz_Attempt {
 						$user_id
 					)
 				);
-				if ( $completed_count >= $quiz->max_attempts && ! current_user_can( 'manage_options' ) ) {
+				if ( $completed_count >= $quiz->max_attempts && ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_iaq_quizzes' ) && ! current_user_can( 'administrator' ) ) {
 					return new WP_Error(
 						'max_attempts_exceeded',
 						sprintf(
@@ -1081,7 +1081,7 @@ class IAQ_Quiz_Attempt {
 				 WHERE a.id = %d AND (a.user_id = %d OR %d = 1)",
 				$attempt_id,
 				$user_id,
-				current_user_can( 'manage_options' ) ? 1 : 0
+				( current_user_can( 'manage_options' ) || current_user_can( 'manage_iaq_quizzes' ) || current_user_can( 'administrator' ) ) ? 1 : 0
 			)
 		);
 
@@ -1183,7 +1183,7 @@ class IAQ_Quiz_Attempt {
 				 WHERE a.id = %d AND (a.user_id = %d OR %d = 1)",
 				$attempt_id,
 				$user_id,
-				current_user_can( 'manage_options' ) ? 1 : 0
+				( current_user_can( 'manage_options' ) || current_user_can( 'manage_iaq_quizzes' ) || current_user_can( 'administrator' ) ) ? 1 : 0
 			)
 		);
 
@@ -1250,7 +1250,7 @@ class IAQ_Quiz_Attempt {
 				"SELECT a.* FROM {$table_attempts} a WHERE a.id = %d AND (a.user_id = %d OR %d = 1)",
 				$attempt_id,
 				$user_id,
-				current_user_can( 'manage_options' ) ? 1 : 0
+				( current_user_can( 'manage_options' ) || current_user_can( 'manage_iaq_quizzes' ) || current_user_can( 'administrator' ) ) ? 1 : 0
 			)
 		);
 

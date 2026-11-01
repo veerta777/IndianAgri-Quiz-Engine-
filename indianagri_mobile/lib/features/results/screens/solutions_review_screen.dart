@@ -115,7 +115,9 @@ class _SolutionsReviewScreenState extends State<SolutionsReviewScreen> {
       padding: const EdgeInsets.all(16),
       itemCount: _questions.length,
       itemBuilder: (context, index) {
-        final q = _questions[index] as Map<String, dynamic>;
+        final raw = _questions[index];
+        if (raw is! Map) return const SizedBox.shrink();
+        final q = Map<String, dynamic>.from(raw);
         final qId = (q['id'] as num?)?.toInt() ?? 0;
         final selectedOpt = q['selected_option']?.toString();
         final correctOpt = q['correct_option']?.toString() ?? '';

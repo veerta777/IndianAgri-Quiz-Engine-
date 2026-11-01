@@ -80,7 +80,9 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
         fetchedQuestions = (res['questions'] as List<dynamic>?) ?? [];
 
         // Restore answered states if resuming
-        final restoredAnswers = res['answers'] as Map<String, dynamic>?;
+        final restoredAnswers = res['answers'] != null && res['answers'] is Map
+            ? Map<String, dynamic>.from(res['answers'] as Map)
+            : null;
         if (restoredAnswers != null) {
           restoredAnswers.forEach((qIdStr, opt) {
             final qId = int.tryParse(qIdStr);
@@ -94,7 +96,9 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
         }
 
         // Restore immediate feedback if provided
-        final restoredFeedbacks = res['immediate_feedback'] as Map<String, dynamic>?;
+        final restoredFeedbacks = res['immediate_feedback'] != null && res['immediate_feedback'] is Map
+            ? Map<String, dynamic>.from(res['immediate_feedback'] as Map)
+            : null;
         if (restoredFeedbacks != null) {
           restoredFeedbacks.forEach((qIdStr, fb) {
             final qId = int.tryParse(qIdStr);
@@ -161,7 +165,10 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
     }
 
     setState(() {
-      _questions = fetchedQuestions;
+      _questions = fetchedQuestions
+          .where((e) => e is Map)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
       _isLoading = false;
       _errorMessage = null;
     });

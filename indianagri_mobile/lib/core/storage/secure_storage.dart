@@ -41,7 +41,11 @@ class SecureStorage {
     final raw = prefs.getString(_keyUser);
     if (raw == null) return null;
     try {
-      return jsonDecode(raw) as Map<String, dynamic>;
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        return Map<String, dynamic>.from(decoded);
+      }
+      return null;
     } catch (_) {
       return null;
     }
