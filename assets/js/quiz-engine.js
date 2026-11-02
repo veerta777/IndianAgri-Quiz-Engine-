@@ -272,6 +272,17 @@
 				self.launchPortalSession(payload, quizId);
 			}
 
+			// Instant Preload Check: If questions are preloaded in DOM, start immediately (0ms wait!)
+			var $preEl = $('#iaq-preloaded-quiz-' + quizId);
+			if ($preEl.length) {
+				try {
+					var pData = JSON.parse($preEl.text());
+					if (pData && pData.questions && pData.questions.length > 0) {
+						startInstantly(pData);
+					}
+				} catch (e) {}
+			}
+
 			// Tier 1: Primary WordPress AJAX attempt
 			var primaryUrl = self.getAjaxUrl();
 			$.ajax({
@@ -286,14 +297,20 @@
 				timeout: 4500,
 				xhrFields: { withCredentials: true },
 				success: function (res) {
-					if (res && res.success && res.data && res.data.questions && res.data.questions.length > 0) {
-						startInstantly(res.data);
-					} else {
+					if (res && res.success && res.data) {
+						if (!hasStarted && res.data.questions && res.data.questions.length > 0) {
+							startInstantly(res.data);
+						} else if (hasStarted && res.data.attempt_id) {
+							self.attemptId = res.data.attempt_id;
+						}
+					} else if (!hasStarted) {
 						tryRestStart(quizId);
 					}
 				},
 				error: function () {
-					tryRestStart(quizId);
+					if (!hasStarted) {
+						tryRestStart(quizId);
+					}
 				}
 			});
 

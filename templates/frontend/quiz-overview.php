@@ -16,7 +16,56 @@ if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 
 $types     = IAQ_Quiz_Builder::get_quiz_types();
 $type_meta = isset( $types[ $quiz->quiz_type ] ) ? $types[ $quiz->quiz_type ] : array( 'label' => ucfirst( $quiz->quiz_type ), 'badge_color' => '#117E3A' );
+
+// Preload questions for instantaneous 0ms client-side CBT startup
+$preload_payload = array(
+	'quiz_id'           => (int) $quiz->id,
+	'questions'         => array(),
+	'remaining_seconds' => ( (int) $quiz->duration_minutes > 0 ) ? ( (int) $quiz->duration_minutes * 60 ) : null,
+	'is_immediate'      => ( 'mock' !== $quiz->quiz_type && 'immediate' === $quiz->show_answers_mode ),
+	'show_answers_mode' => $quiz->show_answers_mode,
+);
+
+if ( class_exists( 'IAQ_Quiz_Builder' ) ) {
+	$raw_assigned = IAQ_Quiz_Builder::get_quiz_questions( $quiz->id );
+	if ( empty( $raw_assigned ) && ! empty( $quiz->subject_id ) ) {
+		global $wpdb;
+		$t_q = $wpdb->prefix . 'iaq_questions';
+		$raw_assigned = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t_q} WHERE subject_id = %d ORDER BY id ASC LIMIT 50", $quiz->subject_id ) );
+	}
+	if ( ! empty( $raw_assigned ) ) {
+		$p_idx = 1;
+		foreach ( $raw_assigned as $rq ) {
+			$opt_a = array( 'key' => 'A', 'text' => $rq->option_a );
+			$opt_b = array( 'key' => 'B', 'text' => $rq->option_b );
+			$opt_c = array( 'key' => 'C', 'text' => $rq->option_c );
+			$opt_d = array( 'key' => 'D', 'text' => $rq->option_d );
+			if ( ! empty( $rq->option_a_hi ) ) $opt_a['text_hi'] = $rq->option_a_hi;
+			if ( ! empty( $rq->option_b_hi ) ) $opt_b['text_hi'] = $rq->option_b_hi;
+			if ( ! empty( $rq->option_c_hi ) ) $opt_c['text_hi'] = $rq->option_c_hi;
+			if ( ! empty( $rq->option_d_hi ) ) $opt_d['text_hi'] = $rq->option_d_hi;
+
+			$preload_payload['questions'][] = array(
+				'index'            => $p_idx++,
+				'id'               => (int) $rq->id,
+				'question_text'    => $rq->question_text,
+				'question_text_hi' => ! empty( $rq->question_text_hi ) ? $rq->question_text_hi : '',
+				'subject_name'     => isset( $rq->subject_name ) ? $rq->subject_name : '',
+				'topic_name'       => isset( $rq->topic_name ) ? $rq->topic_name : '',
+				'marks'            => (float) $rq->marks,
+				'negative_marks'   => (float) $rq->negative_marks,
+				'options'          => array( $opt_a, $opt_b, $opt_c, $opt_d ),
+				'selected'         => null,
+				'is_marked'        => 0,
+			);
+		}
+	}
+}
 ?>
+
+<script type="application/json" id="iaq-preloaded-quiz-<?php echo esc_attr( $quiz->id ); ?>">
+<?php echo wp_json_encode( $preload_payload ); ?>
+</script>
 
 <div class="iaq-exam-card" id="iaq-quiz-overview-<?php echo esc_attr( $quiz->id ); ?>">
 	<!-- Header -->
