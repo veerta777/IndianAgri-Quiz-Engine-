@@ -72,6 +72,35 @@ class _MockTestsScreenState extends State<MockTestsScreen> {
   }
 
   Widget _buildBody() {
+    try {
+      return _buildBodyInternal();
+    } catch (e) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.refresh_rounded, size: 44, color: AppColors.primary),
+              const SizedBox(height: 14),
+              const Text('Unable to load mock categories', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 8),
+              const Text('Please tap below to refresh or verify your connection.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 13)),
+              const SizedBox(height: 18),
+              ElevatedButton.icon(
+                onPressed: () => _fetchCategories(forceRefresh: true),
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Refresh'),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildBodyInternal() {
     if (_isLoading) {
       return const LoadingView(message: 'Loading 10 main examination categories...');
     }
@@ -305,6 +334,35 @@ class _MockHierarchyScreenState extends State<MockHierarchyScreen> {
   }
 
   Widget _buildBody() {
+    try {
+      return _buildBodyInternal();
+    } catch (e) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.refresh_rounded, size: 44, color: AppColors.primary),
+              const SizedBox(height: 14),
+              const Text('Unable to load examination hierarchy', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 8),
+              const Text('Please tap below to refresh or verify your connection.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 13)),
+              const SizedBox(height: 18),
+              ElevatedButton.icon(
+                onPressed: () => _fetchHierarchy(forceRefresh: true),
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Refresh'),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildBodyInternal() {
     if (_isLoading) return const LoadingView(message: 'Loading test series & examinations...');
     if (_error != null) {
       return ErrorStateView(
@@ -615,6 +673,35 @@ class _MockExamPapersScreenState extends State<MockExamPapersScreen> {
   }
 
   Widget _buildBody() {
+    try {
+      return _buildBodyInternal();
+    } catch (e) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.refresh_rounded, size: 44, color: AppColors.primary),
+              const SizedBox(height: 14),
+              const Text('Unable to load test papers', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 8),
+              const Text('Please tap below to refresh or verify your connection.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 13)),
+              const SizedBox(height: 18),
+              ElevatedButton.icon(
+                onPressed: () => _fetchPapers(forceRefresh: true),
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Refresh'),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildBodyInternal() {
     if (_isLoading) return const LoadingView(message: 'Loading examination papers & questions...');
     if (_error != null) {
       return ErrorStateView(

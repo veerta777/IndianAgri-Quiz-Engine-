@@ -573,13 +573,13 @@ class IAQ_Practice_Sets {
 		$query = "
 			SELECT s.*,
 				(
-					SELECT COUNT(q.id)
+					SELECT COUNT(DISTINCT q.id)
 					FROM {$table_quizzes} q
-					WHERE q.subject_id = s.id
+					LEFT JOIN {$table_book_quizzes} bq ON q.id = bq.quiz_id
+					LEFT JOIN {$table_books} b ON bq.book_id = b.id
+					WHERE (q.subject_id = s.id OR b.subject_id = s.id)
 					  AND q.quiz_type = 'practice'
 					  AND q.status = 'published'
-					  AND q.id NOT IN (SELECT bq.quiz_id FROM {$table_book_quizzes} bq)
-					  AND q.id NOT IN (SELECT esq.quiz_id FROM {$table_esq} esq)
 				) AS practice_sets_count,
 				(
 					SELECT COUNT(t.id)
@@ -602,16 +602,16 @@ class IAQ_Practice_Sets {
 	}
 
 	/**
-	 * Retrieve practice sets for a specific subject.
+	 * Retrieve practice sets for a specific subject (unified view: both book-based and independent sets).
 	 * Numbering dynamically starts at 1 according to display_order.
-	 * Excludes book practice sets and exam practice sets so each pathway is strictly separate.
 	 *
 	 * @param int    $subject_id Subject ID.
 	 * @param string $status     Quiz status ('published' or all).
 	 * @param int    $user_id    Optional user ID.
+	 * @param array  $filters    Optional filters (search, book_id, topic_id, access_type, attempt_status, orderby, order).
 	 * @return array
 	 */
-	public static function get_subject_quizzes( $subject_id, $status = 'published', $user_id = 0 ) {
+	public static function get_subject_quizzes( $subject_id, $status = 'published', $user_id = 0, $filters = array() ) {
 		global $wpdb;
 
 		$table_quizzes      = IAQ_Database::get_table_name( 'quizzes' );
@@ -619,7 +619,7 @@ class IAQ_Practice_Sets {
 		$table_topics       = IAQ_Database::get_table_name( 'topics' );
 		$table_attempts     = IAQ_Database::get_table_name( 'quiz_attempts' );
 		$table_book_quizzes = IAQ_Database::get_table_name( 'book_quizzes' );
-		$table_esq          = IAQ_Database::get_table_name( 'exam_subject_quizzes' );
+		$table_books        = IAQ_Database::get_table_name( 'books' );
 
 		$subject_id = absint( $subject_id );
 		if ( ! $subject_id ) {
@@ -627,12 +627,10 @@ class IAQ_Practice_Sets {
 		}
 
 		$where  = array(
-			'q.subject_id = %d',
+			'(q.subject_id = %d OR (b.subject_id = %d AND b.subject_id IS NOT NULL))',
 			"q.quiz_type = 'practice'",
-			"q.id NOT IN (SELECT bq.quiz_id FROM {$table_book_quizzes} bq)",
-			"q.id NOT IN (SELECT esq.quiz_id FROM {$table_esq} esq)",
 		);
-		$values = array( $subject_id );
+		$values = array( $subject_id, $subject_id );
 
 		if ( ! empty( $status ) ) {
 			$where[]  = 'q.status = %s';
@@ -641,17 +639,50 @@ class IAQ_Practice_Sets {
 			$where[] = "q.status != 'archived'";
 		}
 
+		if ( ! empty( $filters['search'] ) ) {
+			$like     = '%' . $wpdb->esc_like( trim( $filters['search'] ) ) . '%';
+			$where[]  = '(q.title LIKE %s OR q.description LIKE %s OR b.title LIKE %s)';
+			$values[] = $like;
+			$values[] = $like;
+			$values[] = $like;
+		}
+
+		if ( ! empty( $filters['topic_id'] ) ) {
+			$where[]  = 'q.topic_id = %d';
+			$values[] = absint( $filters['topic_id'] );
+		}
+
+		if ( isset( $filters['book_id'] ) && '' !== $filters['book_id'] && 'all' !== $filters['book_id'] ) {
+			if ( 'independent' === $filters['book_id'] || 0 === (int) $filters['book_id'] ) {
+				$where[] = 'bq.book_id IS NULL';
+			} else {
+				$where[]  = 'bq.book_id = %d';
+				$values[] = absint( $filters['book_id'] );
+			}
+		}
+
+		if ( ! empty( $filters['access_type'] ) && in_array( $filters['access_type'], array( 'free', 'paid' ), true ) ) {
+			$where[]  = 'q.access_type = %s';
+			$values[] = $filters['access_type'];
+		}
+
 		$where_clause = implode( ' AND ', $where );
 
 		$query = "
 			SELECT q.*,
 				s.name AS subject_name,
-				t.name AS topic_name
+				t.name AS topic_name,
+				b.id AS book_id,
+				b.title AS book_title,
+				b.author AS book_author
 			FROM {$table_quizzes} q
 			LEFT JOIN {$table_subjects} s ON q.subject_id = s.id
 			LEFT JOIN {$table_topics} t ON q.topic_id = t.id
+			LEFT JOIN {$table_book_quizzes} bq ON q.id = bq.quiz_id
+			LEFT JOIN {$table_books} b ON bq.book_id = b.id
 			WHERE {$where_clause}
-			ORDER BY q.display_order ASC, q.id ASC
+			GROUP BY q.id
+			ORDER BY (CASE WHEN b.title IS NOT NULL THEN 0 ELSE 1 END) ASC, q.display_order ASC, q.id ASC
 		";
 
 		$rows = $wpdb->get_results( $wpdb->prepare( $query, $values ) );
@@ -664,6 +695,19 @@ class IAQ_Practice_Sets {
 
 		foreach ( $rows as &$row ) {
 			self::enrich_practice_set_meta( $row, $user_id, $table_attempts, $counter++ );
+			$row->is_book_set = ! empty( $row->book_id );
+		}
+
+		if ( ! empty( $filters['attempt_status'] ) && 'all' !== $filters['attempt_status'] ) {
+			$desired_status = sanitize_key( $filters['attempt_status'] );
+			$rows = array_values(
+				array_filter(
+					$rows,
+					function( $r ) use ( $desired_status ) {
+						return $r->attempt_status === $desired_status;
+					}
+				)
+			);
 		}
 
 		return $rows;
@@ -1263,13 +1307,15 @@ class IAQ_Practice_Sets {
 
 	/**
 	 * Retrieve practice sets inside a subject (REST API helper).
+	 * Supports optional filtering by book, topic, search, and attempt status.
 	 *
-	 * @param int $subject_id Subject ID.
-	 * @param int $user_id Optional user ID.
+	 * @param int   $subject_id Subject ID.
+	 * @param int   $user_id    Optional user ID.
+	 * @param array $filters    Optional filters array.
 	 * @return array
 	 */
-	public static function get_subject_practice_sets( $subject_id, $user_id = 0 ) {
-		return self::get_subject_quizzes( $subject_id, 'published', $user_id );
+	public static function get_subject_practice_sets( $subject_id, $user_id = 0, $filters = array() ) {
+		return self::get_subject_quizzes( $subject_id, 'published', $user_id, $filters );
 	}
 
 	/**

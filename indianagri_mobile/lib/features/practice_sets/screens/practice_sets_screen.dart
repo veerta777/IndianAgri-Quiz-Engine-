@@ -159,13 +159,42 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
         ),
         body: TabBarView(
           children: [
-            _buildSubjectsTab(),
-            _buildExamsTab(),
-            _buildBooksTab(),
+            _safeBuildTab('Subjects', _buildSubjectsTab, () => _fetchSubjects(forceRefresh: true)),
+            _safeBuildTab('Exams', _buildExamsTab, () => _fetchExams(forceRefresh: true)),
+            _safeBuildTab('Books', _buildBooksTab, () => _fetchBooks(forceRefresh: true)),
           ],
         ),
       ),
     );
+  }
+
+  Widget _safeBuildTab(String tabName, Widget Function() builder, VoidCallback onRetry) {
+    try {
+      return builder();
+    } catch (e) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.refresh_rounded, size: 44, color: AppColors.primary),
+              const SizedBox(height: 14),
+              Text('Unable to load $tabName catalog', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 8),
+              const Text('Please tap below to refresh or verify your connection.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondaryLight, fontSize: 13)),
+              const SizedBox(height: 18),
+              ElevatedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Refresh'),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
   }
 
   // Helper to choose themed icons for subjects
@@ -1317,8 +1346,14 @@ class _GenericSetsListScreenState extends State<GenericSetsListScreen> {
                                 spacing: 6,
                                 runSpacing: 4,
                                 children: [
+                                  if (item['book_title'] != null && item['book_title'].toString().isNotEmpty)
+                                    _buildMetaChip(Icons.menu_book, 'Book: ${item['book_title']}', const Color(0xFF0369A1)),
                                   _buildMetaChip(Icons.help_outline, '$totalQ Questions', AppColors.primary),
                                   _buildMetaChip(Icons.timer_outlined, duration > 0 ? '$duration Mins' : 'Practice Drill', AppColors.textSecondaryLight),
+                                  if (item['attempt_status'] == 'completed')
+                                    _buildMetaChip(Icons.check_circle, 'Completed (${item['latest_percentage'] ?? 0}%)', AppColors.correctGreen)
+                                  else if (item['attempt_status'] == 'in_progress')
+                                    _buildMetaChip(Icons.timelapse, 'In Progress', AppColors.warningAmber),
                                   if (isLocked)
                                     _buildMetaChip(Icons.lock, 'Subscribers Only', AppColors.accent),
                                 ],

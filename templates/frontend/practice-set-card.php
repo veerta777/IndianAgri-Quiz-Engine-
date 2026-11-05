@@ -31,11 +31,17 @@ $attempt_url = add_query_arg( array( 'iaq_quiz_id' => (int) $pq->id ), get_perma
 			</span>
 		</div>
 		<div class="iaq-ps-set-details">
-			<div class="iaq-badges-line" style="margin-bottom:4px;">
+			<div class="iaq-badges-line" style="margin-bottom:4px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
 				<?php if ( 'paid' === $pq->access_type ) : ?>
 					<span class="iaq-pill iaq-pill-paid"><?php esc_html_e( 'Premium', 'indianagri-quiz-engine' ); ?></span>
 				<?php else : ?>
 					<span class="iaq-pill iaq-pill-free"><?php esc_html_e( 'Free', 'indianagri-quiz-engine' ); ?></span>
+				<?php endif; ?>
+
+				<?php if ( ! empty( $pq->book_title ) ) : ?>
+					<span class="iaq-pill iaq-pill-book" style="background:#e0f2fe;color:#0369a1;font-weight:600;" title="<?php echo esc_attr( sprintf( __( 'From Reference Book: %s', 'indianagri-quiz-engine' ), $pq->book_title ) ); ?>">
+						📖 <?php echo esc_html( $pq->book_title ); ?>
+					</span>
 				<?php endif; ?>
 
 				<?php if ( 'completed' === $attempt_status ) : ?>

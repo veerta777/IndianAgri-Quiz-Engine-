@@ -297,7 +297,14 @@ class IAQ_Frontend {
 			case 'subject':
 				$s_id    = isset( $_GET['subject_id'] ) ? absint( $_GET['subject_id'] ) : absint( $atts['subject_id'] );
 				$subject = IAQ_Question_Bank::get_subject( $s_id );
-				$quizzes = $subject ? IAQ_Practice_Sets::get_subject_quizzes( $subject->id, 'published', $user_id ) : array();
+				$filters = array(
+					'search'         => isset( $_GET['ps_search'] ) ? sanitize_text_field( wp_unslash( $_GET['ps_search'] ) ) : '',
+					'book_id'        => isset( $_GET['ps_book'] ) ? sanitize_text_field( wp_unslash( $_GET['ps_book'] ) ) : '',
+					'topic_id'       => isset( $_GET['ps_topic'] ) ? absint( $_GET['ps_topic'] ) : 0,
+					'access_type'    => isset( $_GET['ps_access'] ) ? sanitize_key( $_GET['ps_access'] ) : '',
+					'attempt_status' => isset( $_GET['ps_status'] ) ? sanitize_key( $_GET['ps_status'] ) : '',
+				);
+				$quizzes = $subject ? IAQ_Practice_Sets::get_subject_quizzes( $subject->id, 'published', $user_id, $filters ) : array();
 				break;
 
 			case 'exams':

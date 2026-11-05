@@ -53,3 +53,4 @@ class SafeParse {
     return str.isEmpty ? fallback : str;
   }
 }
+

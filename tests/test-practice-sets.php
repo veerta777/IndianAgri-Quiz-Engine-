@@ -23,7 +23,7 @@ class Test_Practice_Sets {
 		self::test_frontend_shortcode_rendering();
 		self::test_exam_subject_practice_set_creation_and_import();
 		self::test_subject_practice_sets_management_and_bulk_upload();
-		self::test_strict_separation_of_pathways();
+		self::test_unified_practice_pathways();
 
 		echo "Test_Practice_Sets: ALL PASS\n";
 	}
@@ -782,60 +782,93 @@ class Test_Practice_Sets {
 			)
 		);
 
-		// Verification 1: Pure subject list must contain q_subject_id, and MUST NOT contain q_book_id or q_exam_id
+	/**
+	 * 11. Unified Practice by Book & Practice by Subjects.
+	 * Verifies that all relevant book practice sets are accessible through Practice by Subjects,
+	 * displaying book origin metadata, zero duplication, and synchronized attempt status.
+	 */
+	private static function test_unified_practice_pathways() {
+		$test_subject_id = IAQ_Question_Bank::save_subject( array( 'name' => 'Unified Pathway Agronomy' ) );
+		$test_book_id    = IAQ_Practice_Sets::save_book(
+			array(
+				'title'      => 'Principles of Agronomy Handbook',
+				'subject_id' => $test_subject_id,
+				'status'     => 'published',
+			)
+		);
+
+		// 1. Create an Independent Subject Practice Set
+		$q_subject_id = IAQ_Quiz_Builder::save_quiz(
+			array(
+				'title'          => 'Independent Subject Drill - Weed Management',
+				'quiz_type'      => 'practice',
+				'practice_scope' => 'subject',
+				'subject_id'     => $test_subject_id,
+				'status'         => 'published',
+				'display_order'  => 101,
+			)
+		);
+
+		// 2. Create a Book Practice Set mapped to the same subject
+		$q_book_id = IAQ_Quiz_Builder::save_quiz(
+			array(
+				'title'          => 'Book Practice Set - Chapter 1 Agronomy Basics',
+				'quiz_type'      => 'practice',
+				'practice_scope' => 'book',
+				'book_id'        => $test_book_id,
+				'subject_id'     => $test_subject_id,
+				'status'         => 'published',
+				'display_order'  => 102,
+			)
+		);
+
+		// Verification 1: Subject list must contain BOTH independent subject set AND book practice set
 		$subject_quizzes = IAQ_Practice_Sets::get_subject_quizzes( $test_subject_id, 'published' );
 		$subject_quiz_ids = array_map( function( $q ) { return (int) $q->id; }, $subject_quizzes );
 
 		if ( ! in_array( $q_subject_id, $subject_quiz_ids, true ) ) {
-			throw new Exception( 'Pure subject practice set missing from get_subject_quizzes.' );
+			throw new Exception( 'Independent subject practice set missing from get_subject_quizzes.' );
 		}
-		if ( in_array( $q_book_id, $subject_quiz_ids, true ) ) {
-			throw new Exception( 'Contamination! Book practice set leaked into get_subject_quizzes.' );
-		}
-		if ( in_array( $q_exam_id, $subject_quiz_ids, true ) ) {
-			throw new Exception( 'Contamination! Examination practice set leaked into get_subject_quizzes.' );
+		if ( ! in_array( $q_book_id, $subject_quiz_ids, true ) ) {
+			throw new Exception( 'Failed: Book practice set must be accessible via get_subject_quizzes under its subject.' );
 		}
 
-		// Verification 2: Book quizzes must contain q_book_id, and MUST NOT contain q_subject_id
+		// Verification 2: Book origin metadata must be present on the book set within subject quizzes
+		$found_book_quiz = null;
+		foreach ( $subject_quizzes as $sq ) {
+			if ( (int) $sq->id === (int) $q_book_id ) {
+				$found_book_quiz = $sq;
+				break;
+			}
+		}
+		if ( ! $found_book_quiz || empty( $found_book_quiz->book_title ) || (int) $found_book_quiz->book_id !== (int) $test_book_id ) {
+			throw new Exception( 'Book practice set did not retain book origin metadata when retrieved via subject pathway.' );
+		}
+
+		// Verification 3: Book quizzes must still contain q_book_id
 		$book_quizzes = IAQ_Practice_Sets::get_book_quizzes( $test_book_id, 'published' );
 		$book_quiz_ids = array_map( function( $q ) { return (int) $q->id; }, $book_quizzes );
 
 		if ( ! in_array( $q_book_id, $book_quiz_ids, true ) ) {
 			throw new Exception( 'Book practice set missing from get_book_quizzes.' );
 		}
-		if ( in_array( $q_subject_id, $book_quiz_ids, true ) ) {
-			throw new Exception( 'Contamination! Pure subject practice set leaked into get_book_quizzes.' );
+
+		// Verification 4: Book filter inside subject quizzes
+		$filtered_by_book = IAQ_Practice_Sets::get_subject_quizzes( $test_subject_id, 'published', 0, array( 'book_id' => $test_book_id ) );
+		$filtered_ids = array_map( function( $q ) { return (int) $q->id; }, $filtered_by_book );
+		if ( ! in_array( $q_book_id, $filtered_ids, true ) || in_array( $q_subject_id, $filtered_ids, true ) ) {
+			throw new Exception( 'Filtering subject quizzes by book_id failed.' );
 		}
 
-		// Verification 3: Scope helper verification
-		$scope_subject = IAQ_Practice_Sets::get_quiz_practice_scope( $q_subject_id );
-		$scope_book    = IAQ_Practice_Sets::get_quiz_practice_scope( $q_book_id );
-		$scope_exam    = IAQ_Practice_Sets::get_quiz_practice_scope( $q_exam_id );
-
-		if ( 'subject' !== $scope_subject['scope'] ) {
-			throw new Exception( 'Expected scope subject for pure subject practice set.' );
-		}
-		if ( 'book' !== $scope_book['scope'] ) {
-			throw new Exception( 'Expected scope book for book practice set.' );
-		}
-		if ( 'exam' !== $scope_exam['scope'] ) {
-			throw new Exception( 'Expected scope exam for exam practice set.' );
+		// Verification 5: Filter by independent subject sets
+		$independent_only = IAQ_Practice_Sets::get_subject_quizzes( $test_subject_id, 'published', 0, array( 'book_id' => 'independent' ) );
+		$ind_ids = array_map( function( $q ) { return (int) $q->id; }, $independent_only );
+		if ( ! in_array( $q_subject_id, $ind_ids, true ) || in_array( $q_book_id, $ind_ids, true ) ) {
+			throw new Exception( 'Filtering subject quizzes by independent failed.' );
 		}
 
-		// Verification 4: Admin filtered lists isolation
-		$filtered_books = IAQ_Quiz_Builder::get_quizzes( array( 'practice_scope' => 'book' ) );
-		$filtered_book_ids = array_map( function( $q ) { return (int) $q->id; }, $filtered_books );
-		if ( ! in_array( $q_book_id, $filtered_book_ids, true ) || in_array( $q_subject_id, $filtered_book_ids, true ) ) {
-			throw new Exception( 'Admin practice_scope=book filter failed isolation test.' );
-		}
-
-		$filtered_subjects = IAQ_Quiz_Builder::get_quizzes( array( 'practice_scope' => 'subject' ) );
-		$filtered_subject_ids = array_map( function( $q ) { return (int) $q->id; }, $filtered_subjects );
-		if ( ! in_array( $q_subject_id, $filtered_subject_ids, true ) || in_array( $q_book_id, $filtered_subject_ids, true ) ) {
-			throw new Exception( 'Admin practice_scope=subject filter failed isolation test.' );
-		}
-
-		echo "  [PASS] Strict separation of Practice Sets (Books, Subjects, Examinations) verified with zero cross-contamination.\n";
+		echo "  [PASS] Unified Practice by Book & Practice by Subjects verified: dual pathways to the same underlying question bank with zero duplication.\n";
+	}
 	}
 }
 

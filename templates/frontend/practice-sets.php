@@ -911,8 +911,47 @@ $page_url = function( $subview = '', $params = array() ) {
 		</div>
 
 		<div class="iaq-ps-section-header">
-			<h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> <?php esc_html_e( 'Subject Practice Sets (Sequential Drills)', 'indianagri-quiz-engine' ); ?></h3>
-			<span class="iaq-card-help"><?php esc_html_e( 'Sequential drills arranged by topic.', 'indianagri-quiz-engine' ); ?></span>
+			<h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> <?php esc_html_e( 'Subject Practice Sets (Sequential Drills & Reference Books)', 'indianagri-quiz-engine' ); ?></h3>
+			<span class="iaq-card-help"><?php esc_html_e( 'Access all chapter practice sets from reference books and subject-wise drills.', 'indianagri-quiz-engine' ); ?></span>
+		</div>
+
+		<div class="iaq-ps-filter-bar iaq-ps-subject-filters" style="margin-bottom:20px;">
+			<form method="get" action="<?php echo esc_url( $page_url( 'subject', array( 'subject_id' => $subject->id ) ) ); ?>" class="iaq-ps-search-form" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+				<input type="hidden" name="iaq_ps_view" value="subject">
+				<input type="hidden" name="subject_id" value="<?php echo esc_attr( $subject->id ); ?>">
+				<?php if ( isset( $_GET['page'] ) ) : ?>
+					<input type="hidden" name="page" value="<?php echo esc_attr( sanitize_key( $_GET['page'] ) ); ?>">
+				<?php endif; ?>
+
+				<div class="iaq-ps-search-input-wrap" style="flex:1;min-width:200px;">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="iaq-input-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+					<input type="text" name="ps_search" value="<?php echo esc_attr( isset( $_GET['ps_search'] ) ? sanitize_text_field( wp_unslash( $_GET['ps_search'] ) ) : '' ); ?>" placeholder="<?php esc_attr_e( 'Search sets by title or topic...', 'indianagri-quiz-engine' ); ?>" class="iaq-input">
+				</div>
+
+				<select name="ps_book" class="iaq-select" style="max-width:220px;" onchange="this.form.submit()">
+					<option value="all"><?php esc_html_e( 'All Sources (Books & Drills)', 'indianagri-quiz-engine' ); ?></option>
+					<option value="independent" <?php selected( isset( $_GET['ps_book'] ) && 'independent' === $_GET['ps_book'] ); ?>><?php esc_html_e( 'Independent Subject Drills', 'indianagri-quiz-engine' ); ?></option>
+					<?php
+					$subj_books = IAQ_Practice_Sets::get_books( array( 'status' => 'published' ) );
+					foreach ( $subj_books as $sb ) :
+					?>
+						<option value="<?php echo esc_attr( $sb->id ); ?>" <?php selected( isset( $_GET['ps_book'] ) && (int) $_GET['ps_book'] === (int) $sb->id ); ?>>
+							📖 <?php echo esc_html( $sb->title ); ?>
+						</option>
+					<?php endforeach; ?>
+				</select>
+
+				<select name="ps_access" class="iaq-select" style="max-width:140px;" onchange="this.form.submit()">
+					<option value=""><?php esc_html_e( 'All Access', 'indianagri-quiz-engine' ); ?></option>
+					<option value="free" <?php selected( isset( $_GET['ps_access'] ) && 'free' === $_GET['ps_access'] ); ?>><?php esc_html_e( 'Free', 'indianagri-quiz-engine' ); ?></option>
+					<option value="paid" <?php selected( isset( $_GET['ps_access'] ) && 'paid' === $_GET['ps_access'] ); ?>><?php esc_html_e( 'Premium', 'indianagri-quiz-engine' ); ?></option>
+				</select>
+
+				<button type="submit" class="iaq-btn iaq-btn-primary"><?php esc_html_e( 'Filter', 'indianagri-quiz-engine' ); ?></button>
+				<?php if ( ! empty( $_GET['ps_search'] ) || ! empty( $_GET['ps_book'] ) || ! empty( $_GET['ps_access'] ) ) : ?>
+					<a href="<?php echo esc_url( $page_url( 'subject', array( 'subject_id' => $subject->id ) ) ); ?>" class="iaq-btn iaq-btn-outline"><?php esc_html_e( 'Reset', 'indianagri-quiz-engine' ); ?></a>
+				<?php endif; ?>
+			</form>
 		</div>
 
 		<?php if ( empty( $quizzes ) ) : ?>

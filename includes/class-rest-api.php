@@ -987,12 +987,42 @@ class IAQ_Rest_Api {
 			return new WP_Error( 'not_found', __( 'Subject not found.', 'indianagri-quiz-engine' ), array( 'status' => 404 ) );
 		}
 
-		$sets = IAQ_Practice_Sets::get_subject_practice_sets( $id, $user_id );
+		$filters = array(
+			'search'         => $request->get_param( 'search' ) ? sanitize_text_field( $request->get_param( 'search' ) ) : '',
+			'book_id'        => $request->get_param( 'book_id' ) ? sanitize_text_field( $request->get_param( 'book_id' ) ) : '',
+			'topic_id'       => $request->get_param( 'topic_id' ) ? absint( $request->get_param( 'topic_id' ) ) : 0,
+			'access_type'    => $request->get_param( 'access_type' ) ? sanitize_key( $request->get_param( 'access_type' ) ) : '',
+			'attempt_status' => $request->get_param( 'attempt_status' ) ? sanitize_key( $request->get_param( 'attempt_status' ) ) : '',
+		);
+
+		$sets = IAQ_Practice_Sets::get_subject_practice_sets( $id, $user_id, $filters );
+
+		// Extract available books and topics among these sets for client filters
+		$books_map  = array();
+		$topics_map = array();
+		foreach ( $sets as $s_item ) {
+			if ( ! empty( $s_item->book_id ) && ! empty( $s_item->book_title ) ) {
+				$books_map[ (int) $s_item->book_id ] = array(
+					'id'     => (int) $s_item->book_id,
+					'title'  => $s_item->book_title,
+					'author' => ! empty( $s_item->book_author ) ? $s_item->book_author : '',
+				);
+			}
+			if ( ! empty( $s_item->topic_id ) && ! empty( $s_item->topic_name ) ) {
+				$topics_map[ (int) $s_item->topic_id ] = array(
+					'id'   => (int) $s_item->topic_id,
+					'name' => $s_item->topic_name,
+				);
+			}
+		}
 
 		return rest_ensure_response(
 			array(
-				'subject' => $subject,
-				'sets'    => $sets,
+				'subject'    => $subject,
+				'sets'       => $sets,
+				'total_sets' => count( $sets ),
+				'books'      => array_values( $books_map ),
+				'topics'     => array_values( $topics_map ),
 			)
 		);
 	}
