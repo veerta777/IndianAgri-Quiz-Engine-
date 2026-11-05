@@ -3,6 +3,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_styles.dart';
+import '../../../core/utils/safe_parse.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/state_views.dart';
 
@@ -49,8 +50,8 @@ class _StudyStreaksScreenState extends State<StudyStreaksScreen> {
       final res = await ApiClient.get(ApiEndpoints.studyStreaks);
       if (res is Map<String, dynamic>) {
         setState(() {
-          _currentStreak = (res['current_streak'] as num?)?.toInt() ?? 0;
-          _bestStreak = (res['best_streak'] as num?)?.toInt() ?? 0;
+          _currentStreak = SafeParse.toInt(res['current_streak']);
+          _bestStreak = SafeParse.toInt(res['best_streak']);
           _calendar = (res['calendar'] as List<dynamic>?) ?? [];
           _goals = res['goals'] != null && res['goals'] is Map
               ? Map<String, dynamic>.from(res['goals'] as Map)

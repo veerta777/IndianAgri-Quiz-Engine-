@@ -20,6 +20,13 @@ class AppColors {
   static const Color warningAmber = Color(0xFFD97706);
   static const Color warningAmberBg = Color(0xFFFFFBEB);
 
+  // CBT Question Palette Exact Specification Colors
+  static const Color cbtAnswered = Color(0xFF168443); // Green (#168443)
+  static const Color cbtNotAnswered = Color(0xFFF0640A); // Orange (#F0640A)
+  static const Color cbtNotVisited = Color(0xFFCBD5E1); // Light Grey (#CBD5E1)
+  static const Color cbtMarked = Color(0xFF8B5CF6); // Purple (#8B5CF6)
+  static const Color cbtCurrentOutline = Color(0xFF2563EB); // Blue outline for active question
+
   // Backgrounds & Surfaces (Light)
   static const Color backgroundLight = Color(0xFFF8FAF9);
   static const Color surfaceLight = Color(0xFFFFFFFF);

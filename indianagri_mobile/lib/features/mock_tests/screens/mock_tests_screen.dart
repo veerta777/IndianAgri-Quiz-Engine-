@@ -3,6 +3,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_styles.dart';
+import '../../../core/utils/safe_parse.dart';
 import '../../../core/widgets/language_toggle.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../quiz_cbt/screens/cbt_exam_screen.dart';
@@ -105,123 +106,127 @@ class _MockTestsScreenState extends State<MockTestsScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         itemCount: _categories.length,
         itemBuilder: (context, index) {
-        final raw = _categories[index];
-        if (raw is! Map) return const SizedBox.shrink();
-        final cat = Map<String, dynamic>.from(raw);
-        final id = (cat['id'] as num?)?.toInt() ?? 0;
-        final name = (cat['name'] ?? 'Mock Category').toString();
-        final description = (cat['description'] ?? '').toString();
-        final badge = (cat['badge_text'] ?? '').toString();
-        final code = (cat['code'] ?? '').toString();
+          try {
+            final raw = _categories[index];
+            if (raw is! Map) return const SizedBox.shrink();
+            final cat = Map<String, dynamic>.from(raw);
+            final id = SafeParse.toInt(cat['id']);
+            final name = (cat['name'] ?? 'Mock Category').toString();
+            final description = (cat['description'] ?? '').toString();
+            final badge = (cat['badge_text'] ?? '').toString();
+            final code = (cat['code'] ?? '').toString();
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 14),
-          decoration: AppStyles.glassCardDecoration(context),
-          child: Material(
-            color: Colors.transparent,
-            borderRadius: AppStyles.borderRadiusL,
-            child: InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => MockHierarchyScreen(
-                      categoryId: id,
-                      categoryName: name,
-                      categoryCode: code,
-                    ),
-                  ),
-                );
-              },
-              borderRadius: AppStyles.borderRadiusL,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            gradient: AppColors.heroEmeraldGradient,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primary.withOpacity(0.2),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(Icons.assignment, color: Colors.white, size: 24),
+            return Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: AppStyles.glassCardDecoration(context),
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: AppStyles.borderRadiusL,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MockHierarchyScreen(
+                          categoryId: id,
+                          categoryName: name,
+                          categoryCode: code,
                         ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                name,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                              ),
-                              const SizedBox(height: 3),
-                              Row(
-                                children: [
-                                  if (badge.isNotEmpty) ...[
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primarySubtle,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        badge,
-                                        style: const TextStyle(
-                                          color: AppColors.primaryDark,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                  ],
-                                  const Text('Full-Length CBT Mocks', style: TextStyle(fontSize: 11, color: AppColors.textSecondaryLight)),
+                      ),
+                    );
+                  },
+                  borderRadius: AppStyles.borderRadiusL,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                gradient: AppColors.heroEmeraldGradient,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.primary.withOpacity(0.2),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
                                 ],
                               ),
-                            ],
-                          ),
+                              child: const Icon(Icons.assignment, color: Colors.white, size: 24),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    name,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Row(
+                                    children: [
+                                      if (badge.isNotEmpty) ...[
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primarySubtle,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            badge,
+                                            style: const TextStyle(
+                                              color: AppColors.primaryDark,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                      ],
+                                      const Text('Full-Length CBT Mocks', style: TextStyle(fontSize: 11, color: AppColors.textSecondaryLight)),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textSecondaryLight),
+                          ],
                         ),
-                        const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textSecondaryLight),
+                        if (description.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Text(
+                            description,
+                            style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight, height: 1.35),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                        const Divider(height: 1),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: const [
+                            Text('100 MCQs • Timed CBT Hall', style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                            Text('Explore Papers →', style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
                       ],
                     ),
-                    if (description.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      Text(
-                        description,
-                        style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight, height: 1.35),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                    const SizedBox(height: 12),
-                    const Divider(height: 1),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        Text('100 MCQs • Timed CBT Hall', style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
-                        Text('Explore Papers →', style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
-        );
-      },
+            );
+          } catch (_) {
+            return const SizedBox.shrink();
+          }
+        },
     ),
   );
 }
@@ -368,7 +373,7 @@ class _MockHierarchyScreenState extends State<MockHierarchyScreen> {
     final exam = Map<String, dynamic>.from(rawExam);
     final title = (exam['name'] ?? 'Exam').toString();
     final code = (exam['code'] ?? '').toString();
-    final id = (exam['id'] as num?)?.toInt() ?? 0;
+    final id = SafeParse.toInt(exam['id']);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -432,11 +437,11 @@ class _MockHierarchyScreenState extends State<MockHierarchyScreen> {
     if (rawTest is! Map) return const SizedBox.shrink();
     final test = Map<String, dynamic>.from(rawTest);
     final title = (test['title'] ?? 'Mock Test').toString();
-    final quizId = (test['quiz_id'] ?? test['id'] as num?)?.toInt() ?? 1;
-    final totalQ = test['total_questions'] ?? 100;
-    final duration = test['duration_minutes'] ?? 120;
-    final marks = test['total_marks'] ?? 400;
-    final isLocked = test['is_locked'] == true;
+    final quizId = SafeParse.toInt(test['quiz_id'] ?? test['id'], 1);
+    final totalQ = SafeParse.toInt(test['total_questions'], 100);
+    final duration = SafeParse.toInt(test['duration_minutes'], 120);
+    final marks = SafeParse.toInt(test['total_marks'], 400);
+    final isLocked = SafeParse.toBool(test['is_locked']);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -644,11 +649,11 @@ class _MockExamPapersScreenState extends State<MockExamPapersScreen> {
         final raw = _papers[index];
         if (raw is! Map) return const SizedBox.shrink();
         final p = Map<String, dynamic>.from(raw);
-        final quizId = (p['quiz_id'] ?? p['id'] as num?)?.toInt() ?? 1;
+        final quizId = SafeParse.toInt(p['quiz_id'] ?? p['id'], 1);
         final title = (p['title'] ?? 'Mock Test Paper ${index + 1}').toString();
-        final totalQ = p['total_questions'] ?? 100;
-        final duration = p['duration_minutes'] ?? 120;
-        final isLocked = p['is_locked'] == true;
+        final totalQ = SafeParse.toInt(p['total_questions'], 100);
+        final duration = SafeParse.toInt(p['duration_minutes'], 120);
+        final isLocked = SafeParse.toBool(p['is_locked']);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),

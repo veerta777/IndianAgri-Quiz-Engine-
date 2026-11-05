@@ -6,6 +6,8 @@ import '../../../core/api/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_styles.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/utils/citation_cleaner.dart';
+import '../../../core/utils/safe_parse.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/language_toggle.dart';
 import '../../../core/widgets/state_views.dart';
@@ -41,6 +43,11 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
   final Map<int, bool> _markedForReview = {};
   final Map<int, Map<String, dynamic>> _immediateFeedbacks = {};
   final Map<int, bool> _lockedQuestions = {};
+  final Set<int> _visitedQuestionIds = {};
+
+  // Practice Mode Streaks & Tracking
+  int _currentStreak = 0;
+  int _highestStreak = 0;
 
   // Server-authoritative Timer
   Timer? _timer;
@@ -75,7 +82,7 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
       );
 
       if (res is Map<String, dynamic> && res.containsKey('attempt_id')) {
-        _attemptId = (res['attempt_id'] as num).toInt();
+        _attemptId = SafeParse.toInt(res['attempt_id']);
         _isImmediate = res['is_immediate'] == true || widget.isDemoMode;
         fetchedQuestions = (res['questions'] as List<dynamic>?) ?? [];
 
@@ -88,11 +95,24 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
             final qId = int.tryParse(qIdStr);
             if (qId != null && opt != null) {
               _userAnswers[qId] = opt.toString();
+              _visitedQuestionIds.add(qId);
               if (_isImmediate) {
                 _lockedQuestions[qId] = true;
               }
             }
           });
+        }
+
+        // Restore marked questions if resuming
+        final restoredMarked = res['marked_questions'] ?? res['marked'];
+        if (restoredMarked is List) {
+          for (final item in restoredMarked) {
+            final qId = item is num ? item.toInt() : int.tryParse(item.toString());
+            if (qId != null) {
+              _markedForReview[qId] = true;
+              _visitedQuestionIds.add(qId);
+            }
+          }
         }
 
         // Restore immediate feedback if provided
@@ -110,8 +130,8 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
         }
 
         // Timer initialization
-        final durationMins = (res['duration_minutes'] as num?)?.toInt() ?? 0;
-        final elapsedSecs = (res['time_spent_seconds'] as num?)?.toInt() ?? 0;
+        final durationMins = SafeParse.toInt(res['duration_minutes']);
+        final elapsedSecs = SafeParse.toInt(res['time_spent_seconds']);
         _totalDurationSeconds = durationMins * 60;
 
         if (_totalDurationSeconds > 0) {
@@ -126,7 +146,7 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
           body: {'demo_mode': true},
         );
         if (demoRes is Map<String, dynamic> && demoRes.containsKey('questions')) {
-          _attemptId = (demoRes['attempt_id'] as num?)?.toInt() ?? (9999000 + widget.quizId);
+          _attemptId = SafeParse.toInt(demoRes['attempt_id'], 9999000 + widget.quizId);
           _isImmediate = true;
           fetchedQuestions = (demoRes['questions'] as List<dynamic>?) ?? [];
         }
@@ -140,7 +160,7 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
         if (qRes is Map<String, dynamic> && qRes.containsKey('questions')) {
           fetchedQuestions = (qRes['questions'] as List<dynamic>?) ?? [];
           _isImmediate = true;
-          _attemptId = (qRes['attempt_id'] as num?)?.toInt() ?? (9999000 + widget.quizId);
+          _attemptId = SafeParse.toInt(qRes['attempt_id'], 9999000 + widget.quizId);
         } else if (qRes is List<dynamic> && qRes.isNotEmpty) {
           fetchedQuestions = qRes;
           _isImmediate = true;
@@ -178,11 +198,92 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
     setState(() {
       _questions = fetchedQuestions
           .where((e) => e is Map)
-          .map((e) => Map<String, dynamic>.from(e as Map))
+          .map((e) => CitationCleaner.cleanQuestionMap(Map<String, dynamic>.from(e as Map)))
           .toList();
+      if (_questions.isNotEmpty) {
+        final firstQId = SafeParse.toInt(_questions[0]['id'], -1);
+        if (firstQId != -1) {
+          _visitedQuestionIds.add(firstQId);
+        }
+      }
+      if (_isImmediate) {
+        _recomputeStreaksFromFeedbacks();
+      }
       _isLoading = false;
       _errorMessage = null;
     });
+  }
+
+  void _recomputeStreaksFromFeedbacks() {
+    int streak = 0;
+    int maxStreak = 0;
+    for (int i = 0; i < _questions.length; i++) {
+      final qId = SafeParse.toInt(_questions[i]['id']);
+      final fb = _immediateFeedbacks[qId];
+      if (fb != null) {
+        if (fb['is_correct'] == true) {
+          streak++;
+          if (streak > maxStreak) maxStreak = streak;
+        } else {
+          streak = 0;
+        }
+      }
+    }
+    _currentStreak = streak;
+    _highestStreak = maxStreak;
+  }
+
+  void _updatePracticeStreak(bool isCorrect) {
+    if (isCorrect) {
+      _currentStreak++;
+      if (_currentStreak > _highestStreak) {
+        _highestStreak = _currentStreak;
+      }
+      String? milestoneMsg;
+      if (_currentStreak == 1) {
+        milestoneMsg = 'Well done! Correct Answer!';
+      } else if (_currentStreak == 2) {
+        milestoneMsg = 'Great! 2 correct in a row!';
+      } else if (_currentStreak == 3) {
+        milestoneMsg = '🔥 3 in a Row! Excellent Performance!';
+      } else if (_currentStreak == 5) {
+        milestoneMsg = '🌟 Amazing! 5 Correct Answers in a Row!';
+      } else if (_currentStreak == 10) {
+        milestoneMsg = '🏆 Outstanding! 10 Correct Answers in a Row!';
+      } else if (_currentStreak > 10 && _currentStreak % 5 == 0) {
+        milestoneMsg = '🚀 $_currentStreak Correct in a Row! Superb Mastery!';
+      }
+      if (milestoneMsg != null && mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.stars, color: Colors.amber, size: 20),
+                const SizedBox(width: 8),
+                Expanded(child: Text(milestoneMsg, style: const TextStyle(fontWeight: FontWeight.bold))),
+              ],
+            ),
+            backgroundColor: const Color(0xFF0F5A29),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } else {
+      _currentStreak = 0;
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Not quite! Don't give up. Learn from this question."),
+            backgroundColor: Color(0xFF991B1B),
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   void _startTimer() {
@@ -213,7 +314,7 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
   Future<void> _selectOption(String optionKey) async {
     if (_questions.isEmpty) return;
     final q = _questions[_currentIndex] as Map<String, dynamic>;
-    final qId = (q['id'] as num).toInt();
+    final qId = SafeParse.toInt(q['id']);
 
     // Prevent altering locked answers in immediate feedback mode
     if (_lockedQuestions[qId] == true) {
@@ -222,6 +323,7 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
 
     setState(() {
       _userAnswers[qId] = optionKey;
+      _visitedQuestionIds.add(qId);
     });
 
     // Client-side instant evaluation in demo practice mode
@@ -229,8 +331,8 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
       final correctOpt = (q['demo_answer'] ?? q['correct_option'] ?? 'A').toString().toUpperCase().trim();
       final isCorrect = optionKey.toUpperCase().trim() == correctOpt;
       final exp = (q['demo_explanation'] ?? q['explanation'] ?? 'Review this agricultural concept thoroughly for upcoming examinations.').toString();
-      final posMarks = (q['marks'] as num?)?.toDouble() ?? 1.0;
-      final negMarks = (q['negative_marks'] as num?)?.toDouble() ?? 0.25;
+      final posMarks = SafeParse.toDouble(q['marks'], 1.0);
+      final negMarks = SafeParse.toDouble(q['negative_marks'], 0.25);
 
       setState(() {
         _lockedQuestions[qId] = true;
@@ -245,6 +347,7 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
           'marks_awarded': isCorrect ? posMarks : -negMarks.abs(),
         };
       });
+      _updatePracticeStreak(isCorrect);
       return;
     }
 
@@ -262,10 +365,12 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
 
       if (res is Map<String, dynamic>) {
         if (_isImmediate && res['is_immediate'] == true) {
+          final isCorrect = res['is_correct'] == true;
           setState(() {
             _lockedQuestions[qId] = true;
             _immediateFeedbacks[qId] = res;
           });
+          _updatePracticeStreak(isCorrect);
         }
       }
     } catch (e) {
@@ -279,12 +384,13 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
 
   void _clearSelection() {
     final q = _questions[_currentIndex] as Map<String, dynamic>;
-    final qId = (q['id'] as num).toInt();
+    final qId = SafeParse.toInt(q['id']);
 
     if (_lockedQuestions[qId] == true) return;
 
     setState(() {
       _userAnswers.remove(qId);
+      _visitedQuestionIds.add(qId);
     });
 
     if (!widget.isDemoMode && _attemptId < 9999000) {
@@ -302,11 +408,12 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
 
   void _toggleMarkForReview() {
     final q = _questions[_currentIndex] as Map<String, dynamic>;
-    final qId = (q['id'] as num).toInt();
+    final qId = SafeParse.toInt(q['id']);
 
     final newVal = !(_markedForReview[qId] ?? false);
     setState(() {
       _markedForReview[qId] = newVal;
+      _visitedQuestionIds.add(qId);
     });
 
     if (!widget.isDemoMode && _attemptId < 9999000) {
@@ -320,6 +427,66 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
         },
       );
     }
+  }
+
+  void _navigateToQuestion(int newIndex) {
+    if (newIndex >= 0 && newIndex < _questions.length) {
+      setState(() {
+        _currentIndex = newIndex;
+        final nextQ = _questions[newIndex];
+        if (nextQ is Map) {
+          final nextQId = SafeParse.toInt(nextQ['id'], -1);
+          if (nextQId != -1) {
+            _visitedQuestionIds.add(nextQId);
+          }
+        }
+      });
+    }
+  }
+
+  Map<String, int> _calculateStatusCounts() {
+    int countAnswered = 0;
+    int countNotAnswered = 0;
+    int countNotVisited = 0;
+    int countMarked = 0;
+    int countAnsMarked = 0;
+
+    for (int i = 0; i < _questions.length; i++) {
+      final raw = _questions[i];
+      if (raw is! Map) continue;
+      final q = raw as Map<String, dynamic>;
+      final qId = SafeParse.toInt(q['id']);
+      final hasAnswer = _userAnswers[qId] != null && _userAnswers[qId]!.trim().isNotEmpty;
+      final isVisited = _visitedQuestionIds.contains(qId);
+      final isMarked = _markedForReview[qId] == true;
+
+      // Primary status totals: Strictly partition questions
+      // Answered + Not Answered + Not Visited === total questions
+      if (hasAnswer) {
+        countAnswered++;
+      } else if (isVisited) {
+        countNotAnswered++;
+      } else {
+        countNotVisited++;
+      }
+
+      // Review categories
+      if (isMarked) {
+        if (hasAnswer) {
+          countAnsMarked++;
+        } else {
+          countMarked++;
+        }
+      }
+    }
+
+    return {
+      'answered': countAnswered,
+      'not_answered': countNotAnswered,
+      'not_visited': countNotVisited,
+      'marked': countMarked,
+      'ans_marked': countAnsMarked,
+    };
   }
 
   Future<void> _submitAttempt() async {
@@ -385,7 +552,7 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
     int attemptedCount = _userAnswers.length;
 
     for (final q in _questions) {
-      final qId = (q['id'] as num).toInt();
+      final qId = SafeParse.toInt(q['id']);
       final userAns = _userAnswers[qId];
       final correctOpt = (q['demo_answer'] ?? q['correct_option'] ?? 'A').toString().toUpperCase().trim();
       if (userAns != null && userAns.toUpperCase().trim() == correctOpt) {
@@ -459,10 +626,11 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
   }
 
   void _confirmSubmit() {
-    final total = _questions.length;
-    final answered = _userAnswers.length;
-    final unanswered = total - answered;
-    final marked = _markedForReview.values.where((v) => v).length;
+    final counts = _calculateStatusCounts();
+    final answered = counts['answered'] ?? 0;
+    final notAnswered = counts['not_answered'] ?? 0;
+    final notVisited = counts['not_visited'] ?? 0;
+    final totalMarked = (counts['marked'] ?? 0) + (counts['ans_marked'] ?? 0);
 
     showModalBottomSheet(
       context: context,
@@ -486,17 +654,19 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
             ),
             const SizedBox(height: 18),
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: AppColors.backgroundLight,
                 borderRadius: AppStyles.borderRadiusM,
+                border: Border.all(color: AppColors.cardBorderLight),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildSummaryPill('Answered', '$answered', AppColors.correctGreen),
-                  _buildSummaryPill('Unanswered', '$unanswered', AppColors.incorrectRed),
-                  _buildSummaryPill('Marked', '$marked', AppColors.reviewPurple),
+                  _buildSummaryPill('Answered', '$answered', AppColors.cbtAnswered),
+                  _buildSummaryPill('Not Answered', '$notAnswered', AppColors.cbtNotAnswered),
+                  _buildSummaryPill('Not Visited', '$notVisited', AppColors.cbtNotVisited),
+                  _buildSummaryPill('Marked', '$totalMarked', AppColors.cbtMarked),
                 ],
               ),
             ),
@@ -695,7 +865,7 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
     }
 
     final q = _questions[_currentIndex] as Map<String, dynamic>;
-    final qId = (q['id'] as num).toInt();
+    final qId = SafeParse.toInt(q['id']);
     final selectedOpt = _userAnswers[qId];
     final isMarked = _markedForReview[qId] == true;
     final fb = _immediateFeedbacks[qId];
@@ -705,9 +875,9 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
     final isHindi = langProvider.isHindi;
 
     // Bilingual text extraction with bulletproof fallbacks (Never "null")
-    final qText = (isHindi && q['question_text_hi']?.toString().isNotEmpty == true)
+    final qText = CitationCleaner.clean((isHindi && q['question_text_hi']?.toString().isNotEmpty == true)
         ? q['question_text_hi'].toString()
-        : (q['question_text'] ?? q['question'] ?? q['text'] ?? q['title'] ?? 'Question ${q['index'] ?? (_currentIndex + 1)}').toString();
+        : (q['question_text'] ?? q['question'] ?? q['text'] ?? q['title'] ?? 'Question ${q['index'] ?? (_currentIndex + 1)}').toString());
 
     // Dynamic options parsing with fallback
     final rawOptions = q['options'];
@@ -766,6 +936,9 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
           children: [
             // Sticky Timer Bar
             if (_totalDurationSeconds > 0) _buildTimerBar(),
+
+            // Practice Progress & Streaks Dashboard
+            if (_isImmediate) _buildPracticeDashboard(),
 
             // Question & Options Content
             Expanded(
@@ -830,9 +1003,9 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
                       final opt = optionsList[idx];
                       final displayLabel = (idx < 26) ? String.fromCharCode(65 + idx) : '${idx + 1}';
                       final optionKey = opt['key']?.toString() ?? displayLabel;
-                      final optText = (isHindi && opt['text_hi']?.toString().isNotEmpty == true)
+                      final optText = CitationCleaner.clean((isHindi && opt['text_hi']?.toString().isNotEmpty == true)
                           ? opt['text_hi'].toString()
-                          : (opt['text'] ?? opt['option_text'] ?? opt['content'] ?? '').toString();
+                          : (opt['text'] ?? opt['option_text'] ?? opt['content'] ?? '').toString());
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 10),
@@ -1028,18 +1201,76 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
     );
   }
 
+  Widget _buildPracticeDashboard() {
+    int attempted = 0;
+    int correct = 0;
+    int incorrect = 0;
+    _immediateFeedbacks.forEach((_, fb) {
+      attempted++;
+      if (fb['is_correct'] == true) {
+        correct++;
+      } else {
+        incorrect++;
+      }
+    });
+
+    final accuracy = attempted > 0 ? ((correct / attempted) * 100).toStringAsFixed(0) : '0';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        border: Border(bottom: BorderSide(color: AppColors.primary.withOpacity(0.2))),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildPracticeDashItem('Attempted', '$attempted', AppColors.primary),
+          _buildPracticeDashItem('Correct', '$correct', const Color(0xFF168443)),
+          _buildPracticeDashItem('Incorrect', '$incorrect', const Color(0xFFDC2626)),
+          _buildPracticeDashItem('Streak', '🔥 $_currentStreak', const Color(0xFFD97706)),
+          _buildPracticeDashItem('Best', '🏆 $_highestStreak', const Color(0xFF0F5A29)),
+          _buildPracticeDashItem('Accuracy', '$accuracy%', const Color(0xFF2563EB)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPracticeDashItem(String label, String value, Color color) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: color),
+        ),
+        const SizedBox(height: 1),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 9.5, color: AppColors.textSecondaryLight, fontWeight: FontWeight.w500),
+        ),
+      ],
+    );
+  }
+
   Widget _buildImmediateFeedbackBox(Map<String, dynamic> fb) {
     final isCorrect = fb['is_correct'] == true;
-    final message = fb['feedback_message'] ?? (isCorrect ? 'Correct! Outstanding work!' : 'Review explanation below:');
-    final explanation = fb['explanation'] ?? '';
+    final message = fb['feedback_message'] ?? (isCorrect ? 'Excellent! Correct Answer!' : 'Not quite! Learn from this question.');
+    final explanation = fb['explanation']?.toString() ?? '';
+    final correctOpt = fb['correct_option']?.toString().toUpperCase() ?? '';
     final marks = fb['marks_awarded'] ?? 0;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isCorrect ? AppColors.correctGreenBg : AppColors.incorrectRedBg,
+        color: const Color(0xFFF0FDF4),
         borderRadius: AppStyles.borderRadiusL,
-        border: Border.all(color: isCorrect ? AppColors.correctGreen : AppColors.incorrectRed, width: 1.5),
+        border: Border(
+          left: const BorderSide(color: Color(0xFF168443), width: 4.5),
+          top: BorderSide(color: isCorrect ? const Color(0xFF86EFAC) : const Color(0xFFFECACA)),
+          right: BorderSide(color: isCorrect ? const Color(0xFF86EFAC) : const Color(0xFFFECACA)),
+          bottom: BorderSide(color: isCorrect ? const Color(0xFF86EFAC) : const Color(0xFFFECACA)),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1047,8 +1278,8 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
           Row(
             children: [
               Icon(
-                isCorrect ? Icons.check_circle : Icons.info,
-                color: isCorrect ? AppColors.correctGreen : AppColors.incorrectRed,
+                isCorrect ? Icons.check_circle : Icons.cancel,
+                color: isCorrect ? const Color(0xFF168443) : const Color(0xFFDC2626),
                 size: 22,
               ),
               const SizedBox(width: 8),
@@ -1065,7 +1296,7 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: isCorrect ? AppColors.correctGreen : AppColors.incorrectRed,
+                  color: isCorrect ? const Color(0xFF168443) : const Color(0xFFDC2626),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -1075,18 +1306,31 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
               ),
             ],
           ),
-          if (explanation.toString().isNotEmpty) ...[
-            const SizedBox(height: 12),
-            const Text(
-              'Detailed Scientific Explanation:',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              explanation.toString(),
-              style: const TextStyle(fontSize: 13, height: 1.45),
+          if (correctOpt.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFDCFCE7),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF86EFAC)),
+              ),
+              child: Text(
+                '✔ Correct Answer: Option $correctOpt',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: Color(0xFF166534)),
+              ),
             ),
           ],
+          const SizedBox(height: 12),
+          const Text(
+            'Correct Answer – Explanation',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF166534)),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            explanation.isNotEmpty ? explanation : 'Explanation is not available for this question.',
+            style: const TextStyle(fontSize: 13, height: 1.45, color: Color(0xFF1E293B)),
+          ),
           const SizedBox(height: 14),
           ElevatedButton.icon(
             onPressed: () {
@@ -1133,11 +1377,7 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
           // Previous Button
           OutlinedButton(
             onPressed: _currentIndex > 0
-                ? () {
-                    setState(() {
-                      _currentIndex--;
-                    });
-                  }
+                ? () => _navigateToQuestion(_currentIndex - 1)
                 : null,
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -1151,18 +1391,18 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
             icon: Icon(
               isMarked ? Icons.bookmark : Icons.bookmark_border,
               size: 16,
-              color: isMarked ? AppColors.reviewPurple : AppColors.textSecondaryLight,
+              color: isMarked ? AppColors.cbtMarked : AppColors.textSecondaryLight,
             ),
             label: Text(
               isMarked ? 'Marked' : 'Review',
               style: TextStyle(
                 fontSize: 12,
-                color: isMarked ? AppColors.reviewPurple : AppColors.textSecondaryLight,
+                color: isMarked ? AppColors.cbtMarked : AppColors.textSecondaryLight,
               ),
             ),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              side: BorderSide(color: isMarked ? AppColors.reviewPurple : AppColors.cardBorderLight),
+              side: BorderSide(color: isMarked ? AppColors.cbtMarked : AppColors.cardBorderLight),
             ),
           ),
 
@@ -1177,11 +1417,7 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
           // Next or Submit Button
           if (_currentIndex < _questions.length - 1)
             ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _currentIndex++;
-                });
-              },
+              onPressed: () => _navigateToQuestion(_currentIndex + 1),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1192,7 +1428,7 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
             ElevatedButton(
               onPressed: _confirmSubmit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.correctGreen,
+                backgroundColor: AppColors.cbtAnswered,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
               child: const Text('Submit', style: TextStyle(fontSize: 13, color: Colors.white, fontWeight: FontWeight.bold)),
@@ -1209,127 +1445,235 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => Container(
-        height: MediaQuery.of(context).size.height * 0.65,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Question Palette',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+      builder: (sheetContext) {
+        final counts = _calculateStatusCounts();
+
+        return Container(
+          height: MediaQuery.of(sheetContext).size.height * 0.75,
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Question Palette',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(sheetContext),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              // Status Legend & Counters
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.backgroundLight,
+                  borderRadius: AppStyles.borderRadiusM,
+                  border: Border.all(color: AppColors.cardBorderLight),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // Legend
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildLegendItem('Answered', AppColors.correctGreen),
-                _buildLegendItem('Unanswered', AppColors.cardBorderLight),
-                _buildLegendItem('Review', AppColors.reviewPurple),
-              ],
-            ),
-            const Divider(height: 24),
-            // Palette Grid
-            Expanded(
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 5,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                ),
-                itemCount: _questions.length,
-                itemBuilder: (context, index) {
-                  final q = _questions[index] as Map<String, dynamic>;
-                  final qId = (q['id'] as num).toInt();
-                  final isAnswered = _userAnswers.containsKey(qId);
-                  final isMarked = _markedForReview[qId] == true;
-                  final isCurrent = index == _currentIndex;
-
-                  Color color = Colors.white;
-                  Color textColor = AppColors.textPrimaryLight;
-                  Border? border = Border.all(color: AppColors.cardBorderLight);
-
-                  if (isMarked) {
-                    color = AppColors.reviewPurple;
-                    textColor = Colors.white;
-                    border = null;
-                  } else if (isAnswered) {
-                    color = AppColors.correctGreen;
-                    textColor = Colors.white;
-                    border = null;
-                  }
-
-                  if (isCurrent) {
-                    border = Border.all(color: AppColors.primary, width: 2.5);
-                  }
-
-                  return InkWell(
-                    onTap: () {
-                      Navigator.pop(context);
-                      setState(() {
-                        _currentIndex = index;
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: BorderRadius.circular(8),
-                        border: border,
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${index + 1}',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: textColor,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildLegendItem('Answered', AppColors.cbtAnswered, counts['answered'] ?? 0),
+                        _buildLegendItem('Not Answered', AppColors.cbtNotAnswered, counts['not_answered'] ?? 0),
+                        _buildLegendItem('Not Visited', AppColors.cbtNotVisited, counts['not_visited'] ?? 0),
+                      ],
                     ),
-                  );
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildLegendItem('Marked Review', AppColors.cbtMarked, counts['marked'] ?? 0),
+                        _buildLegendItem(
+                          'Answered & Marked',
+                          AppColors.cbtAnswered,
+                          counts['ans_marked'] ?? 0,
+                          hasPurpleBadge: true,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 20),
+
+              // Question Numbers Grid
+              Expanded(
+                child: GridView.builder(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 5,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                    childAspectRatio: 1.0,
+                  ),
+                  itemCount: _questions.length,
+                  itemBuilder: (context, index) {
+                    final raw = _questions[index];
+                    if (raw is! Map) return const SizedBox.shrink();
+                    final q = raw as Map<String, dynamic>;
+                    final qId = SafeParse.toInt(q['id']);
+                    final hasAnswer = _userAnswers[qId] != null && _userAnswers[qId]!.trim().isNotEmpty;
+                    final isVisited = _visitedQuestionIds.contains(qId);
+                    final isMarked = _markedForReview[qId] == true;
+                    final isCurrent = index == _currentIndex;
+
+                    Color bgColor;
+                    Color textColor;
+                    bool showPurpleBadge = false;
+
+                    if (hasAnswer && isMarked) {
+                      bgColor = AppColors.cbtAnswered;
+                      textColor = Colors.white;
+                      showPurpleBadge = true;
+                    } else if (hasAnswer) {
+                      bgColor = AppColors.cbtAnswered;
+                      textColor = Colors.white;
+                    } else if (isMarked) {
+                      bgColor = AppColors.cbtMarked;
+                      textColor = Colors.white;
+                    } else if (isVisited) {
+                      bgColor = AppColors.cbtNotAnswered;
+                      textColor = Colors.white;
+                    } else {
+                      bgColor = AppColors.cbtNotVisited;
+                      textColor = const Color(0xFF334155);
+                    }
+
+                    return InkWell(
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+                        _navigateToQuestion(index);
+                      },
+                      borderRadius: BorderRadius.circular(6),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            height: double.infinity,
+                            decoration: BoxDecoration(
+                              color: bgColor,
+                              borderRadius: BorderRadius.circular(6),
+                              border: isCurrent
+                                  ? Border.all(color: AppColors.cbtCurrentOutline, width: 3.0)
+                                  : Border.all(
+                                      color: (!isVisited && !hasAnswer && !isMarked)
+                                          ? const Color(0xFF94A3B8)
+                                          : Colors.transparent,
+                                      width: 1.0,
+                                    ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${index + 1}',
+                                style: TextStyle(
+                                  fontWeight: isCurrent ? FontWeight.w900 : FontWeight.bold,
+                                  color: textColor,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (showPurpleBadge)
+                            Positioned(
+                              top: 3,
+                              right: 3,
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: AppColors.cbtMarked,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 1.5),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              // Fixed Submit Button at bottom
+              AppButton(
+                label: 'Submit Examination',
+                onPressed: () {
+                  Navigator.pop(sheetContext);
+                  _confirmSubmit();
                 },
               ),
-            ),
-            const SizedBox(height: 12),
-            AppButton(
-              label: 'Submit Examination',
-              onPressed: () {
-                Navigator.pop(context);
-                _confirmSubmit();
-              },
-            ),
-          ],
-        ),
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildLegendItem(String label, Color color) {
+  Widget _buildLegendItem(String label, Color color, int count, {bool hasPurpleBadge = false}) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 14,
-          height: 14,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.black12),
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: color == AppColors.cbtNotVisited ? const Color(0xFF94A3B8) : Colors.transparent,
+                  width: 1.0,
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  '$count',
+                  style: TextStyle(
+                    color: color == AppColors.cbtNotVisited ? const Color(0xFF334155) : Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ),
+            if (hasPurpleBadge)
+              Positioned(
+                top: -2,
+                right: -2,
+                child: Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: AppColors.cbtMarked,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.0),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondaryLight,
           ),
         ),
-        const SizedBox(width: 6),
-        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight)),
       ],
     );
   }

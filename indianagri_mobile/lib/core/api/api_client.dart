@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../storage/secure_storage.dart';
+import '../utils/citation_cleaner.dart';
+import '../utils/safe_parse.dart';
 
 /// Exception thrown for standard REST API communication failures.
 class ApiException implements Exception {
@@ -174,13 +176,97 @@ class ApiClient {
     }
   }
 
+  static const Set<String> _fieldsToCleanCitations = {
+    'question_text',
+    'question_text_hi',
+    'question',
+    'title',
+    'option_a',
+    'option_b',
+    'option_c',
+    'option_d',
+    'option_a_hi',
+    'option_b_hi',
+    'option_c_hi',
+    'option_d_hi',
+    'text',
+    'text_hi',
+    'option_text',
+    'content',
+    'explanation',
+    'explanation_hi',
+    'demo_explanation',
+    'feedback_message',
+  };
+
+  static final RegExp _integerRegex = RegExp(r'^-?\d+$');
+  static final RegExp _floatRegex = RegExp(r'^-?\d+\.\d+$');
+
+  static const Set<String> _numericFields = {
+    'id',
+    'quiz_id',
+    'category_id',
+    'subject_id',
+    'examination_id',
+    'exam_id',
+    'state_id',
+    'univ_id',
+    'vacancy_id',
+    'attempt_id',
+    'question_id',
+    'practice_sets_count',
+    'duration_minutes',
+    'time_spent_seconds',
+    'display_order',
+    'total_questions',
+    'practice_set_number',
+    'current_streak',
+    'best_streak',
+    'questions_solved',
+    'attempts_count',
+    'marks',
+    'negative_marks',
+    'total_marks',
+    'correct_marks',
+    'score',
+    'percentage',
+    'price',
+    'accuracy',
+    'avg_accuracy',
+    'marks_awarded',
+    'negative_deductions',
+    'total_score',
+    'rank',
+  };
+
   /// Deeply normalize any decoded JSON structure so all Maps become Map<String, dynamic>
   /// and all nested lists/maps are safe from Dart subtype casting errors.
+  /// Automatically strips unwanted citation markers like [cite: 5] from questions, options, and explanations.
+  /// Automatically converts numeric strings returned by MySQL/wpdb into numbers.
   static dynamic _normalizeJson(dynamic value) {
     if (value is Map) {
       final Map<String, dynamic> normalized = {};
       value.forEach((key, val) {
-        normalized[key.toString()] = _normalizeJson(val);
+        final keyStr = key.toString();
+        final normVal = _normalizeJson(val);
+        if (normVal is String) {
+          final cleanStr = normVal.trim();
+          if (_fieldsToCleanCitations.contains(keyStr)) {
+            normalized[keyStr] = CitationCleaner.clean(normVal);
+          } else if (_numericFields.contains(keyStr)) {
+            if (_integerRegex.hasMatch(cleanStr)) {
+              normalized[keyStr] = int.parse(cleanStr);
+            } else if (_floatRegex.hasMatch(cleanStr)) {
+              normalized[keyStr] = double.parse(cleanStr);
+            } else {
+              normalized[keyStr] = normVal;
+            }
+          } else {
+            normalized[keyStr] = normVal;
+          }
+        } else {
+          normalized[keyStr] = normVal;
+        }
       });
       return normalized;
     } else if (value is List) {

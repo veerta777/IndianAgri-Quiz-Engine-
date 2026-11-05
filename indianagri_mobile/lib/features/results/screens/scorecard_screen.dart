@@ -3,6 +3,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_styles.dart';
+import '../../../core/utils/safe_parse.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/state_views.dart';
 import 'solutions_review_screen.dart';
@@ -91,14 +92,14 @@ class _ScorecardScreenState extends State<ScorecardScreen> {
 
     final s = _scorecard!;
     final title = s['quiz_title'] ?? 'Examination';
-    final score = (s['score'] as num?)?.toDouble() ?? 0.0;
-    final totalMarks = (s['total_marks'] as num?)?.toDouble() ?? 0.0;
-    final percentage = (s['percentage'] as num?)?.toDouble() ?? 0.0;
+    final score = SafeParse.toDouble(s['score']);
+    final totalMarks = SafeParse.toDouble(s['total_marks']);
+    final percentage = SafeParse.toDouble(s['percentage']);
     final isPassed = s['passed'] == true;
-    final correct = s['correct_answers'] ?? 0;
-    final incorrect = s['incorrect_answers'] ?? 0;
-    final unattempted = s['unattempted_questions'] ?? 0;
-    final negativeMarks = (s['negative_deductions'] as num?)?.toDouble() ?? 0.0;
+    final correct = SafeParse.toInt(s['correct_answers']);
+    final incorrect = SafeParse.toInt(s['incorrect_answers']);
+    final unattempted = SafeParse.toInt(s['unattempted_questions']);
+    final negativeMarks = SafeParse.toDouble(s['negative_deductions']);
     final timeSpent = s['time_spent_formatted'] ?? '00m 00s';
     final percentile = s['percentile'];
 
@@ -172,7 +173,7 @@ class _ScorecardScreenState extends State<ScorecardScreen> {
                 _buildMetricTile('Time Spent', timeSpent, AppColors.primary, Icons.timer_outlined),
                 _buildMetricTile(
                   'Percentile',
-                  percentile != null ? '${(percentile as num).toStringAsFixed(1)}th' : 'N/A',
+                  percentile != null ? '${SafeParse.toDouble(percentile).toStringAsFixed(1)}th' : 'N/A',
                   const Color(0xFF8B5CF6),
                   Icons.leaderboard_outlined,
                 ),
@@ -247,9 +248,9 @@ class _ScorecardScreenState extends State<ScorecardScreen> {
 
   Widget _buildBreakdownCard(dynamic item) {
     final name = item['subject_name'] ?? 'Subject';
-    final accuracy = (item['accuracy'] as num?)?.toDouble() ?? 0.0;
-    final total = item['total_questions'] ?? 0;
-    final correct = item['correct_count'] ?? 0;
+    final accuracy = SafeParse.toDouble(item['accuracy']);
+    final total = SafeParse.toInt(item['total_questions']);
+    final correct = SafeParse.toInt(item['correct_count']);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),

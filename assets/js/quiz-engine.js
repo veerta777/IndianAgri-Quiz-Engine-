@@ -220,16 +220,49 @@
 
 			// Pre-populate answers dictionary and restore immediate feedback state
 			self.answers = {};
+			self.currentStreak = 0;
+			self.highestStreak = 0;
+			self.correctCount = 0;
+			self.incorrectCount = 0;
+
 			$.each(self.questions, function (i, q) {
+				var hasAns = (q.selected != null && String(q.selected).trim() !== '');
+				var isM = (q.is_marked ? 1 : 0);
+				var isV = (i === 0) ? true : (q.visited ? true : (hasAns ? true : (isM ? true : false)));
 				self.answers[q.id] = {
-					selected: q.selected || null,
-					isMarked: q.is_marked ? 1 : 0,
-					visited: (i === 0) ? true : (q.selected ? true : false)
+					selected: hasAns ? q.selected : null,
+					isMarked: isM,
+					visited: isV
 				};
 				if (q.immediate_feedback) {
 					self.feedbackData[q.id] = q.immediate_feedback;
 				}
 			});
+
+			// Reconstruct streaks and counts if resuming practice session
+			if (self.isImmediate) {
+				var runningStreak = 0;
+				$.each(self.questions, function (i, q) {
+					var fb = self.feedbackData[q.id];
+					if (fb) {
+						if (fb.is_correct) {
+							self.correctCount++;
+							runningStreak++;
+							if (runningStreak > self.highestStreak) {
+								self.highestStreak = runningStreak;
+							}
+						} else {
+							self.incorrectCount++;
+							runningStreak = 0;
+						}
+					}
+				});
+				self.currentStreak = runningStreak;
+				$('#iaq-practice-dashboard').show();
+				self.updatePracticeDashboard();
+			} else {
+				$('#iaq-practice-dashboard').hide();
+			}
 
 			// Switch UI to Examination Portal immediately.
 			$('#iaq-quiz-overview-' + quizId + ', .iaq-exam-card').slideUp(150);
@@ -441,14 +474,42 @@
 			var isCorrect = !!fb.is_correct;
 			var bannerCls = isCorrect ? 'is-correct' : 'is-incorrect';
 			var iconHtml = isCorrect
-				? '<span class="iaq-feedback-icon" style="color:#10b981;">' + IAQ_ICONS.check + '</span>'
-				: '<span class="iaq-feedback-icon" style="color:#ef4444;">' + IAQ_ICONS.cross + '</span>';
+				? '<span class="iaq-feedback-icon" style="color:#168443;">' + IAQ_ICONS.check + '</span>'
+				: '<span class="iaq-feedback-icon" style="color:#dc2626;">' + IAQ_ICONS.cross + '</span>';
 			var scorePillHtml = isCorrect
 				? '<span class="iaq-feedback-score-pill">+' + (fb.marks_awarded !== undefined ? fb.marks_awarded : q.marks) + ' Marks</span>'
 				: '<span class="iaq-feedback-score-pill">' + (fb.marks_awarded !== undefined ? (fb.marks_awarded > 0 ? '+' + fb.marks_awarded : fb.marks_awarded) : '0.00') + ' Marks</span>';
 
-			var defaultMsg = isCorrect ? 'Correct! Excellent work!' : 'Good try! Keep going. Review the explanation below to master this concept.';
-			var feedbackMsg = fb.feedback_message || defaultMsg;
+			var congratulatoryMsgs = [
+				'Excellent! Correct Answer!',
+				'Well done! Keep learning!',
+				'Brilliant! You got it right!',
+				'Great job! Keep it up!'
+			];
+			var supportiveMsgs = [
+				"Not quite! Don't give up.",
+				"Keep learning. You'll get the next one!",
+				"Good try! Learn from this question."
+			];
+
+			var qIdx = self.currentIndex || 0;
+			var feedbackMsg;
+			if (isCorrect) {
+				feedbackMsg = congratulatoryMsgs[qIdx % congratulatoryMsgs.length];
+			} else {
+				feedbackMsg = supportiveMsgs[qIdx % supportiveMsgs.length];
+			}
+
+			// Clearly identify correct answer option key and text
+			var correctOptObj = null;
+			if (q.options && q.options.length) {
+				$.each(q.options, function (oi, opt) {
+					if (opt.key === fb.correct_option) {
+						correctOptObj = opt;
+					}
+				});
+			}
+			var correctOptText = correctOptObj ? ('Option ' + fb.correct_option + ': ' + correctOptObj.text) : ('Option ' + fb.correct_option);
 
 			var html = '<div class="iaq-feedback-banner ' + bannerCls + '">';
 			html += '<div class="iaq-feedback-msg-group">';
@@ -458,13 +519,22 @@
 			html += scorePillHtml;
 			html += '</div>';
 
+			// Clearly identify correct answer banner
+			html += '<div class="iaq-feedback-correct-answer-banner">';
+			html += '<span style="color:#168443;font-size:16px;">✔</span> ';
+			html += '<span><strong>Correct Answer:</strong> ' + correctOptText + '</span>';
+			html += '</div>';
+
+			// Heading: "Correct Answer – Explanation"
 			var expl = cleanExplanationText(fb.explanation);
-			if (expl && $.trim(expl).length > 0) {
-				html += '<div class="iaq-feedback-explanation">';
-				html += '<h5 class="iaq-feedback-expl-title">' + IAQ_ICONS.lightbulb + ' Scientific Explanation &amp; Key Learning Points:</h5>';
-				html += '<div class="iaq-feedback-expl-text">' + expl + '</div>';
-				html += '</div>';
+			if (!expl || $.trim(expl).length === 0) {
+				expl = 'Explanation is not available for this question.';
 			}
+
+			html += '<div class="iaq-feedback-explanation">';
+			html += '<h5 class="iaq-feedback-expl-heading">' + IAQ_ICONS.lightbulb + ' Correct Answer – Explanation</h5>';
+			html += '<div class="iaq-feedback-expl-text">' + expl + '</div>';
+			html += '</div>';
 
 			var nextBtnText = (self.currentIndex === self.questions.length - 1)
 				? 'Finish Practice Set & View Scorecard &rarr;'
@@ -475,6 +545,72 @@
 			html += '</div>';
 
 			$fbBox.html(html).slideDown(200);
+		},
+
+		/**
+		 * Update Practice Progress Dashboard (Attempted, Correct, Incorrect, Streaks, Accuracy).
+		 */
+		updatePracticeDashboard: function () {
+			var self = this;
+			if (!self.isImmediate) return;
+
+			var attempted = self.correctCount + self.incorrectCount;
+			var total = self.questions.length;
+			var accuracy = attempted > 0 ? ((self.correctCount / attempted) * 100).toFixed(1) + '%' : '0.0%';
+
+			$('#iaq-dash-attempted').text(attempted + ' / ' + total);
+			$('#iaq-dash-correct').text(self.correctCount);
+			$('#iaq-dash-incorrect').text(self.incorrectCount);
+			$('#iaq-dash-streak').html((self.currentStreak > 0 ? '🔥 ' : '') + self.currentStreak);
+			$('#iaq-dash-highest-streak').html((self.highestStreak > 0 ? '🏆 ' : '') + self.highestStreak);
+			$('#iaq-dash-accuracy').text(accuracy);
+		},
+
+		/**
+		 * Display celebratory streak toast message.
+		 */
+		showCelebrationToast: function (message, isMega) {
+			var $container = $('#iaq-celebration-container');
+			if (!$container.length) {
+				$container = $('<div class="iaq-celebration-container" id="iaq-celebration-container"></div>').appendTo('body');
+			}
+			var megaCls = isMega ? ' is-mega-streak' : '';
+			var $toast = $('<div class="iaq-streak-toast' + megaCls + '">' + message + '</div>');
+			$container.append($toast);
+			setTimeout(function () {
+				$toast.remove();
+			}, 2600);
+		},
+
+		/**
+		 * Trigger lightweight, non-intrusive celebratory confetti particles.
+		 */
+		triggerConfetti: function () {
+			var colors = ['#117E3A', '#16A34A', '#F59E0B', '#8B5CF6', '#EC4899', '#0284C7', '#EAB308'];
+			for (var i = 0; i < 28; i++) {
+				var $particle = $('<div class="iaq-confetti-particle"></div>');
+				var leftOffset = Math.random() * window.innerWidth;
+				var color = colors[Math.floor(Math.random() * colors.length)];
+				var delay = Math.random() * 0.4;
+				var size = 6 + Math.random() * 6;
+
+				$particle.css({
+					left: leftOffset + 'px',
+					top: '10px',
+					width: size + 'px',
+					height: size + 'px',
+					backgroundColor: color,
+					borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+					animationDelay: delay + 's'
+				});
+
+				$('body').append($particle);
+				(function ($p) {
+					setTimeout(function () {
+						$p.remove();
+					}, 2200);
+				})($particle);
+			}
 		},
 
 		/**
@@ -642,6 +778,42 @@
 							curAns.selected = fb.selected;
 							self.answers[q.id] = curAns;
 
+							var isCor = !!fb.is_correct;
+							if (isCor) {
+								self.correctCount++;
+								self.currentStreak++;
+								if (self.currentStreak > self.highestStreak) {
+									self.highestStreak = self.currentStreak;
+								}
+
+								// Streak milestones celebration
+								if (self.currentStreak === 1) {
+									self.showCelebrationToast('🎯 First correct! Keep the streak going!', false);
+								} else if (self.currentStreak === 2) {
+									self.showCelebrationToast('⚡ Great! 2 correct in a row!', false);
+								} else if (self.currentStreak === 3) {
+									self.showCelebrationToast('🔥 3 in a Row! Excellent Performance!', true);
+									self.triggerConfetti();
+								} else if (self.currentStreak === 5) {
+									self.showCelebrationToast('🌟 Amazing! 5 Correct Answers in a Row!', true);
+									self.triggerConfetti();
+								} else if (self.currentStreak === 10) {
+									self.showCelebrationToast('🏆 Outstanding! 10 Correct Answers in a Row!', true);
+									self.triggerConfetti();
+								} else if (self.currentStreak > 10 && self.currentStreak % 5 === 0) {
+									self.showCelebrationToast('🚀 Superb Streak! ' + self.currentStreak + ' Correct in a Row!', true);
+									self.triggerConfetti();
+								}
+							} else {
+								self.incorrectCount++;
+								if (self.currentStreak > 0) {
+									self.showCelebrationToast("Streak reset. Keep learning — you'll get the next one! 💪", false);
+								}
+								self.currentStreak = 0;
+							}
+
+							self.updatePracticeDashboard();
+
 							// Highlight options with accessible tags and distinct colors
 							$('.iaq-option-item').each(function () {
 								var k = $(this).data('opt-key');
@@ -745,10 +917,12 @@
 
 			var curAns = self.answers[q.id] || { selected: null, isMarked: 0, visited: true };
 			curAns.isMarked = curAns.isMarked ? 0 : 1;
+			curAns.visited = true;
 			self.answers[q.id] = curAns;
 
 			self.autoSaveCurrent();
 			self.updateQuestionPaletteStatus(self.currentIndex);
+			self.updateSummaryCounters();
 
 			if (self.currentIndex < self.questions.length - 1) {
 				self.renderQuestion(self.currentIndex + 1);
@@ -834,13 +1008,17 @@
 
 			$btn.removeClass('is-answered is-unanswered is-not-visited is-marked is-ans-marked');
 
-			if (ans.selected && ans.isMarked) {
+			var hasAnswer = !!(ans.selected && String(ans.selected).trim() !== '');
+			var isVisited = !!ans.visited;
+			var isMarked = !!(ans.isMarked && ans.isMarked !== 0);
+
+			if (hasAnswer && isMarked) {
 				$btn.addClass('is-ans-marked');
-			} else if (ans.selected) {
+			} else if (hasAnswer) {
 				$btn.addClass('is-answered');
-			} else if (ans.isMarked) {
+			} else if (isMarked) {
 				$btn.addClass('is-marked');
-			} else if (ans.visited) {
+			} else if (isVisited) {
 				$btn.addClass('is-unanswered');
 			} else {
 				$btn.addClass('is-not-visited');
@@ -860,6 +1038,7 @@
 
 		/**
 		 * Calculate and refresh live summary status counts on the palette.
+		 * Dynamically partitions all questions so Answered + Not Answered + Not Visited === total questions.
 		 */
 		updateSummaryCounters: function () {
 			var self = this;
@@ -871,17 +1050,27 @@
 
 			$.each(self.questions, function (i, q) {
 				var ans = self.answers[q.id] || { selected: null, isMarked: 0, visited: false };
-				if (ans.selected && ans.isMarked) {
-					countAnsMarked++;
+				var hasAnswer = !!(ans.selected && String(ans.selected).trim() !== '');
+				var isVisited = !!ans.visited;
+				var isMarked = !!(ans.isMarked && ans.isMarked !== 0);
+
+				// Primary status totals: Strictly partition questions
+				// Answered + Not Answered + Not Visited === total questions
+				if (hasAnswer) {
 					countAns++;
-				} else if (ans.selected) {
-					countAns++;
-				} else if (ans.isMarked) {
-					countMarked++;
-				} else if (ans.visited) {
+				} else if (isVisited) {
 					countUnans++;
 				} else {
 					countNotVisited++;
+				}
+
+				// Review categories
+				if (isMarked) {
+					if (hasAnswer) {
+						countAnsMarked++;
+					} else {
+						countMarked++;
+					}
 				}
 			});
 
@@ -981,26 +1170,43 @@
 			var self = this;
 			var total = self.questions.length;
 			var answered = 0;
+			var notAnswered = 0;
+			var notVisited = 0;
 			var marked = 0;
+			var ansMarked = 0;
 
 			$.each(self.questions, function (i, q) {
-				var ans = self.answers[q.id];
-				if (ans && ans.selected) {
+				var ans = self.answers[q.id] || { selected: null, isMarked: 0, visited: false };
+				var hasAnswer = !!(ans.selected && String(ans.selected).trim() !== '');
+				var isVisited = !!ans.visited;
+				var isMarked = !!(ans.isMarked && ans.isMarked !== 0);
+
+				if (hasAnswer) {
 					answered++;
+				} else if (isVisited) {
+					notAnswered++;
+				} else {
+					notVisited++;
 				}
-				if (ans && ans.isMarked) {
-					marked++;
+
+				if (isMarked) {
+					if (hasAnswer) {
+						ansMarked++;
+					} else {
+						marked++;
+					}
 				}
 			});
 
-			var unanswered = total - answered;
-
 			$('#iaq-modal-total-q').text(total);
 			$('#iaq-modal-answered-q').text(answered);
-			$('#iaq-modal-unanswered-q').text(unanswered);
+			$('#iaq-modal-unanswered-q').text(notAnswered);
+			$('#iaq-modal-not-visited-q').text(notVisited);
 			$('#iaq-modal-marked-q').text(marked);
+			$('#iaq-modal-ans-marked-q').text(ansMarked);
 
-			if (unanswered > 0) {
+			var unattempted = notAnswered + notVisited;
+			if (unattempted > 0) {
 				$('#iaq-modal-warning').show();
 			} else {
 				$('#iaq-modal-warning').hide();

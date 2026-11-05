@@ -5,6 +5,8 @@ import '../../../core/api/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_styles.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/utils/citation_cleaner.dart';
+import '../../../core/utils/safe_parse.dart';
 import '../../../core/widgets/language_toggle.dart';
 import '../../../core/widgets/state_views.dart';
 
@@ -39,7 +41,10 @@ class _SolutionsReviewScreenState extends State<SolutionsReviewScreen> {
       final res = await ApiClient.get(ApiEndpoints.solutions(widget.attemptId));
       if (res is List<dynamic>) {
         setState(() {
-          _questions = res;
+          _questions = res
+              .where((e) => e is Map)
+              .map((e) => CitationCleaner.cleanQuestionMap(Map<String, dynamic>.from(e as Map)))
+              .toList();
           _isLoading = false;
         });
         return;
@@ -118,21 +123,34 @@ class _SolutionsReviewScreenState extends State<SolutionsReviewScreen> {
         final raw = _questions[index];
         if (raw is! Map) return const SizedBox.shrink();
         final q = Map<String, dynamic>.from(raw);
-        final qId = (q['id'] as num?)?.toInt() ?? 0;
+        final qId = SafeParse.toInt(q['id']);
         final selectedOpt = q['selected_option']?.toString();
         final correctOpt = q['correct_option']?.toString() ?? '';
-        final isCorrect = q['is_correct'] == 1;
+        final isCorrect = q['is_correct'] == 1 || q['is_correct'] == true || q['is_correct'] == '1';
         final isUnattempted = selectedOpt == null || selectedOpt.isEmpty;
-        final marks = (q['marks_awarded'] as num?)?.toDouble() ?? 0.0;
+        final marks = SafeParse.toDouble(q['marks_awarded']);
         final isBookmarked = _bookmarkedQuestions.contains(qId);
 
-        final qText = (isHindi && q['question_text_hi'] != null && q['question_text_hi'].toString().isNotEmpty)
+        final qText = CitationCleaner.clean((isHindi && q['question_text_hi'] != null && q['question_text_hi'].toString().isNotEmpty)
             ? q['question_text_hi'].toString()
-            : q['question_text'].toString();
+            : (q['question_text'] ?? q['question'] ?? q['text'] ?? '').toString());
 
-        final explanation = (isHindi && q['explanation_hi'] != null && q['explanation_hi'].toString().isNotEmpty)
+        final explanation = CitationCleaner.clean((isHindi && q['explanation_hi'] != null && q['explanation_hi'].toString().isNotEmpty)
             ? q['explanation_hi'].toString()
-            : q['explanation'].toString();
+            : (q['explanation'] ?? q['demo_explanation'] ?? '').toString());
+
+        final optA = (isHindi && q['option_a_hi'] != null && q['option_a_hi'].toString().isNotEmpty)
+            ? q['option_a_hi'].toString()
+            : (q['option_a']?.toString() ?? '');
+        final optB = (isHindi && q['option_b_hi'] != null && q['option_b_hi'].toString().isNotEmpty)
+            ? q['option_b_hi'].toString()
+            : (q['option_b']?.toString() ?? '');
+        final optC = (isHindi && q['option_c_hi'] != null && q['option_c_hi'].toString().isNotEmpty)
+            ? q['option_c_hi'].toString()
+            : (q['option_c']?.toString() ?? '');
+        final optD = (isHindi && q['option_d_hi'] != null && q['option_d_hi'].toString().isNotEmpty)
+            ? q['option_d_hi'].toString()
+            : (q['option_d']?.toString() ?? '');
 
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
@@ -182,13 +200,13 @@ class _SolutionsReviewScreenState extends State<SolutionsReviewScreen> {
               const SizedBox(height: 14),
 
               // Options Review
-              _buildReviewOption('A', q['option_a']?.toString() ?? '', selectedOpt, correctOpt),
+              _buildReviewOption('A', optA, selectedOpt, correctOpt),
               const SizedBox(height: 6),
-              _buildReviewOption('B', q['option_b']?.toString() ?? '', selectedOpt, correctOpt),
+              _buildReviewOption('B', optB, selectedOpt, correctOpt),
               const SizedBox(height: 6),
-              _buildReviewOption('C', q['option_c']?.toString() ?? '', selectedOpt, correctOpt),
+              _buildReviewOption('C', optC, selectedOpt, correctOpt),
               const SizedBox(height: 6),
-              _buildReviewOption('D', q['option_d']?.toString() ?? '', selectedOpt, correctOpt),
+              _buildReviewOption('D', optD, selectedOpt, correctOpt),
 
               // Scientific Explanation
               if (explanation.isNotEmpty) ...[
@@ -271,7 +289,7 @@ class _SolutionsReviewScreenState extends State<SolutionsReviewScreen> {
             ),
           ),
           const SizedBox(width: 10),
-          Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
+          Expanded(child: Text(CitationCleaner.clean(text), style: const TextStyle(fontSize: 13))),
           if (icon != null) ...[
             const SizedBox(width: 6),
             Icon(icon, color: iconColor, size: 18),

@@ -3,6 +3,8 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_styles.dart';
+import '../../../core/utils/citation_cleaner.dart';
+import '../../../core/utils/safe_parse.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../quiz_cbt/screens/quiz_instructions_screen.dart';
@@ -36,8 +38,12 @@ class _WrongNotebookScreenState extends State<WrongNotebookScreen> {
     try {
       final res = await ApiClient.get('${ApiEndpoints.wrongNotebook}?status=$_currentStatus');
       if (res is Map<String, dynamic> && res.containsKey('entries')) {
+        final entriesList = (res['entries'] as List<dynamic>?) ?? [];
         setState(() {
-          _entries = (res['entries'] as List<dynamic>?) ?? [];
+          _entries = entriesList
+              .where((e) => e is Map)
+              .map((e) => CitationCleaner.cleanQuestionMap(Map<String, dynamic>.from(e as Map)))
+              .toList();
           _isLoading = false;
         });
         return;
@@ -62,7 +68,7 @@ class _WrongNotebookScreenState extends State<WrongNotebookScreen> {
     try {
       final res = await ApiClient.post(ApiEndpoints.createRetryQuiz);
       if (res is Map<String, dynamic> && res.containsKey('quiz_id')) {
-        final quizId = (res['quiz_id'] as num).toInt();
+        final quizId = SafeParse.toInt(res['quiz_id']);
         if (!mounted) return;
         Navigator.push(
           context,
@@ -190,10 +196,10 @@ class _WrongNotebookScreenState extends State<WrongNotebookScreen> {
                             final raw = _entries[index];
                             if (raw is! Map) return const SizedBox.shrink();
                             final entry = Map<String, dynamic>.from(raw);
-                            final qId = (entry['question_id'] ?? entry['id'] as num?)?.toInt() ?? 0;
-                            final qText = (entry['question_text'] ?? 'Question').toString();
+                            final qId = SafeParse.toInt(entry['question_id'] ?? entry['id']);
+                            final qText = CitationCleaner.clean((entry['question_text'] ?? 'Question').toString());
                             final subject = (entry['subject_name'] ?? 'Agronomy').toString();
-                            final explanation = entry['explanation']?.toString() ?? '';
+                            final explanation = CitationCleaner.clean(entry['explanation']?.toString() ?? '');
                             final timesIncorrect = entry['times_incorrect'] ?? 1;
 
                             return Container(

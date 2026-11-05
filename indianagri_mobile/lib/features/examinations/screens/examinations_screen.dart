@@ -3,6 +3,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_styles.dart';
+import '../../../core/utils/safe_parse.dart';
 import '../../../core/widgets/language_toggle.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../practice_sets/screens/practice_sets_screen.dart';
@@ -94,7 +95,7 @@ class _ExaminationsScreenState extends State<ExaminationsScreen> {
         final raw = _examinations[index];
         if (raw is! Map) return const SizedBox.shrink();
         final exam = Map<String, dynamic>.from(raw);
-        final id = (exam['id'] as num?)?.toInt() ?? 0;
+        final id = SafeParse.toInt(exam['id']);
         final name = (exam['name'] ?? 'Agricultural Examination').toString();
         final code = (exam['code'] ?? '').toString();
         final description = (exam['description'] ?? '').toString();

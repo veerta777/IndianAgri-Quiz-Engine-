@@ -3,6 +3,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_styles.dart';
+import '../../../core/utils/safe_parse.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../quiz_cbt/screens/quiz_instructions_screen.dart';
@@ -88,7 +89,7 @@ class _CustomPracticeScreenState extends State<CustomPracticeScreen> {
       );
 
       if (res is Map<String, dynamic> && res.containsKey('quiz_id')) {
-        final quizId = (res['quiz_id'] as num).toInt();
+        final quizId = SafeParse.toInt(res['quiz_id']);
         if (!mounted) return;
         Navigator.push(
           context,
@@ -167,7 +168,7 @@ class _CustomPracticeScreenState extends State<CustomPracticeScreen> {
                           child: Text('All Examinations (General Pool)'),
                         ),
                         ..._examinations.map((e) {
-                          final id = (e['id'] as num).toInt();
+                          final id = SafeParse.toInt(e['id']);
                           final name = e['name']?.toString() ?? 'Exam';
                           return DropdownMenuItem<int>(
                             value: id,
@@ -191,7 +192,7 @@ class _CustomPracticeScreenState extends State<CustomPracticeScreen> {
                     spacing: 8,
                     runSpacing: 8,
                     children: _subjects.map((sub) {
-                      final sId = (sub['id'] as num).toInt();
+                      final sId = SafeParse.toInt(sub['id']);
                       final sName = sub['name']?.toString() ?? 'Subject';
                       final isSelected = _selectedSubjectIds.contains(sId);
 

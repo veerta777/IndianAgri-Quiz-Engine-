@@ -4,6 +4,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_styles.dart';
+import '../../../core/utils/safe_parse.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/language_toggle.dart';
 import '../../../core/widgets/state_views.dart';
@@ -425,7 +426,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => CbtExamScreen(quizId: (quizId as num).toInt()),
+                  builder: (_) => CbtExamScreen(quizId: SafeParse.toInt(quizId)),
                 ),
               );
             },
@@ -436,10 +437,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildStatsGrid(Map<String, dynamic>? stats, Map<String, dynamic>? streaks) {
-    final testsAttempted = stats?['attempts_count'] ?? 0;
-    final questionsSolved = stats?['questions_solved'] ?? 0;
-    final accuracy = (stats?['avg_accuracy'] as num?)?.toDouble() ?? 0.0;
-    final streak = streaks?['current'] ?? 0;
+    final testsAttempted = SafeParse.toInt(stats?['attempts_count']);
+    final questionsSolved = SafeParse.toInt(stats?['questions_solved']);
+    final accuracy = SafeParse.toDouble(stats?['avg_accuracy']);
+    final streak = SafeParse.toInt(streaks?['current']);
 
     return GridView.count(
       crossAxisCount: 2,
@@ -641,9 +642,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildContinueQuizCard(dynamic quiz) {
     final title = quiz['title'] ?? 'Practice Set';
-    final qId = (quiz['id'] as num?)?.toInt() ?? 0;
-    final totalQ = quiz['total_questions'] ?? 50;
-    final duration = quiz['duration_minutes'] ?? 0;
+    final qId = SafeParse.toInt(quiz['id']);
+    final totalQ = SafeParse.toInt(quiz['total_questions'], 50);
+    final duration = SafeParse.toInt(quiz['duration_minutes'], 0);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -702,8 +703,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       children: list.take(4).map((sub) {
         final name = sub['subject_name'] ?? 'General Agriculture';
-        final accuracy = (sub['accuracy'] as num?)?.toDouble() ?? 0.0;
-        final solved = sub['questions_solved'] ?? 0;
+        final accuracy = SafeParse.toDouble(sub['accuracy']);
+        final solved = SafeParse.toInt(sub['questions_solved']);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 8),

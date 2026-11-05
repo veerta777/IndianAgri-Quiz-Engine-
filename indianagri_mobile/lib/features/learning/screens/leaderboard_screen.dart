@@ -3,6 +3,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_styles.dart';
+import '../../../core/utils/safe_parse.dart';
 import '../../../core/widgets/state_views.dart';
 
 class LeaderboardScreen extends StatefulWidget {
@@ -122,10 +123,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               final raw = _rankings[index];
               if (raw is! Map) return const SizedBox.shrink();
               final rank = Map<String, dynamic>.from(raw);
-              final rankNum = rank['rank'] ?? (index + 1);
+              final rankNum = SafeParse.toInt(rank['rank'], index + 1);
               final name = (rank['display_name'] ?? 'Scholar').toString();
-              final score = (rank['total_score'] as num?)?.toDouble() ?? 0.0;
-              final accuracy = (rank['accuracy'] as num?)?.toDouble() ?? 0.0;
+              final score = SafeParse.toDouble(rank['total_score']);
+              final accuracy = SafeParse.toDouble(rank['accuracy']);
               final isTop3 = index < 3;
 
               Color rankBadgeColor = AppColors.primarySubtle;

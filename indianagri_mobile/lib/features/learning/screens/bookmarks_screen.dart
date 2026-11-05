@@ -3,6 +3,8 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_styles.dart';
+import '../../../core/utils/citation_cleaner.dart';
+import '../../../core/utils/safe_parse.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../quiz_cbt/screens/quiz_instructions_screen.dart';
@@ -35,8 +37,12 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     try {
       final res = await ApiClient.get(ApiEndpoints.bookmarks);
       if (res is Map<String, dynamic> && res.containsKey('bookmarks')) {
+        final rawBookmarks = (res['bookmarks'] as List<dynamic>?) ?? [];
         setState(() {
-          _bookmarks = (res['bookmarks'] as List<dynamic>?) ?? [];
+          _bookmarks = rawBookmarks
+              .where((e) => e is Map)
+              .map((e) => CitationCleaner.cleanQuestionMap(Map<String, dynamic>.from(e as Map)))
+              .toList();
           _isLoading = false;
         });
         return;
@@ -61,7 +67,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     try {
       final res = await ApiClient.post(ApiEndpoints.createRevisionQuiz);
       if (res is Map<String, dynamic> && res.containsKey('quiz_id')) {
-        final quizId = (res['quiz_id'] as num).toInt();
+        final quizId = SafeParse.toInt(res['quiz_id']);
         if (!mounted) return;
         Navigator.push(
           context,
@@ -160,10 +166,10 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
               final raw = _bookmarks[index];
               if (raw is! Map) return const SizedBox.shrink();
               final b = Map<String, dynamic>.from(raw);
-              final qId = (b['question_id'] ?? b['id'] as num?)?.toInt() ?? 0;
-              final qText = (b['question_text'] ?? 'Question').toString();
+              final qId = SafeParse.toInt(b['question_id'] ?? b['id']);
+              final qText = CitationCleaner.clean((b['question_text'] ?? 'Question').toString());
               final subject = (b['subject_name'] ?? 'General Agriculture').toString();
-              final notes = b['notes']?.toString() ?? '';
+              final notes = CitationCleaner.clean(b['notes']?.toString() ?? '');
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),

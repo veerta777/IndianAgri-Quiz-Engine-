@@ -48,11 +48,42 @@ if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 		</div>
 	</header>
 
+	<!-- Celebration Toast Overlay (Practice Streaks) -->
+	<div class="iaq-celebration-container" id="iaq-celebration-container" aria-live="assertive"></div>
+
 	<!-- Examination Layout (Workspace + Palette) -->
 	<div class="iaq-exam-body">
 		<!-- Left: Question Workspace -->
 		<section class="iaq-exam-workspace">
 			
+			<!-- Practice Mode Progress & Streak Dashboard (Practice Sets Only) -->
+			<div class="iaq-practice-dashboard" id="iaq-practice-dashboard" style="display:none;" role="region" aria-label="<?php esc_attr_e( 'Practice Session Statistics', 'indianagri-quiz-engine' ); ?>">
+				<div class="iaq-dash-item">
+					<span class="iaq-dash-label"><?php esc_html_e( 'Attempted', 'indianagri-quiz-engine' ); ?></span>
+					<span class="iaq-dash-value" id="iaq-dash-attempted">0 / 0</span>
+				</div>
+				<div class="iaq-dash-item is-correct-stat">
+					<span class="iaq-dash-label"><?php esc_html_e( 'Correct', 'indianagri-quiz-engine' ); ?></span>
+					<span class="iaq-dash-value" id="iaq-dash-correct">0</span>
+				</div>
+				<div class="iaq-dash-item is-incorrect-stat">
+					<span class="iaq-dash-label"><?php esc_html_e( 'Incorrect', 'indianagri-quiz-engine' ); ?></span>
+					<span class="iaq-dash-value" id="iaq-dash-incorrect">0</span>
+				</div>
+				<div class="iaq-dash-item is-streak-stat">
+					<span class="iaq-dash-label"><?php esc_html_e( 'Streak', 'indianagri-quiz-engine' ); ?></span>
+					<span class="iaq-dash-value" id="iaq-dash-streak">🔥 0</span>
+				</div>
+				<div class="iaq-dash-item is-highest-streak-stat">
+					<span class="iaq-dash-label"><?php esc_html_e( 'Best Streak', 'indianagri-quiz-engine' ); ?></span>
+					<span class="iaq-dash-value" id="iaq-dash-highest-streak">🏆 0</span>
+				</div>
+				<div class="iaq-dash-item is-accuracy-stat">
+					<span class="iaq-dash-label"><?php esc_html_e( 'Accuracy', 'indianagri-quiz-engine' ); ?></span>
+					<span class="iaq-dash-value" id="iaq-dash-accuracy">0.0%</span>
+				</div>
+			</div>
+
 			<!-- Question Navigation Info Bar -->
 			<div class="iaq-question-meta-bar">
 				<div class="iaq-q-tracker">
@@ -184,8 +215,16 @@ if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 							<td class="iaq-sum-val" id="iaq-modal-unanswered-q">0</td>
 						</tr>
 						<tr>
+							<td><span class="iaq-sum-color-not-visited">●</span> <?php esc_html_e( 'Not Visited', 'indianagri-quiz-engine' ); ?>:</td>
+							<td class="iaq-sum-val" id="iaq-modal-not-visited-q">0</td>
+						</tr>
+						<tr>
 							<td><span class="iaq-sum-color-marked">●</span> <?php esc_html_e( 'Marked for Review', 'indianagri-quiz-engine' ); ?>:</td>
 							<td class="iaq-sum-val" id="iaq-modal-marked-q">0</td>
+						</tr>
+						<tr>
+							<td><span class="iaq-sum-color-ans-marked">●</span> <?php esc_html_e( 'Answered & Marked for Review', 'indianagri-quiz-engine' ); ?>:</td>
+							<td class="iaq-sum-val" id="iaq-modal-ans-marked-q">0</td>
 						</tr>
 					</tbody>
 				</table>

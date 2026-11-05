@@ -3,6 +3,8 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_styles.dart';
+import '../../../core/utils/citation_cleaner.dart';
+import '../../../core/utils/safe_parse.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../subscriptions/screens/subscription_plans_screen.dart';
@@ -57,7 +59,10 @@ class _QuizInstructionsScreenState extends State<QuizInstructionsScreen> {
         setState(() {
           _quiz = res['quiz'] != null && res['quiz'] is Map ? Map<String, dynamic>.from(res['quiz'] as Map) : null;
           _entitlement = res['entitlement'] != null && res['entitlement'] is Map ? Map<String, dynamic>.from(res['entitlement'] as Map) : null;
-          _sampleQuestions = sampleQs;
+          _sampleQuestions = sampleQs
+              .where((e) => e is Map)
+              .map((e) => CitationCleaner.cleanQuestionMap(Map<String, dynamic>.from(e as Map)))
+              .toList();
           _isLoading = false;
         });
         return;
@@ -98,11 +103,11 @@ class _QuizInstructionsScreenState extends State<QuizInstructionsScreen> {
 
     final q = _quiz!;
     final title = q['title'] ?? 'Examination';
-    final totalQ = q['total_questions'] ?? 50;
-    final totalMarks = (q['total_marks'] as num?)?.toDouble() ?? (totalQ * 1.0);
-    final duration = q['duration_minutes'] ?? 0;
-    final correctMarks = (q['correct_marks'] as num?)?.toDouble() ?? 1.0;
-    final negMarks = (q['negative_marks'] as num?)?.toDouble() ?? 0.25;
+    final totalQ = SafeParse.toInt(q['total_questions'], 50);
+    final totalMarks = SafeParse.toDouble(q['total_marks'], totalQ * 1.0);
+    final duration = SafeParse.toInt(q['duration_minutes'], 0);
+    final correctMarks = SafeParse.toDouble(q['correct_marks'], 1.0);
+    final negMarks = SafeParse.toDouble(q['negative_marks'], 0.25);
     final instructions = q['instructions']?.toString().isNotEmpty == true
         ? q['instructions']
         : 'Attempt all questions with precision. In CBT mode, navigate using the bottom bar or Question Palette. Timer will automatically submit your attempt when it runs out.';
@@ -212,7 +217,7 @@ class _QuizInstructionsScreenState extends State<QuizInstructionsScreen> {
                                 children: [
                                   ..._sampleQuestions.map((sq) {
                                     final sIndex = sq['index'] ?? 1;
-                                    final sText = sq['question_text'] ?? '';
+                                    final sText = CitationCleaner.clean(sq['question_text'] ?? sq['question'] ?? sq['text'] ?? '');
                                     final sSub = sq['subject_name'] ?? '';
 
                                     return Padding(

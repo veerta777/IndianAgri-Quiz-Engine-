@@ -4,6 +4,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_styles.dart';
+import '../../../core/utils/safe_parse.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/state_views.dart';
 
@@ -119,15 +120,15 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
         final raw = _plans[index];
         if (raw is! Map) return const SizedBox.shrink();
         final plan = Map<String, dynamic>.from(raw);
-        final id = (plan['id'] as num?)?.toInt() ?? 0;
+        final id = SafeParse.toInt(plan['id']);
         final name = (plan['name'] ?? 'Membership Plan').toString();
-        final price = (plan['price'] as num?)?.toDouble() ?? 0.0;
+        final price = SafeParse.toDouble(plan['price']);
         final currency = (plan['currency'] ?? 'INR').toString();
-        final durationVal = plan['duration_value'] ?? 1;
+        final durationVal = SafeParse.toInt(plan['duration_value'], 1);
         final durationUnit = (plan['duration_unit'] ?? 'months').toString();
         final accessType = (plan['access_type'] ?? 'all_access').toString();
         final description = (plan['description'] ?? '').toString();
-        final isFeatured = plan['is_featured'] == 1;
+        final isFeatured = SafeParse.toBool(plan['is_featured']);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 16),

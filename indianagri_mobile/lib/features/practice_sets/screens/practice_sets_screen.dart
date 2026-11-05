@@ -3,6 +3,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_styles.dart';
+import '../../../core/utils/safe_parse.dart';
 import '../../../core/widgets/language_toggle.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../quiz_cbt/screens/cbt_exam_screen.dart';
@@ -210,92 +211,96 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         itemCount: _subjects.length,
         itemBuilder: (context, index) {
-        final raw = _subjects[index];
-        if (raw is! Map) return const SizedBox.shrink();
-        final s = Map<String, dynamic>.from(raw);
-        final id = (s['id'] as num?)?.toInt() ?? 0;
-        final name = (s['name'] ?? 'Subject').toString();
-        final description = (s['description'] ?? '').toString();
-        final setsCount = (s['practice_sets_count'] as num?)?.toInt() ?? 0;
-        final icon = _getSubjectIcon(name);
+          try {
+            final raw = _subjects[index];
+            if (raw is! Map) return const SizedBox.shrink();
+            final s = Map<String, dynamic>.from(raw);
+            final id = SafeParse.toInt(s['id']);
+            final name = (s['name'] ?? 'Subject').toString();
+            final description = (s['description'] ?? '').toString();
+            final setsCount = SafeParse.toInt(s['practice_sets_count']);
+            final icon = _getSubjectIcon(name);
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: AppStyles.glassCardDecoration(context),
-          child: Material(
-            color: Colors.transparent,
-            borderRadius: AppStyles.borderRadiusL,
-            child: InkWell(
-              onTap: () => _openSubjectSets(id, name),
-              borderRadius: AppStyles.borderRadiusL,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        gradient: AppColors.heroEmeraldGradient,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withOpacity(0.25),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Icon(icon, color: Colors.white, size: 26),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            name,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                          ),
-                          if (description.isNotEmpty) ...[
-                            const SizedBox(height: 3),
-                            Text(
-                              description,
-                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primarySubtle,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  '$setsCount Practice Sets',
-                                  style: const TextStyle(fontSize: 11, color: AppColors.primaryDark, fontWeight: FontWeight.bold),
-                                ),
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: AppStyles.glassCardDecoration(context),
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: AppStyles.borderRadiusL,
+                child: InkWell(
+                  onTap: () => _openSubjectSets(id, name),
+                  borderRadius: AppStyles.borderRadiusL,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            gradient: AppColors.heroEmeraldGradient,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withOpacity(0.25),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
                               ),
-                              const SizedBox(width: 8),
-                              const Text('• 50 MCQs / Set', style: TextStyle(fontSize: 11, color: AppColors.textSecondaryLight)),
                             ],
                           ),
-                        ],
-                      ),
+                          child: Icon(icon, color: Colors.white, size: 26),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                name,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                              ),
+                              if (description.isNotEmpty) ...[
+                                const SizedBox(height: 3),
+                                Text(
+                                  description,
+                                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primarySubtle,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      '$setsCount Practice Sets',
+                                      style: const TextStyle(fontSize: 11, color: AppColors.primaryDark, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text('• 50 MCQs / Set', style: TextStyle(fontSize: 11, color: AppColors.textSecondaryLight)),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textSecondaryLight),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textSecondaryLight),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
-        );
-      },
+            );
+          } catch (_) {
+            return const SizedBox.shrink();
+          }
+        },
     ),
   );
 }
@@ -327,85 +332,89 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         itemCount: _exams.length,
         itemBuilder: (context, index) {
-        final raw = _exams[index];
-        if (raw is! Map) return const SizedBox.shrink();
-        final e = Map<String, dynamic>.from(raw);
-        final id = (e['id'] as num?)?.toInt() ?? 0;
-        final name = (e['name'] ?? 'Exam').toString();
-        final code = (e['code'] ?? '').toString();
-        final desc = (e['description'] ?? '').toString();
+          try {
+            final raw = _exams[index];
+            if (raw is! Map) return const SizedBox.shrink();
+            final e = Map<String, dynamic>.from(raw);
+            final id = SafeParse.toInt(e['id']);
+            final name = (e['name'] ?? 'Exam').toString();
+            final code = (e['code'] ?? '').toString();
+            final desc = (e['description'] ?? '').toString();
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: AppStyles.glassCardDecoration(context),
-          child: Material(
-            color: Colors.transparent,
-            borderRadius: AppStyles.borderRadiusL,
-            child: InkWell(
-              onTap: () => _openExamSets(id, name),
-              borderRadius: AppStyles.borderRadiusL,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: AppColors.warningAmberBg,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.warningAmber.withOpacity(0.3)),
-                      ),
-                      child: const Icon(Icons.school, color: AppColors.warningAmber, size: 26),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: AppStyles.glassCardDecoration(context),
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: AppStyles.borderRadiusL,
+                child: InkWell(
+                  onTap: () => _openExamSets(id, name),
+                  borderRadius: AppStyles.borderRadiusL,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: AppColors.warningAmberBg,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.warningAmber.withOpacity(0.3)),
+                          ),
+                          child: const Icon(Icons.school, color: AppColors.warningAmber, size: 26),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                  ),
+                                  if (code.isNotEmpty)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFE0F2FE),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        code,
+                                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF0369A1)),
+                                      ),
+                                    ),
+                                ],
                               ),
-                              if (code.isNotEmpty)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFE0F2FE),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    code,
-                                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF0369A1)),
-                                  ),
+                              if (desc.isNotEmpty) ...[
+                                const SizedBox(height: 3),
+                                Text(
+                                  desc,
+                                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
+                              ],
+                              const SizedBox(height: 6),
+                              const Text(
+                                'Syllabus & Exam Mock Drills →',
+                                style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600),
+                              ),
                             ],
                           ),
-                          if (desc.isNotEmpty) ...[
-                            const SizedBox(height: 3),
-                            Text(
-                              desc,
-                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                          const SizedBox(height: 6),
-                          const Text(
-                            'Syllabus & Exam Mock Drills →',
-                            style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
-        );
-      },
+            );
+          } catch (_) {
+            return const SizedBox.shrink();
+          }
+        },
     ),
   );
 }
@@ -664,7 +673,14 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
             ),
           )
         else
-          ...displayBooks.map((b) => _buildBookCard(Map<String, dynamic>.from(b as Map), isDark)),
+          ...displayBooks.map((b) {
+            try {
+              if (b is! Map) return const SizedBox.shrink();
+              return _buildBookCard(Map<String, dynamic>.from(b), isDark);
+            } catch (_) {
+              return const SizedBox.shrink();
+            }
+          }),
       ],
     ),
   );
@@ -699,10 +715,10 @@ class _PracticeSetsScreenState extends State<PracticeSetsScreen> {
   }
 
   Widget _buildBookCard(Map<String, dynamic> b, bool isDark) {
-    final id = (b['id'] as num?)?.toInt() ?? 0;
+    final id = SafeParse.toInt(b['id']);
     final title = (b['title'] ?? 'Textbook').toString();
     final author = (b['author'] ?? '').toString();
-    final setsCount = (b['practice_sets_count'] as num?)?.toInt() ?? 0;
+    final setsCount = SafeParse.toInt(b['practice_sets_count']);
     final desc = (b['description'] ?? '').toString();
     final coverImageUrl = (b['cover_image_url'] ?? '').toString();
     final accessType = (b['access_type'] ?? 'paid').toString().toLowerCase();
@@ -1221,12 +1237,12 @@ class _GenericSetsListScreenState extends State<GenericSetsListScreen> {
         final raw = _sets[index];
         if (raw is! Map) return const SizedBox.shrink();
         final item = Map<String, dynamic>.from(raw);
-        final quizId = (item['quiz_id'] ?? item['id'] as num?)?.toInt() ?? 0;
-        final setNumber = (item['practice_set_number'] as num?)?.toInt() ?? (index + 1);
+        final quizId = SafeParse.toInt(item['quiz_id'] ?? item['id']);
+        final setNumber = SafeParse.toInt(item['practice_set_number'], index + 1);
         final rawTitle = item['title']?.toString() ?? 'Practice Set $setNumber';
-        final totalQ = item['total_questions'] ?? 50;
-        final duration = item['duration_minutes'] ?? 0;
-        final isLocked = item['is_locked'] == true;
+        final totalQ = SafeParse.toInt(item['total_questions'], 50);
+        final duration = SafeParse.toInt(item['duration_minutes'], 0);
+        final isLocked = SafeParse.toBool(item['is_locked']);
         final subjectName = item['subject_name']?.toString() ?? '';
 
         return Container(
