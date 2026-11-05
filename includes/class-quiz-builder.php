@@ -31,6 +31,11 @@ class IAQ_Quiz_Builder {
 				'description' => __( 'Full-length simulated examination with strict countdown timer and negative marking.', 'indianagri-quiz-engine' ),
 				'badge_color' => '#117E3A', // Brand green
 			),
+			'previous_year' => array(
+				'label'       => __( 'Previous Year Question Paper (PYQ)', 'indianagri-quiz-engine' ),
+				'description' => __( 'Authentic past examination paper in original sequential order with exam year and official scoring.', 'indianagri-quiz-engine' ),
+				'badge_color' => '#8b5cf6', // Violet/Purple
+			),
 		);
 	}
 
@@ -148,7 +153,7 @@ class IAQ_Quiz_Builder {
 		}
 
 		// Quiz Type filter.
-		if ( ! empty( $args['quiz_type'] ) && in_array( $args['quiz_type'], array( 'practice', 'mock' ), true ) ) {
+		if ( ! empty( $args['quiz_type'] ) && in_array( $args['quiz_type'], array( 'practice', 'mock', 'previous_year' ), true ) ) {
 			$where_clauses[] = 'q.quiz_type = %s';
 			$params[]        = $args['quiz_type'];
 		}
@@ -315,7 +320,7 @@ class IAQ_Quiz_Builder {
 			$slug .= '-' . time();
 		}
 
-		$quiz_type = isset( $data['quiz_type'] ) && in_array( $data['quiz_type'], array( 'practice', 'mock' ), true ) ? $data['quiz_type'] : 'practice';
+		$quiz_type = isset( $data['quiz_type'] ) && in_array( $data['quiz_type'], array( 'practice', 'mock', 'previous_year' ), true ) ? $data['quiz_type'] : 'practice';
 		$subject_id = ! empty( $data['subject_id'] ) ? absint( $data['subject_id'] ) : null;
 		$topic_id   = ! empty( $data['topic_id'] ) ? absint( $data['topic_id'] ) : null;
 		$exam_cat   = ! empty( $data['exam_category'] ) ? sanitize_text_field( wp_unslash( $data['exam_category'] ) ) : 'General Agriculture';

@@ -206,6 +206,37 @@ class IAQ_Rest_Api {
 			)
 		);
 
+		// --- 5b. Previous Year Question Papers (PYQ) Routes ---
+		register_rest_route(
+			self::NAMESPACE,
+			'/pyq/categories',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( __CLASS__, 'get_pyq_categories' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/pyq/hierarchy',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( __CLASS__, 'get_pyq_hierarchy' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/pyq/papers',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( __CLASS__, 'get_pyq_papers' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+
 		// --- 6. Quiz CBT Attempt Engine Routes ---
 		register_rest_route(
 			self::NAMESPACE,
@@ -1122,6 +1153,87 @@ class IAQ_Rest_Api {
 		$quizzes = IAQ_Mock_Tests::get_context_mock_tests( array( 'series_id' => $id ), $user_id );
 
 		return rest_ensure_response( $quizzes );
+	}
+
+	/* =========================================================================
+	 * ROUTE HANDLERS: PREVIOUS YEAR PAPERS (PYQ)
+	 * ========================================================================= */
+
+	/**
+	 * Get PYQ Categories with available examination years.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function get_pyq_categories() {
+		self::send_cache_headers( 300 );
+		$categories = IAQ_PYQ::get_categories( array( 'status' => 'active' ) );
+		$years      = IAQ_PYQ::get_available_years();
+
+		return rest_ensure_response(
+			array(
+				'categories'      => $categories,
+				'available_years' => $years,
+			)
+		);
+	}
+
+	/**
+	 * Get PYQ hierarchy drilldown (reusing existing Mock Test hierarchy).
+	 *
+	 * @param WP_REST_Request $request
+	 * @return WP_REST_Response
+	 */
+	public static function get_pyq_hierarchy( $request ) {
+		$user_id = get_current_user_id();
+		$cat_id  = absint( $request->get_param( 'category_id' ) );
+		$year    = absint( $request->get_param( 'year' ) );
+
+		$filters = array(
+			'exam_id'    => absint( $request->get_param( 'exam_id' ) ),
+			'subject_id' => absint( $request->get_param( 'subject_id' ) ),
+			'vacancy_id' => absint( $request->get_param( 'vacancy_id' ) ),
+			'state_id'   => absint( $request->get_param( 'state_id' ) ),
+			'year'       => $year,
+		);
+
+		if ( $cat_id > 0 ) {
+			$exams  = IAQ_Mock_Tests::get_category_examinations( $cat_id );
+			$papers = IAQ_PYQ::get_context_pyq_papers(
+				array_merge( array( 'category_id' => $cat_id ), $filters ),
+				$user_id
+			);
+
+			return rest_ensure_response(
+				array(
+					'category_id'  => $cat_id,
+					'examinations' => $exams,
+					'pyq_papers'   => $papers,
+				)
+			);
+		}
+
+		$categories = IAQ_PYQ::get_categories( array( 'status' => 'active' ) );
+		return rest_ensure_response( $categories );
+	}
+
+	/**
+	 * Query PYQ papers directly with filters.
+	 *
+	 * @param WP_REST_Request $request
+	 * @return WP_REST_Response
+	 */
+	public static function get_pyq_papers( $request ) {
+		$user_id = get_current_user_id();
+		$context = array(
+			'category_id' => absint( $request->get_param( 'category_id' ) ),
+			'exam_id'     => absint( $request->get_param( 'exam_id' ) ),
+			'subject_id'  => absint( $request->get_param( 'subject_id' ) ),
+			'year'        => absint( $request->get_param( 'year' ) ),
+			'status'      => 'published',
+		);
+
+		$papers = IAQ_PYQ::get_context_pyq_papers( $context, $user_id );
+		return rest_ensure_response( $papers );
 	}
 
 	/* =========================================================================

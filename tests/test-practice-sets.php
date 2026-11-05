@@ -727,62 +727,6 @@ class Test_Practice_Sets {
 	}
 
 	/**
-	 * 11. Strict Separation: Practice by Books, Practice by Subjects, and Browse by Examination.
-	 * Verifies that a book practice set only appears under books, an exam practice set only under exams,
-	 * and pure subject practice sets only under subjects with zero cross-contamination.
-	 */
-	private static function test_strict_separation_of_pathways() {
-		$subjects = IAQ_Question_Bank::get_subjects();
-		$books    = IAQ_Practice_Sets::get_books();
-		$exams    = IAQ_Practice_Sets::get_exams_catalog();
-
-		if ( empty( $subjects ) || empty( $books ) || empty( $exams ) ) {
-			throw new Exception( 'Prerequisites missing for strict separation test.' );
-		}
-
-		$test_subject_id = (int) $subjects[0]->id;
-		$test_book_id    = (int) $books[0]->id;
-		$test_exam_id    = (int) $exams[0]->id;
-
-		// 1. Create a pure Subject Practice Set
-		$q_subject_id = IAQ_Quiz_Builder::save_quiz(
-			array(
-				'title'          => 'Pure Subject Drill - Soil Physics',
-				'quiz_type'      => 'practice',
-				'practice_scope' => 'subject',
-				'subject_id'     => $test_subject_id,
-				'status'         => 'published',
-				'display_order'  => 101,
-			)
-		);
-
-		// 2. Create a Book Practice Set
-		$q_book_id = IAQ_Quiz_Builder::save_quiz(
-			array(
-				'title'          => 'Book Practice Set - Chapter 1 Agronomy',
-				'quiz_type'      => 'practice',
-				'practice_scope' => 'book',
-				'book_id'        => $test_book_id,
-				'subject_id'     => $test_subject_id,
-				'status'         => 'published',
-				'display_order'  => 102,
-			)
-		);
-
-		// 3. Create an Examination Practice Set
-		$q_exam_id = IAQ_Quiz_Builder::save_quiz(
-			array(
-				'title'          => 'Exam Practice Set - ICAR JRF Soil Test',
-				'quiz_type'      => 'practice',
-				'practice_scope' => 'exam',
-				'exam_id'        => $test_exam_id,
-				'subject_id'     => $test_subject_id,
-				'status'         => 'published',
-				'display_order'  => 103,
-			)
-		);
-
-	/**
 	 * 11. Unified Practice by Book & Practice by Subjects.
 	 * Verifies that all relevant book practice sets are accessible through Practice by Subjects,
 	 * displaying book origin metadata, zero duplication, and synchronized attempt status.
@@ -868,7 +812,6 @@ class Test_Practice_Sets {
 		}
 
 		echo "  [PASS] Unified Practice by Book & Practice by Subjects verified: dual pathways to the same underlying question bank with zero duplication.\n";
-	}
 	}
 }
 

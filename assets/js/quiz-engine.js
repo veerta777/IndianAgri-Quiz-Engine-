@@ -1645,6 +1645,8 @@
 							$('.iaq-dash-nav-trigger[data-target="practice-sets"]').first().trigger('click');
 						} else if (initialHash === '#iaq-pane-mock-tests' || initialHash === '#mock-tests') {
 							$('.iaq-dash-nav-trigger[data-target="mock-tests"]').first().trigger('click');
+						} else if (initialHash === '#iaq-pane-pyq' || initialHash === '#pyq') {
+							$('.iaq-dash-nav-trigger[data-target="pyq"]').first().trigger('click');
 						} else if (initialHash === '#iaq-pane-examinations' || initialHash === '#examinations') {
 							$('.iaq-dash-nav-trigger[data-target="examinations"]').first().trigger('click');
 						} else if (initialHash === '#iaq-pane-subscriptions' || initialHash === '#subscriptions') {

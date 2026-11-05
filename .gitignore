@@ -6,6 +6,8 @@
 .DS_Store
 Thumbs.db
 *.log
+run_logs/
+run_logs.zip
 .vscode/
 .idea/
 backups/

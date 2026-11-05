@@ -50,6 +50,7 @@ require_once IAQ_PLUGIN_DIR . 'includes/class-access-control.php';
 require_once IAQ_PLUGIN_DIR . 'includes/class-quiz-builder.php';
 require_once IAQ_PLUGIN_DIR . 'includes/class-practice-sets.php';
 require_once IAQ_PLUGIN_DIR . 'includes/class-mock-tests.php';
+require_once IAQ_PLUGIN_DIR . 'includes/class-pyq.php';
 require_once IAQ_PLUGIN_DIR . 'includes/class-quiz-attempt.php';
 require_once IAQ_PLUGIN_DIR . 'includes/class-bookmarks.php';
 require_once IAQ_PLUGIN_DIR . 'includes/class-wrong-notebook.php';

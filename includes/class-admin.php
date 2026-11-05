@@ -191,6 +191,16 @@ class IAQ_Admin {
 			array( $this, 'render_mock_tests_page' )
 		);
 
+		// 7c. Previous Year Question Papers (PYQ).
+		add_submenu_page(
+			'iaq-dashboard',
+			__( 'Previous Year Question Papers (PYQ)', 'indianagri-quiz-engine' ),
+			__( 'PYQ Papers', 'indianagri-quiz-engine' ),
+			$capability,
+			'iaq-pyq',
+			array( $this, 'render_pyq_page' )
+		);
+
 		// 8. Subscription Plans.
 		add_submenu_page(
 			'iaq-dashboard',
@@ -1445,6 +1455,46 @@ class IAQ_Admin {
 			wp_safe_redirect( $redirect );
 			exit;
 		}
+
+		// 50. Save Previous Year Question Paper (PYQ).
+		if ( isset( $_POST['iaq_action'] ) && 'save_pyq_paper' === $_POST['iaq_action'] ) {
+			check_admin_referer( 'iaq_save_pyq_paper_nonce' );
+			$res = IAQ_PYQ::save_paper( $_POST );
+			if ( is_wp_error( $res ) ) {
+				$this->add_notice( 'error', $res->get_error_message() );
+			} else {
+				wp_safe_redirect( add_query_arg( array( 'page' => 'iaq-pyq', 'tab' => 'papers', 'message' => 'pyq_paper_saved' ), admin_url( 'admin.php' ) ) );
+				exit;
+			}
+		}
+
+		// 51. Delete Previous Year Question Paper (PYQ).
+		if ( isset( $_GET['iaq_action'] ) && 'delete_pyq_paper' === $_GET['iaq_action'] && isset( $_GET['quiz_id'] ) ) {
+			$quiz_id = absint( $_GET['quiz_id'] );
+			check_admin_referer( 'iaq_delete_pyq_' . $quiz_id );
+			IAQ_PYQ::delete_paper( $quiz_id );
+			wp_safe_redirect( add_query_arg( array( 'page' => 'iaq-pyq', 'tab' => 'papers', 'message' => 'pyq_paper_deleted' ), admin_url( 'admin.php' ) ) );
+			exit;
+		}
+
+		// 52. Bulk Import Questions to PYQ Paper.
+		if ( isset( $_POST['iaq_action'] ) && 'bulk_import_pyq' === $_POST['iaq_action'] ) {
+			check_admin_referer( 'iaq_pyq_bulk_import_nonce' );
+			$quiz_id = isset( $_POST['quiz_id'] ) ? absint( $_POST['quiz_id'] ) : 0;
+			if ( ! $quiz_id ) {
+				$this->add_notice( 'error', __( 'Target PYQ Paper is required.', 'indianagri-quiz-engine' ) );
+			} elseif ( empty( $_FILES['csv_file']['tmp_name'] ) || ! is_uploaded_file( $_FILES['csv_file']['tmp_name'] ) ) {
+				$this->add_notice( 'error', __( 'Please choose a valid CSV file to upload.', 'indianagri-quiz-engine' ) );
+			} else {
+				$import_res = IAQ_Import_Export::import_from_file( $_FILES['csv_file']['tmp_name'], $quiz_id, null, $_FILES['csv_file']['name'] );
+				if ( empty( $import_res['success'] ) ) {
+					$this->add_notice( 'error', $import_res['message'] );
+				} else {
+					wp_safe_redirect( add_query_arg( array( 'page' => 'iaq-pyq', 'tab' => 'papers', 'message' => 'pyq_questions_imported', 'count' => (int) $import_res['imported'] ), admin_url( 'admin.php' ) ) );
+					exit;
+				}
+			}
+		}
 	}
 
 	/**
@@ -1547,6 +1597,9 @@ class IAQ_Admin {
 				'series_deleted'          => array( 'success', __( 'Mock test series deleted successfully.', 'indianagri-quiz-engine' ) ),
 				'quiz_attached'           => array( 'success', __( 'Mock test context attachment saved successfully.', 'indianagri-quiz-engine' ) ),
 				'quiz_detached'           => array( 'success', __( 'Mock test detached from hierarchy context.', 'indianagri-quiz-engine' ) ),
+				'pyq_paper_saved'         => array( 'success', __( 'Previous Year Question Paper saved successfully.', 'indianagri-quiz-engine' ) ),
+				'pyq_paper_deleted'       => array( 'success', __( 'Previous Year Question Paper deleted successfully.', 'indianagri-quiz-engine' ) ),
+				'pyq_questions_imported'  => array( 'success', sprintf( __( '%d questions bulk imported and sequentially assigned to PYQ paper.', 'indianagri-quiz-engine' ), $count ) ),
 			);
 
 			if ( isset( $map[ $msg_key ] ) ) {
@@ -1698,5 +1751,12 @@ class IAQ_Admin {
 	 */
 	public function render_mock_tests_page() {
 		include IAQ_PLUGIN_DIR . 'templates/admin/mock-tests.php';
+	}
+
+	/**
+	 * Render Previous Year Question Papers (PYQ) management view.
+	 */
+	public function render_pyq_page() {
+		include IAQ_PLUGIN_DIR . 'templates/admin/pyq.php';
 	}
 }

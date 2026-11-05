@@ -23,6 +23,8 @@ class IAQ_Frontend {
 		add_shortcode( 'iaq_quiz_list', array( $this, 'render_quiz_list_shortcode' ) );
 		add_shortcode( 'iaq_practice_sets', array( $this, 'render_practice_sets_shortcode' ) );
 		add_shortcode( 'iaq_mock_tests', array( $this, 'render_mock_tests_shortcode' ) );
+		add_shortcode( 'iaq_pyq', array( $this, 'render_pyq_shortcode' ) );
+		add_shortcode( 'iaq_previous_year_papers', array( $this, 'render_pyq_shortcode' ) );
 		add_shortcode( 'iaq_student_dashboard', array( $this, 'render_student_dashboard' ) );
 		add_shortcode( 'iaq_quiz_results', array( $this, 'render_results_shortcode' ) );
 		add_shortcode( 'iaq_subscription_plans', array( $this, 'render_subscription_plans_shortcode' ) );
@@ -524,6 +526,157 @@ class IAQ_Frontend {
 	}
 
 	/**
+	 * Render Previous Year Question Papers (PYQ) [iaq_pyq] or [iaq_previous_year_papers].
+	 * Reuses the existing Mock Test hierarchy navigation with strict quiz_type = 'previous_year' separation.
+	 *
+	 * @param array $atts Shortcode attributes.
+	 * @return string HTML output.
+	 */
+	public function render_pyq_shortcode( $atts = array() ) {
+		$this->enqueue_frontend_assets();
+
+		// If a quiz attempt was initiated, render the examination overview/screen
+		if ( isset( $_GET['iaq_quiz_id'] ) && absint( $_GET['iaq_quiz_id'] ) > 0 ) {
+			$q_id      = absint( $_GET['iaq_quiz_id'] );
+			$back_url  = remove_query_arg( 'iaq_quiz_id' );
+			$quiz_html = $this->render_quiz_shortcode( array( 'id' => $q_id ) );
+			return '<div class="iaq-mock-attempt-wrapper"><div style="margin-bottom:16px;"><a href="' . esc_url( $back_url ) . '" class="iaq-btn iaq-btn-outline"><span class="dashicons dashicons-arrow-left-alt"></span> ' . esc_html__( 'Back to Previous Year Papers', 'indianagri-quiz-engine' ) . '</a></div>' . $quiz_html . '</div>';
+		}
+
+		$atts = shortcode_atts(
+			array(
+				'category'    => '',
+				'category_id' => 0,
+				'exam_id'     => 0,
+				'subject_id'  => 0,
+				'vacancy_id'  => 0,
+				'state_id'    => 0,
+				'series_id'   => 0,
+				'year'        => 0,
+				'view'        => '',
+				'limit'       => 20,
+			),
+			$atts,
+			'iaq_pyq'
+		);
+
+		// Determine view mode
+		$view = 'landing';
+		if ( isset( $_GET['iaq_pyq_view'] ) ) {
+			$view = sanitize_key( $_GET['iaq_pyq_view'] );
+		} elseif ( ! empty( $atts['view'] ) ) {
+			$view = sanitize_key( $atts['view'] );
+		} elseif ( ! empty( $atts['category_id'] ) || ! empty( $atts['category'] ) ) {
+			$view = 'category';
+		}
+
+		$cat_id      = isset( $_GET['category_id'] ) ? absint( $_GET['category_id'] ) : absint( $atts['category_id'] );
+		$exam_id     = isset( $_GET['exam_id'] ) ? absint( $_GET['exam_id'] ) : absint( $atts['exam_id'] );
+		$sub_id      = isset( $_GET['subject_id'] ) ? absint( $_GET['subject_id'] ) : absint( $atts['subject_id'] );
+		$vac_id      = isset( $_GET['vacancy_id'] ) ? absint( $_GET['vacancy_id'] ) : absint( $atts['vacancy_id'] );
+		$state_id    = isset( $_GET['state_id'] ) ? absint( $_GET['state_id'] ) : absint( $atts['state_id'] );
+		$univ_id     = isset( $_GET['university_id'] ) ? absint( $_GET['university_id'] ) : 0;
+		$series_id   = isset( $_GET['series_id'] ) ? absint( $_GET['series_id'] ) : absint( $atts['series_id'] );
+		$year_filter = isset( $_GET['pyq_year'] ) ? absint( $_GET['pyq_year'] ) : absint( $atts['year'] );
+
+		// If category slug/code provided in atts or GET
+		if ( ! $cat_id && ! empty( $atts['category'] ) ) {
+			$cat_by_slug = IAQ_PYQ::get_category( $atts['category'] );
+			if ( $cat_by_slug ) {
+				$cat_id = (int) $cat_by_slug->id;
+			}
+		}
+
+		$category      = $cat_id ? IAQ_PYQ::get_category( $cat_id ) : null;
+		$exam          = $exam_id ? IAQ_Examinations::get_examination( $exam_id ) : null;
+		$subject       = $sub_id ? IAQ_Question_Bank::get_subject( $sub_id ) : null;
+		$state         = null;
+		$university    = null;
+		$vacancy       = null;
+		$series        = $series_id ? IAQ_Mock_Tests::get_series( $series_id ) : null;
+
+		$categories    = array();
+		$examinations  = array();
+		$sub_exams     = array();
+		$subjects      = array();
+		$exam_subjects = array();
+		$quizzes       = array();
+
+		// Auto-resolve view if not explicitly landing or when drilling down
+		if ( 'landing' === $view && ( $cat_id || $exam_id || $sub_id || $vac_id || $state_id || $univ_id || $series_id ) ) {
+			if ( $series_id || $vac_id || ( $exam_id && $sub_id ) ) {
+				$view = 'tests';
+			} elseif ( $exam_id ) {
+				$view = 'exam';
+			} elseif ( $cat_id ) {
+				$view = 'category';
+			}
+		}
+
+		switch ( $view ) {
+			case 'category':
+				if ( $category ) {
+					$cfg = IAQ_PYQ::get_category_hierarchy_config( $category->slug );
+					if ( ! empty( $cfg['has_exams'] ) ) {
+						$examinations = IAQ_Mock_Tests::get_category_exams( $category->id );
+					}
+					$quizzes = IAQ_PYQ::get_context_pyq_papers(
+						array(
+							'category_id' => $category->id,
+							'year'        => $year_filter,
+						)
+					);
+				}
+				break;
+
+			case 'exam':
+				if ( $exam ) {
+					$exam_subjects = IAQ_Practice_Sets::get_exam_subjects( $exam->id );
+					$quizzes       = IAQ_PYQ::get_context_pyq_papers(
+						array(
+							'category_id' => $cat_id,
+							'exam_id'     => $exam->id,
+							'year'        => $year_filter,
+						)
+					);
+				}
+				break;
+
+			case 'exam_subject':
+			case 'subject':
+			case 'tests':
+				$quizzes = IAQ_PYQ::get_context_pyq_papers(
+					array(
+						'category_id' => $cat_id,
+						'exam_id'     => $exam_id,
+						'subject_id'  => $sub_id,
+						'vacancy_id'  => $vac_id,
+						'state_id'    => $state_id,
+						'series_id'   => $series_id,
+						'year'        => $year_filter,
+					)
+				);
+				break;
+
+			case 'landing':
+			default:
+				$view       = 'landing';
+				$categories = IAQ_PYQ::get_categories( array( 'status' => 'active' ) );
+				$quizzes    = IAQ_PYQ::get_context_pyq_papers(
+					array(
+						'year'  => $year_filter,
+						'limit' => 6,
+					)
+				);
+				break;
+		}
+
+		ob_start();
+		include IAQ_PLUGIN_DIR . 'templates/frontend/pyq.php';
+		return ob_get_clean();
+	}
+
+	/**
 	 * Render Student Examination Dashboard [iaq_student_dashboard] (Phase 5).
 	 *
 	 * @param array $atts Shortcode attributes.
@@ -591,6 +744,7 @@ class IAQ_Frontend {
 		// Render integrated modules into dashboard panes
 		$practice_sets_html      = $this->render_practice_sets_shortcode();
 		$mock_tests_html         = $this->render_mock_tests_shortcode();
+		$pyq_html                = $this->render_pyq_shortcode();
 		$subscription_plans_html = $this->render_subscription_plans_shortcode();
 
 		// Determine initial active view pane
@@ -599,6 +753,8 @@ class IAQ_Frontend {
 			$active_tab = 'practice-sets';
 		} elseif ( isset( $_GET['iaq_mt_view'] ) || isset( $_GET['category_id'] ) || isset( $_GET['exam_id'] ) || isset( $_GET['state_id'] ) || isset( $_GET['univ_id'] ) || isset( $_GET['vacancy_id'] ) || isset( $_GET['series_id'] ) || ( isset( $_GET['iaq_tab'] ) && 'mock-tests' === $_GET['iaq_tab'] ) ) {
 			$active_tab = 'mock-tests';
+		} elseif ( isset( $_GET['iaq_pyq_view'] ) || isset( $_GET['pyq_year'] ) || ( isset( $_GET['iaq_tab'] ) && 'pyq' === $_GET['iaq_tab'] ) ) {
+			$active_tab = 'pyq';
 		} elseif ( isset( $_GET['iaq_tab'] ) ) {
 			$active_tab = sanitize_key( $_GET['iaq_tab'] );
 		}

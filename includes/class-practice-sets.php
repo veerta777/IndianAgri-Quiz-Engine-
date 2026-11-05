@@ -557,6 +557,7 @@ class IAQ_Practice_Sets {
 		$table_quizzes      = IAQ_Database::get_table_name( 'quizzes' );
 		$table_topics       = IAQ_Database::get_table_name( 'topics' );
 		$table_book_quizzes = IAQ_Database::get_table_name( 'book_quizzes' );
+		$table_books        = IAQ_Database::get_table_name( 'books' );
 		$table_esq          = IAQ_Database::get_table_name( 'exam_subject_quizzes' );
 
 		$search = ! empty( $args['search'] ) ? trim( $args['search'] ) : '';

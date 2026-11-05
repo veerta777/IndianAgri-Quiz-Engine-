@@ -18,6 +18,7 @@ require_once __DIR__ . '/test-access-control-security.php';
 require_once __DIR__ . '/test-student-learning-features.php';
 require_once __DIR__ . '/test-practice-sets.php';
 require_once __DIR__ . '/test-mock-tests.php';
+require_once __DIR__ . '/test-pyq.php';
 require_once __DIR__ . '/test-rest-api.php';
 require_once __DIR__ . '/test-staging-and-release.php';
 
@@ -40,6 +41,7 @@ try {
 	Test_Student_Learning_Features::run();
 	Test_Practice_Sets::run();
 	Test_Mock_Tests::run();
+	Test_PYQ::run();
 	Test_Rest_Api::run();
 	$staging_suite = new Test_Staging_And_Release();
 	$staging_suite->run();

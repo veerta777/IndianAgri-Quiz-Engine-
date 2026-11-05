@@ -45,6 +45,7 @@ $enable_study_streaks = (bool) get_option( 'iaq_enable_study_streaks', 1 );
 $active_tab              = isset( $active_tab ) ? $active_tab : 'dashboard';
 $practice_sets_html      = isset( $practice_sets_html ) ? $practice_sets_html : '';
 $mock_tests_html         = isset( $mock_tests_html ) ? $mock_tests_html : '';
+$pyq_html                = isset( $pyq_html ) ? $pyq_html : '';
 $subscription_plans_html = isset( $subscription_plans_html ) ? $subscription_plans_html : '';
 ?>
 
@@ -52,7 +53,7 @@ $subscription_plans_html = isset( $subscription_plans_html ) ? $subscription_pla
 	<div class="iaq-student-dashboard iaq-student-dashboard-layout" id="iaq-student-dashboard">
 
 	<?php
-	$is_guest_allowed_view = in_array( $active_tab, array( 'practice-sets', 'mock-tests', 'examinations', 'subscriptions' ), true ) || isset( $_GET['iaq_ps_view'] ) || isset( $_GET['iaq_mt_view'] );
+	$is_guest_allowed_view = in_array( $active_tab, array( 'practice-sets', 'mock-tests', 'pyq', 'examinations', 'subscriptions' ), true ) || isset( $_GET['iaq_ps_view'] ) || isset( $_GET['iaq_mt_view'] ) || isset( $_GET['iaq_pyq_view'] );
 	if ( ! is_user_logged_in() && ! $is_guest_allowed_view ) :
 	?>
 		<!-- Non-Logged In Guest State (Server-Side Enforced) -->
@@ -126,6 +127,7 @@ $subscription_plans_html = isset( $subscription_plans_html ) ? $subscription_pla
 				<a href="#iaq-overview" class="iaq-top-link iaq-dash-nav-trigger <?php echo 'dashboard' === $active_tab ? 'is-active' : ''; ?>" data-target="dashboard"><?php esc_html_e( 'Dashboard', 'indianagri-quiz-engine' ); ?></a>
 				<a href="#iaq-pane-practice-sets" class="iaq-top-link iaq-dash-nav-trigger <?php echo 'practice-sets' === $active_tab ? 'is-active' : ''; ?>" data-target="practice-sets"><?php esc_html_e( 'Practice Sets', 'indianagri-quiz-engine' ); ?></a>
 				<a href="#iaq-pane-mock-tests" class="iaq-top-link iaq-dash-nav-trigger <?php echo 'mock-tests' === $active_tab ? 'is-active' : ''; ?>" data-target="mock-tests"><?php esc_html_e( 'Mock Tests', 'indianagri-quiz-engine' ); ?></a>
+				<a href="#iaq-pane-pyq" class="iaq-top-link iaq-dash-nav-trigger <?php echo 'pyq' === $active_tab ? 'is-active' : ''; ?>" data-target="pyq"><?php esc_html_e( 'PYQ Papers', 'indianagri-quiz-engine' ); ?></a>
 				<a href="#iaq-pane-examinations" class="iaq-top-link iaq-dash-nav-trigger <?php echo 'examinations' === $active_tab ? 'is-active' : ''; ?>" data-target="examinations"><?php esc_html_e( 'Examinations', 'indianagri-quiz-engine' ); ?></a>
 				<a href="#iaq-custom-practice-section" class="iaq-top-link iaq-dash-nav-trigger <?php echo 'custom-test' === $active_tab ? 'is-active' : ''; ?>" data-target="custom-test"><?php esc_html_e( 'Custom Test', 'indianagri-quiz-engine' ); ?></a>
 				<a href="#iaq-pane-subscriptions" class="iaq-top-link iaq-dash-nav-trigger <?php echo 'subscriptions' === $active_tab ? 'is-active' : ''; ?>" data-target="subscriptions"><?php esc_html_e( 'Subscriptions', 'indianagri-quiz-engine' ); ?></a>
@@ -189,6 +191,12 @@ $subscription_plans_html = isset( $subscription_plans_html ) ? $subscription_pla
 						<a href="#iaq-pane-mock-tests" class="iaq-side-link iaq-dash-nav-trigger" data-target="mock-tests">
 							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
 							<span><?php esc_html_e( 'Mock Tests', 'indianagri-quiz-engine' ); ?></span>
+						</a>
+					</li>
+					<li class="iaq-side-nav-item <?php echo 'pyq' === $active_tab ? 'is-active' : ''; ?>" data-view="pyq">
+						<a href="#iaq-pane-pyq" class="iaq-side-link iaq-dash-nav-trigger" data-target="pyq">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+							<span><?php esc_html_e( 'Previous Year Papers (PYQ)', 'indianagri-quiz-engine' ); ?></span>
 						</a>
 					</li>
 					<li class="iaq-side-nav-item <?php echo 'examinations' === $active_tab ? 'is-active' : ''; ?>" data-view="examinations">
@@ -631,6 +639,9 @@ $subscription_plans_html = isset( $subscription_plans_html ) ? $subscription_pla
 							<span style="font-size:12.5px;color:#64748b;font-weight:700;"><?php esc_html_e( 'Direct shortcuts:', 'indianagri-quiz-engine' ); ?></span>
 							<a href="#iaq-pane-mock-tests" class="iaq-dash-nav-trigger" data-target="mock-tests" style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;color:#1d4ed8;background:#eff6ff;padding:5px 14px;border-radius:20px;text-decoration:none;border:1px solid #bfdbfe;">
 								⚡ <?php esc_html_e( 'Full-Length Mock Tests', 'indianagri-quiz-engine' ); ?> &rarr;
+							</a>
+							<a href="#iaq-pane-pyq" class="iaq-dash-nav-trigger" data-target="pyq" style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;color:#6b21a8;background:#faf5ff;padding:5px 14px;border-radius:20px;text-decoration:none;border:1px solid #e9d5ff;">
+								📜 <?php esc_html_e( 'Previous Year Papers (PYQ)', 'indianagri-quiz-engine' ); ?> &rarr;
 							</a>
 							<a href="#iaq-custom-practice-section" class="iaq-dash-nav-trigger" data-target="custom-test" style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;color:#0f766e;background:#f0fdfa;padding:5px 14px;border-radius:20px;text-decoration:none;border:1px solid #99f6e4;">
 								⚙️ <?php esc_html_e( 'Create Custom Test', 'indianagri-quiz-engine' ); ?> &rarr;
@@ -1219,6 +1230,11 @@ $subscription_plans_html = isset( $subscription_plans_html ) ? $subscription_pla
 				<!-- VIEW PANE: MOCK TESTS (INTEGRATED) -->
 				<div class="iaq-dashboard-view-pane <?php echo 'mock-tests' === $active_tab ? 'is-active' : ''; ?>" id="iaq-pane-mock-tests">
 					<?php echo $mock_tests_html; ?>
+				</div>
+
+				<!-- VIEW PANE: PREVIOUS YEAR PAPERS (PYQ) (INTEGRATED) -->
+				<div class="iaq-dashboard-view-pane <?php echo 'pyq' === $active_tab ? 'is-active' : ''; ?>" id="iaq-pane-pyq">
+					<?php echo $pyq_html; ?>
 				</div>
 
 				<!-- VIEW PANE: EXAMINATIONS (INTEGRATED) -->

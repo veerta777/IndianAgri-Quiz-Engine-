@@ -1054,7 +1054,7 @@ class Mock_WPDB {
 		}
 
 		// Handle quizzes query
-		if ( strpos( $query, 'FROM ' . $this->prefix . 'iaq_quizzes' ) !== false && strpos( $query, 'SELECT q.*' ) !== false && strpos( $query, 'mock_test_relations' ) === false && strpos( $query, 'INNER JOIN' ) === false ) {
+		if ( strpos( $query, 'FROM ' . $this->prefix . 'iaq_quizzes' ) !== false && strpos( $query, 'SELECT q.*' ) !== false && strpos( $query, 'mock_test_relations' ) === false && strpos( $query, 'INNER JOIN' ) === false && strpos( $query, 'book_title' ) === false ) {
 			$filter_subj_id = null;
 			if ( preg_match( '/q\.subject_id\s*=\s*(\d+)/', $query, $sm ) ) {
 				$filter_subj_id = (int) $sm[1];
@@ -1598,7 +1598,7 @@ class Mock_WPDB {
 		}
 
 		// Subject practice quizzes query
-		if ( strpos( $query, "q.quiz_type = 'practice'" ) !== false && preg_match( "/q\.subject_id = (\d+)/", $query, $sm ) ) {
+		if ( strpos( $query, "q.quiz_type = 'practice'" ) !== false && ( preg_match( "/q\.subject_id = (\d+)/", $query, $sm ) || preg_match( "/\(q\.subject_id = (\d+) OR/", $query, $sm ) ) ) {
 			$sid = (int) $sm[1];
 			$status_match = null;
 			if ( preg_match( "/q\.status = '([^']+)'/", $query, $st_m ) ) {
@@ -1606,31 +1606,64 @@ class Mock_WPDB {
 			}
 			$not_archived = ( strpos( $query, "q.status != 'archived'" ) !== false );
 			$list = array();
-			$exclude_book = ( strpos( $query, 'iaq_book_quizzes' ) !== false );
-			$exclude_esq  = ( strpos( $query, 'iaq_exam_subject_quizzes' ) !== false );
+
+			// Book filter handling
+			$only_independent = ( strpos( $query, 'bq.book_id IS NULL' ) !== false );
+			$specific_book_id = null;
+			if ( preg_match( "/bq\.book_id = (\d+)/", $query, $bm ) ) {
+				$specific_book_id = (int) $bm[1];
+			}
+
 			foreach ( $this->tables[ $this->prefix . 'iaq_quizzes' ] as $qz ) {
-				if ( (int) $qz->subject_id === $sid && 'practice' === $qz->quiz_type ) {
-					if ( $status_match && isset( $qz->status ) && $qz->status !== $status_match ) continue;
-					if ( $not_archived && isset( $qz->status ) && 'archived' === $qz->status ) continue;
-					if ( $exclude_book ) {
-						$in_b = false;
-						foreach ( $this->tables[ $this->prefix . 'iaq_book_quizzes' ] as $bq ) {
-							if ( (int) $bq->quiz_id === (int) $qz->id ) { $in_b = true; break; }
+				if ( 'practice' !== $qz->quiz_type ) continue;
+
+				// Check if quiz belongs to this subject directly or through a book
+				$is_direct_subject = ( isset( $qz->subject_id ) && (int) $qz->subject_id === $sid );
+				$matched_book = null;
+				$in_book_id = null;
+				foreach ( $this->tables[ $this->prefix . 'iaq_book_quizzes' ] as $bq ) {
+					if ( (int) $bq->quiz_id === (int) $qz->id ) {
+						$in_book_id = (int) $bq->book_id;
+						if ( isset( $this->tables[ $this->prefix . 'iaq_books' ][ $in_book_id ] ) ) {
+							$matched_book = $this->tables[ $this->prefix . 'iaq_books' ][ $in_book_id ];
 						}
-						if ( $in_b ) continue;
+						break;
 					}
-					if ( $exclude_esq ) {
-						$in_e = false;
-						foreach ( $this->tables[ $this->prefix . 'iaq_exam_subject_quizzes' ] as $esq ) {
-							if ( (int) $esq->quiz_id === (int) $qz->id ) { $in_e = true; break; }
-						}
-						if ( $in_e ) continue;
-					}
-					$clone = clone $qz;
-					$clone->subject_name = ( ! empty( $clone->subject_id ) && isset( $this->tables[ $this->prefix . 'iaq_subjects' ][ $clone->subject_id ] ) ) ? $this->tables[ $this->prefix . 'iaq_subjects' ][ $clone->subject_id ]->name : '';
-					$clone->topic_name   = ( ! empty( $clone->topic_id ) && isset( $this->tables[ $this->prefix . 'iaq_topics' ][ $clone->topic_id ] ) ) ? $this->tables[ $this->prefix . 'iaq_topics' ][ $clone->topic_id ]->name : '';
-					$list[] = $clone;
 				}
+
+				$is_book_subject = false;
+				if ( $matched_book && ! empty( $matched_book->subject_id ) && (int) $matched_book->subject_id === $sid ) {
+					$is_book_subject = true;
+				}
+
+				if ( ! $is_direct_subject && ! $is_book_subject ) {
+					continue;
+				}
+
+				if ( $status_match && isset( $qz->status ) && $qz->status !== $status_match ) continue;
+				if ( $not_archived && isset( $qz->status ) && 'archived' === $qz->status ) continue;
+
+				if ( $only_independent && $in_book_id ) {
+					continue;
+				}
+				if ( $specific_book_id !== null && ( ! $in_book_id || $in_book_id !== $specific_book_id ) ) {
+					continue;
+				}
+
+				$clone = clone $qz;
+				$clone->subject_name = ( ! empty( $clone->subject_id ) && isset( $this->tables[ $this->prefix . 'iaq_subjects' ][ $clone->subject_id ] ) ) ? $this->tables[ $this->prefix . 'iaq_subjects' ][ $clone->subject_id ]->name : '';
+				$clone->topic_name   = ( ! empty( $clone->topic_id ) && isset( $this->tables[ $this->prefix . 'iaq_topics' ][ $clone->topic_id ] ) ) ? $this->tables[ $this->prefix . 'iaq_topics' ][ $clone->topic_id ]->name : '';
+				if ( $matched_book ) {
+					$clone->book_id     = (int) $matched_book->id;
+					$clone->book_title  = $matched_book->title;
+					$clone->book_author = isset( $matched_book->author ) ? $matched_book->author : '';
+				} else {
+					$clone->book_id     = null;
+					$clone->book_title  = null;
+					$clone->book_author = null;
+				}
+
+				$list[] = $clone;
 			}
 			usort( $list, function( $a, $b ) {
 				$oa = isset( $a->display_order ) ? (int) $a->display_order : 0;
@@ -1812,7 +1845,7 @@ class Mock_WPDB {
 			return $list;
 		}
 
-		// Mock test relations / joined context query
+		// Mock test & PYQ relations / joined context query
 		if ( strpos( $query, $this->prefix . 'iaq_mock_test_relations' ) !== false && strpos( $query, 'INNER JOIN' ) !== false ) {
 			$cat_id   = preg_match( "/r\.category_id = (\d+)/", $query, $cm ) ? (int) $cm[1] : 0;
 			$exam_id  = preg_match( "/r\.exam_id = (\d+)/", $query, $em ) ? (int) $em[1] : 0;
@@ -1820,6 +1853,7 @@ class Mock_WPDB {
 			$vac_id   = preg_match( "/r\.vacancy_id = (\d+)/", $query, $vm ) ? (int) $vm[1] : 0;
 			$state_id = preg_match( "/r\.state_id = (\d+)/", $query, $stm ) ? (int) $stm[1] : 0;
 			$ser_id   = preg_match( "/r\.series_id = (\d+)/", $query, $serm ) ? (int) $serm[1] : 0;
+			$req_type = ( strpos( $query, "q.quiz_type = 'previous_year'" ) !== false ) ? 'previous_year' : 'mock';
 
 			$list = array();
 			foreach ( $this->tables[ $this->prefix . 'iaq_mock_test_relations' ] as $rel ) {
@@ -1833,15 +1867,19 @@ class Mock_WPDB {
 				$qid = (int) $rel->quiz_id;
 				if ( isset( $this->tables[ $this->prefix . 'iaq_quizzes' ][ $qid ] ) ) {
 					$qz = clone $this->tables[ $this->prefix . 'iaq_quizzes' ][ $qid ];
-					if ( 'published' !== $qz->status || 'mock' !== $qz->quiz_type ) continue;
+					if ( 'published' !== $qz->status || $req_type !== $qz->quiz_type ) continue;
 					$qz->mock_rel_id     = (int) $rel->id;
 					$qz->mock_sort_order = (int) $rel->sort_order;
 					$qz->mock_series_id  = (int) $rel->series_id;
+					$qz->pyq_rel_id      = (int) $rel->id;
+					$qz->pyq_sort_order  = (int) $rel->sort_order;
 					$list[] = $qz;
 				}
 			}
 			usort( $list, function( $a, $b ) {
-				if ( $a->mock_sort_order !== $b->mock_sort_order ) return $a->mock_sort_order <=> $b->mock_sort_order;
+				$oa = isset( $a->mock_sort_order ) ? $a->mock_sort_order : 0;
+				$ob = isset( $b->mock_sort_order ) ? $b->mock_sort_order : 0;
+				if ( $oa !== $ob ) return $oa <=> $ob;
 				return (int) $a->id <=> (int) $b->id;
 			} );
 			return $list;
@@ -2719,6 +2757,18 @@ class Mock_WPDB {
 	public function get_col( $query ) {
 		$this->queries[] = $query;
 		$col = array();
+		if ( strpos( $query, 'DISTINCT pyq_year' ) !== false ) {
+			$years = array();
+			foreach ( $this->tables[ $this->prefix . 'iaq_quizzes' ] as $qz ) {
+				if ( isset( $qz->quiz_type ) && 'previous_year' === $qz->quiz_type && ! empty( $qz->pyq_year ) && (int) $qz->pyq_year > 1990 && ( ! isset( $qz->status ) || 'archived' !== $qz->status ) ) {
+					$years[ (int) $qz->pyq_year ] = true;
+				}
+			}
+			$keys = array_keys( $years );
+			rsort( $keys );
+			return $keys;
+		}
+
 		if ( strpos( $query, 'SELECT id FROM ' . $this->prefix . 'iaq_questions' ) !== false ) {
 			foreach ( $this->tables[ $this->prefix . 'iaq_questions' ] as $q ) {
 				$col[] = $q->id;
@@ -2811,6 +2861,7 @@ require_once dirname( __DIR__ ) . '/includes/class-access-control.php';
 require_once dirname( __DIR__ ) . '/includes/class-quiz-builder.php';
 require_once dirname( __DIR__ ) . '/includes/class-practice-sets.php';
 require_once dirname( __DIR__ ) . '/includes/class-mock-tests.php';
+require_once dirname( __DIR__ ) . '/includes/class-pyq.php';
 require_once dirname( __DIR__ ) . '/includes/class-quiz-attempt.php';
 require_once dirname( __DIR__ ) . '/includes/class-bookmarks.php';
 require_once dirname( __DIR__ ) . '/includes/class-wrong-notebook.php';

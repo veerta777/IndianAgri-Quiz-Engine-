@@ -630,6 +630,34 @@ class IAQ_Access_Control {
 					}
 				}
 
+				// If it's a mock test or PYQ paper, check exam associations in mock_test_relations
+				if ( isset( $quiz->quiz_type ) && in_array( $quiz->quiz_type, array( 'mock', 'previous_year' ), true ) ) {
+					global $wpdb;
+					$table_rel   = IAQ_Database::get_table_name( 'mock_test_relations' );
+					$table_exams = IAQ_Database::get_table_name( 'examinations' );
+					$rel_exams = $wpdb->get_results(
+						$wpdb->prepare(
+							"SELECT r.exam_id, e.name, e.code, e.slug 
+							 FROM {$table_rel} r 
+							 LEFT JOIN {$table_exams} e ON r.exam_id = e.id 
+							 WHERE r.quiz_id = %d",
+							$quiz->id
+						)
+					);
+					if ( ! empty( $rel_exams ) ) {
+						foreach ( $rel_exams as $rex ) {
+							if ( ! empty( $rex->exam_id ) ) {
+								$quiz_exam_identifiers[] = (string) $rex->exam_id;
+							}
+							if ( ! empty( $rex->code ) ) {
+								$quiz_exam_identifiers[] = (string) $rex->code;
+								$quiz_exam_identifiers[] = (string) $rex->slug;
+								$quiz_exam_identifiers[] = (string) $rex->name;
+							}
+						}
+					}
+				}
+
 				if ( ! empty( array_intersect( $allowed_exams, $quiz_exam_identifiers ) ) ) {
 					return array(
 						'allowed' => true,
