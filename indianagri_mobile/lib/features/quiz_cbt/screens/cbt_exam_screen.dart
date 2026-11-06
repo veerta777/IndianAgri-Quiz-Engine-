@@ -240,46 +240,67 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
         _highestStreak = _currentStreak;
       }
       String? milestoneMsg;
+      bool isCelebration = false;
       if (_currentStreak == 1) {
-        milestoneMsg = 'Well done! Correct Answer!';
+        milestoneMsg = 'Good start! Keep it up!';
       } else if (_currentStreak == 2) {
         milestoneMsg = 'Great! 2 correct in a row!';
       } else if (_currentStreak == 3) {
         milestoneMsg = '🔥 3 in a Row! Excellent Performance!';
+        isCelebration = true;
       } else if (_currentStreak == 5) {
-        milestoneMsg = '🌟 Amazing! 5 Correct Answers in a Row!';
+        milestoneMsg = 'Amazing! 5 Correct Answers in a Row!';
+        isCelebration = true;
       } else if (_currentStreak == 10) {
-        milestoneMsg = '🏆 Outstanding! 10 Correct Answers in a Row!';
-      } else if (_currentStreak > 10 && _currentStreak % 5 == 0) {
-        milestoneMsg = '🚀 $_currentStreak Correct in a Row! Superb Mastery!';
+        milestoneMsg = 'Outstanding! 10 Correct Answers in a Row!';
+        isCelebration = true;
+      } else if (_currentStreak == 15) {
+        milestoneMsg = 'Incredible! 15 Correct Answers in a Row!';
+        isCelebration = true;
+      } else if (_currentStreak == 20) {
+        milestoneMsg = 'Unstoppable! 20 Correct Answers in a Row!';
+        isCelebration = true;
+      } else if (_currentStreak > 20 && _currentStreak % 5 == 0) {
+        milestoneMsg = 'Mastery! $_currentStreak Correct Answers in a Row!';
+        isCelebration = true;
       }
+
       if (milestoneMsg != null && mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.stars, color: Colors.amber, size: 20),
+                Icon(isCelebration ? Icons.local_fire_department : Icons.stars, color: Colors.amber, size: 20),
                 const SizedBox(width: 8),
                 Expanded(child: Text(milestoneMsg, style: const TextStyle(fontWeight: FontWeight.bold))),
               ],
             ),
-            backgroundColor: const Color(0xFF0F5A29),
-            duration: const Duration(seconds: 2),
+            backgroundColor: const Color(0xFF117E3A),
+            duration: const Duration(milliseconds: 2200),
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
       }
     } else {
+      final hadStreak = _currentStreak > 0;
       _currentStreak = 0;
-      if (mounted) {
+      if (hadStreak && mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Not quite! Don't give up. Learn from this question."),
-            backgroundColor: Color(0xFF991B1B),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.emoji_objects_outlined, color: Colors.amber, size: 20),
+                SizedBox(width: 8),
+                Expanded(child: Text("Don't give up! Keep practicing — you'll get the next one!", style: TextStyle(fontWeight: FontWeight.bold))),
+              ],
+            ),
+            backgroundColor: const Color(0xFF991B1B),
+            duration: const Duration(milliseconds: 2200),
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
       }
@@ -1226,10 +1247,10 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildPracticeDashItem('Attempted', '$attempted', AppColors.primary),
-          _buildPracticeDashItem('Correct', '$correct', const Color(0xFF168443)),
+          _buildPracticeDashItem('Correct', '$correct', const Color(0xFF117E3A)),
           _buildPracticeDashItem('Incorrect', '$incorrect', const Color(0xFFDC2626)),
           _buildPracticeDashItem('Streak', '🔥 $_currentStreak', const Color(0xFFD97706)),
-          _buildPracticeDashItem('Best', '🏆 $_highestStreak', const Color(0xFF0F5A29)),
+          _buildPracticeDashItem('Best', '🏆 $_highestStreak', const Color(0xFF117E3A)),
           _buildPracticeDashItem('Accuracy', '$accuracy%', const Color(0xFF2563EB)),
         ],
       ),
@@ -1266,7 +1287,7 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
         color: const Color(0xFFF0FDF4),
         borderRadius: AppStyles.borderRadiusL,
         border: Border(
-          left: const BorderSide(color: Color(0xFF168443), width: 4.5),
+          left: const BorderSide(color: Color(0xFF117E3A), width: 5.0),
           top: BorderSide(color: isCorrect ? const Color(0xFF86EFAC) : const Color(0xFFFECACA)),
           right: BorderSide(color: isCorrect ? const Color(0xFF86EFAC) : const Color(0xFFFECACA)),
           bottom: BorderSide(color: isCorrect ? const Color(0xFF86EFAC) : const Color(0xFFFECACA)),
@@ -1279,7 +1300,7 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
             children: [
               Icon(
                 isCorrect ? Icons.check_circle : Icons.cancel,
-                color: isCorrect ? const Color(0xFF168443) : const Color(0xFFDC2626),
+                color: isCorrect ? const Color(0xFF117E3A) : const Color(0xFFDC2626),
                 size: 22,
               ),
               const SizedBox(width: 8),
@@ -1296,7 +1317,7 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: isCorrect ? const Color(0xFF168443) : const Color(0xFFDC2626),
+                  color: isCorrect ? const Color(0xFF117E3A) : const Color(0xFFDC2626),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -1317,14 +1338,14 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
               ),
               child: Text(
                 '✔ Correct Answer: Option $correctOpt',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: Color(0xFF166534)),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: Color(0xFF117E3A)),
               ),
             ),
           ],
           const SizedBox(height: 12),
           const Text(
             'Correct Answer – Explanation',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF166534)),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF117E3A)),
           ),
           const SizedBox(height: 4),
           Text(

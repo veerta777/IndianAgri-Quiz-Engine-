@@ -474,7 +474,7 @@
 			var isCorrect = !!fb.is_correct;
 			var bannerCls = isCorrect ? 'is-correct' : 'is-incorrect';
 			var iconHtml = isCorrect
-				? '<span class="iaq-feedback-icon" style="color:#168443;">' + IAQ_ICONS.check + '</span>'
+				? '<span class="iaq-feedback-icon" style="color:#117E3A;">' + IAQ_ICONS.check + '</span>'
 				: '<span class="iaq-feedback-icon" style="color:#dc2626;">' + IAQ_ICONS.cross + '</span>';
 			var scorePillHtml = isCorrect
 				? '<span class="iaq-feedback-score-pill">+' + (fb.marks_awarded !== undefined ? fb.marks_awarded : q.marks) + ' Marks</span>'
@@ -521,7 +521,7 @@
 
 			// Clearly identify correct answer banner
 			html += '<div class="iaq-feedback-correct-answer-banner">';
-			html += '<span style="color:#168443;font-size:16px;">✔</span> ';
+			html += '<span style="color:#117E3A;font-size:16px;">✔</span> ';
 			html += '<span><strong>Correct Answer:</strong> ' + correctOptText + '</span>';
 			html += '</div>';
 
@@ -561,7 +561,13 @@
 			$('#iaq-dash-attempted').text(attempted + ' / ' + total);
 			$('#iaq-dash-correct').text(self.correctCount);
 			$('#iaq-dash-incorrect').text(self.incorrectCount);
-			$('#iaq-dash-streak').html((self.currentStreak > 0 ? '🔥 ' : '') + self.currentStreak);
+			var $streak = $('#iaq-dash-streak');
+			$streak.html((self.currentStreak > 0 ? '🔥 ' : '') + self.currentStreak);
+			$streak.addClass('is-streak-pulse');
+			setTimeout(function () {
+				$streak.removeClass('is-streak-pulse');
+			}, 400);
+
 			$('#iaq-dash-highest-streak').html((self.highestStreak > 0 ? '🏆 ' : '') + self.highestStreak);
 			$('#iaq-dash-accuracy').text(accuracy);
 		},
@@ -786,28 +792,34 @@
 									self.highestStreak = self.currentStreak;
 								}
 
-								// Streak milestones celebration
+								// Streak milestones celebration (intelligent non-repetitive notifications)
 								if (self.currentStreak === 1) {
-									self.showCelebrationToast('🎯 First correct! Keep the streak going!', false);
+									self.showCelebrationToast('Good start! Keep it up!', false);
 								} else if (self.currentStreak === 2) {
-									self.showCelebrationToast('⚡ Great! 2 correct in a row!', false);
+									self.showCelebrationToast('Great! 2 correct in a row!', false);
 								} else if (self.currentStreak === 3) {
 									self.showCelebrationToast('🔥 3 in a Row! Excellent Performance!', true);
 									self.triggerConfetti();
 								} else if (self.currentStreak === 5) {
-									self.showCelebrationToast('🌟 Amazing! 5 Correct Answers in a Row!', true);
+									self.showCelebrationToast('Amazing! 5 Correct Answers in a Row!', true);
 									self.triggerConfetti();
 								} else if (self.currentStreak === 10) {
-									self.showCelebrationToast('🏆 Outstanding! 10 Correct Answers in a Row!', true);
+									self.showCelebrationToast('Outstanding! 10 Correct Answers in a Row!', true);
 									self.triggerConfetti();
-								} else if (self.currentStreak > 10 && self.currentStreak % 5 === 0) {
-									self.showCelebrationToast('🚀 Superb Streak! ' + self.currentStreak + ' Correct in a Row!', true);
+								} else if (self.currentStreak === 15) {
+									self.showCelebrationToast('Incredible! 15 Correct Answers in a Row!', true);
+									self.triggerConfetti();
+								} else if (self.currentStreak === 20) {
+									self.showCelebrationToast('Unstoppable! 20 Correct Answers in a Row!', true);
+									self.triggerConfetti();
+								} else if (self.currentStreak > 20 && self.currentStreak % 5 === 0) {
+									self.showCelebrationToast('Mastery! ' + self.currentStreak + ' Correct Answers in a Row!', true);
 									self.triggerConfetti();
 								}
 							} else {
 								self.incorrectCount++;
 								if (self.currentStreak > 0) {
-									self.showCelebrationToast("Streak reset. Keep learning — you'll get the next one! 💪", false);
+									self.showCelebrationToast("Don't give up! Keep practicing — you'll get the next one!", false);
 								}
 								self.currentStreak = 0;
 							}
