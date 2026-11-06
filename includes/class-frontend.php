@@ -92,11 +92,16 @@ class IAQ_Frontend {
 			true
 		);
 
+		$ajax_url = admin_url( 'admin-ajax.php' );
+		if ( is_ssl() || ( isset( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) && 'https' === $_SERVER['HTTP_X_FORWARDED_PROTO'] ) || ( isset( $_SERVER['SERVER_PORT'] ) && 443 == (int) $_SERVER['SERVER_PORT'] ) || ( function_exists( 'home_url' ) && strpos( home_url(), 'https://' ) === 0 ) ) {
+			$ajax_url = set_url_scheme( $ajax_url, 'https' );
+		}
+
 		wp_localize_script(
 			'iaq-quiz-engine',
 			'iaqQuizData',
 			array(
-				'ajaxUrl'          => admin_url( 'admin-ajax.php', is_ssl() ? 'https' : 'admin' ),
+				'ajaxUrl'          => $ajax_url,
 				'restStartUrl'     => esc_url_raw( rest_url( 'iaq/v1/quiz/{id}/start' ) ),
 				'restQuestionsUrl' => esc_url_raw( rest_url( 'iaq/v1/quiz/{id}/questions' ) ),
 				'nonce'            => wp_create_nonce( 'iaq_quiz_nonce' ),

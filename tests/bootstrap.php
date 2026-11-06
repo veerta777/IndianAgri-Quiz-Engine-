@@ -1944,6 +1944,18 @@ class Mock_WPDB {
 			return null;
 		}
 
+		// Match wrong notebook entry by user_id and question_id
+		if ( strpos( $query, $this->prefix . 'iaq_wrong_notebook' ) !== false && preg_match( "/WHERE (?:n\.)?user_id = (\d+) AND (?:n\.)?question_id = (\d+)/", $query, $m ) ) {
+			$uid = (int) $m[1];
+			$qid = (int) $m[2];
+			foreach ( $this->tables[ $this->prefix . 'iaq_wrong_notebook' ] as $wn ) {
+				if ( (int) $wn->user_id === $uid && (int) $wn->question_id === $qid ) {
+					return clone $wn;
+				}
+			}
+			return null;
+		}
+
 		// Match single book
 		if ( strpos( $query, $this->prefix . 'iaq_books' ) !== false ) {
 			if ( preg_match( "/WHERE (?:b\.)?id = (\d+)/", $query, $m ) ) {

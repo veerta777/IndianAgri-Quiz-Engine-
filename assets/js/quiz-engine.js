@@ -214,8 +214,8 @@
 			self.questions = d.questions || [];
 			self.remainingSeconds = (d.remaining_seconds != null) ? d.remaining_seconds : ((d.duration_minutes || 0) * 60 || null);
 			self.timeSpentSeconds = d.time_spent_seconds || 0;
-			self.isImmediate = !!d.is_immediate;
-			self.showAnswersMode = d.show_answers_mode || 'after_submission';
+			self.isImmediate = !!d.is_immediate || (d.quiz_type === 'practice') || (self.quizType === 'practice');
+			self.showAnswersMode = d.show_answers_mode || (self.isImmediate ? 'immediate' : 'after_submission');
 			self.feedbackData = {};
 
 			// Pre-populate answers dictionary and restore immediate feedback state
@@ -758,9 +758,97 @@
 					'Saving...'
 				);
 
+				function applyImmediateFeedback(fb) {
+					self.feedbackData[q.id] = fb;
+					curAns.selected = fb.selected;
+					self.answers[q.id] = curAns;
+
+					var isCor = !!fb.is_correct;
+					if (isCor) {
+						self.correctCount++;
+						self.currentStreak++;
+						if (self.currentStreak > self.highestStreak) {
+							self.highestStreak = self.currentStreak;
+						}
+
+						// Streak milestones celebration (intelligent non-repetitive notifications)
+						if (self.currentStreak === 1) {
+							self.showCelebrationToast('Good start! Keep it up!', false);
+						} else if (self.currentStreak === 2) {
+							self.showCelebrationToast('Great! 2 correct in a row!', false);
+						} else if (self.currentStreak === 3) {
+							self.showCelebrationToast('🔥 3 in a Row! Excellent Performance!', true);
+							self.triggerConfetti();
+						} else if (self.currentStreak === 5) {
+							self.showCelebrationToast('Amazing! 5 Correct Answers in a Row!', true);
+							self.triggerConfetti();
+						} else if (self.currentStreak === 10) {
+							self.showCelebrationToast('Outstanding! 10 Correct Answers in a Row!', true);
+							self.triggerConfetti();
+						} else if (self.currentStreak === 15) {
+							self.showCelebrationToast('Incredible! 15 Correct Answers in a Row!', true);
+							self.triggerConfetti();
+						} else if (self.currentStreak === 20) {
+							self.showCelebrationToast('Unstoppable! 20 Correct Answers in a Row!', true);
+							self.triggerConfetti();
+						} else if (self.currentStreak > 20 && self.currentStreak % 5 === 0) {
+							self.showCelebrationToast('Mastery! ' + self.currentStreak + ' Correct Answers in a Row!', true);
+							self.triggerConfetti();
+						}
+					} else {
+						self.incorrectCount++;
+						if (self.currentStreak > 0) {
+							self.showCelebrationToast("Don't give up! Keep practicing — you'll get the next one!", false);
+						}
+						self.currentStreak = 0;
+					}
+
+					self.updatePracticeDashboard();
+
+					// Highlight options with accessible tags and distinct colors
+					$('.iaq-option-item').each(function () {
+						var k = $(this).data('opt-key');
+						if (k === fb.correct_option) {
+							$(this).addClass('is-immediate-correct');
+							if (!$(this).find('.iaq-option-status-tag').length) {
+								$(this).append('<span class="iaq-option-status-tag is-correct-tag">' + IAQ_ICONS.check + ' <span>Correct Answer</span></span>');
+							}
+						} else if (k === fb.selected && !fb.is_correct) {
+							$(this).addClass('is-immediate-incorrect');
+							if (!$(this).find('.iaq-option-status-tag').length) {
+								$(this).append('<span class="iaq-option-status-tag is-incorrect-tag">' + IAQ_ICONS.cross + ' <span>Your Choice</span></span>');
+							}
+						}
+					});
+
+					// Render feedback box with explanation
+					self.renderImmediateFeedbackBox(q, fb);
+					$('#iaq-action-clear').hide();
+					$('#iaq-action-mark').hide();
+
+					// Update palette status and summary counters
+					self.updateQuestionPaletteStatus(self.currentIndex);
+					self.updateSummaryCounters();
+				}
+
+				// Check if question has preloaded correct_option (instant 0ms client-side evaluation)
+				var hasClientKey = (q.correct_option && String(q.correct_option).trim() !== '');
+				if (hasClientKey) {
+					var isCor = (String(q.correct_option).trim().toUpperCase() === String(optKey).trim().toUpperCase());
+					var clientFb = {
+						question_id: q.id,
+						selected: optKey,
+						is_correct: isCor ? 1 : 0,
+						correct_option: String(q.correct_option).trim().toUpperCase(),
+						explanation: q.explanation || ''
+					};
+					applyImmediateFeedback(clientFb);
+				}
+
 				$.ajax({
-					url: window.iaqQuizData.ajaxUrl,
+					url: self.getAjaxUrl(),
 					type: 'POST',
+					xhrFields: { withCredentials: true },
 					data: {
 						action: 'iaq_save_answer',
 						attempt_id: self.attemptId,
@@ -768,7 +856,7 @@
 						selected_option: optKey,
 						is_marked: curAns.isMarked,
 						time_spent: self.timeSpentSeconds,
-						nonce: window.iaqQuizData.nonce
+						nonce: self.getNonce()
 					},
 					dataType: 'json',
 					success: function (res) {
@@ -778,83 +866,17 @@
 							'Synchronized'
 						);
 
-						if (res && res.success && res.data) {
-							var fb = res.data;
-							self.feedbackData[q.id] = fb;
-							curAns.selected = fb.selected;
-							self.answers[q.id] = curAns;
-
-							var isCor = !!fb.is_correct;
-							if (isCor) {
-								self.correctCount++;
-								self.currentStreak++;
-								if (self.currentStreak > self.highestStreak) {
-									self.highestStreak = self.currentStreak;
-								}
-
-								// Streak milestones celebration (intelligent non-repetitive notifications)
-								if (self.currentStreak === 1) {
-									self.showCelebrationToast('Good start! Keep it up!', false);
-								} else if (self.currentStreak === 2) {
-									self.showCelebrationToast('Great! 2 correct in a row!', false);
-								} else if (self.currentStreak === 3) {
-									self.showCelebrationToast('🔥 3 in a Row! Excellent Performance!', true);
-									self.triggerConfetti();
-								} else if (self.currentStreak === 5) {
-									self.showCelebrationToast('Amazing! 5 Correct Answers in a Row!', true);
-									self.triggerConfetti();
-								} else if (self.currentStreak === 10) {
-									self.showCelebrationToast('Outstanding! 10 Correct Answers in a Row!', true);
-									self.triggerConfetti();
-								} else if (self.currentStreak === 15) {
-									self.showCelebrationToast('Incredible! 15 Correct Answers in a Row!', true);
-									self.triggerConfetti();
-								} else if (self.currentStreak === 20) {
-									self.showCelebrationToast('Unstoppable! 20 Correct Answers in a Row!', true);
-									self.triggerConfetti();
-								} else if (self.currentStreak > 20 && self.currentStreak % 5 === 0) {
-									self.showCelebrationToast('Mastery! ' + self.currentStreak + ' Correct Answers in a Row!', true);
-									self.triggerConfetti();
-								}
-							} else {
-								self.incorrectCount++;
-								if (self.currentStreak > 0) {
-									self.showCelebrationToast("Don't give up! Keep practicing — you'll get the next one!", false);
-								}
-								self.currentStreak = 0;
-							}
-
-							self.updatePracticeDashboard();
-
-							// Highlight options with accessible tags and distinct colors
-							$('.iaq-option-item').each(function () {
-								var k = $(this).data('opt-key');
-								if (k === fb.correct_option) {
-									$(this).addClass('is-immediate-correct');
-									if (!$(this).find('.iaq-option-status-tag').length) {
-										$(this).append('<span class="iaq-option-status-tag is-correct-tag">' + IAQ_ICONS.check + ' <span>Correct Answer</span></span>');
-									}
-								} else if (k === fb.selected && !fb.is_correct) {
-									$(this).addClass('is-immediate-incorrect');
-									if (!$(this).find('.iaq-option-status-tag').length) {
-										$(this).append('<span class="iaq-option-status-tag is-incorrect-tag">' + IAQ_ICONS.cross + ' <span>Your Choice</span></span>');
-									}
-								}
-							});
-
-							// Render feedback box with explanation
-							self.renderImmediateFeedbackBox(q, fb);
-							$('#iaq-action-clear').hide();
-							$('#iaq-action-mark').hide();
-
-							// Update palette status and summary counters
-							self.updateQuestionPaletteStatus(self.currentIndex);
-							self.updateSummaryCounters();
+						if (!hasClientKey && res && res.success && res.data) {
+							applyImmediateFeedback(res.data);
 						}
 					},
 					error: function () {
-						$statusTag.removeClass('is-saving').find('.iaq-save-text').text('Offline');
-						$('.iaq-option-item').removeClass('is-disabled');
+						if (!hasClientKey) {
+							$statusTag.removeClass('is-saving').find('.iaq-save-text').text('Offline');
+							$('.iaq-option-item').removeClass('is-disabled');
+						} else {
+							$statusTag.removeClass('is-saving').find('.iaq-save-text').text('Saved Locally');
+						}
 					}
 				});
 				return;
@@ -982,8 +1004,9 @@
 			);
 
 			$.ajax({
-				url: window.iaqQuizData.ajaxUrl,
+				url: self.getAjaxUrl(),
 				type: 'POST',
+				xhrFields: { withCredentials: true },
 				data: {
 					action: 'iaq_save_answer',
 					attempt_id: self.attemptId,
@@ -991,7 +1014,7 @@
 					selected_option: ans.selected || '',
 					is_marked: ans.isMarked,
 					time_spent: self.timeSpentSeconds,
-					nonce: window.iaqQuizData.nonce
+					nonce: self.getNonce()
 				},
 				dataType: 'json',
 				success: function (res) {
@@ -1247,13 +1270,14 @@
 			);
 
 			$.ajax({
-				url: window.iaqQuizData.ajaxUrl,
+				url: self.getAjaxUrl(),
 				type: 'POST',
+				xhrFields: { withCredentials: true },
 				data: {
 					action: 'iaq_submit_quiz_attempt',
 					attempt_id: self.attemptId,
 					time_spent: self.timeSpentSeconds,
-					nonce: window.iaqQuizData.nonce
+					nonce: self.getNonce()
 				},
 				dataType: 'json',
 				success: function (res) {
@@ -1261,6 +1285,10 @@
 					$('#iaq-timeout-modal').hide();
 
 					if (res && res.success && res.data) {
+						if (res.data.redirect_url && (!res.data.scorecard_html && !res.data.score)) {
+							window.location.href = res.data.redirect_url;
+							return;
+						}
 						self.renderScorecard(res.data);
 					} else {
 						var msg = (res && res.data && res.data.message) ? res.data.message : 'Error submitting test.';
@@ -1270,6 +1298,25 @@
 					}
 				},
 				error: function (xhr) {
+					// Fallback for in-memory / guest practice sets: show practice scorecard
+					if (self.isImmediate && self.attemptId >= 9999000) {
+						$('#iaq-submit-modal').hide();
+						$('#iaq-timeout-modal').hide();
+						var attempted = self.correctCount + self.incorrectCount;
+						var totalQ = self.questions.length;
+						var acc = attempted > 0 ? ((self.correctCount / attempted) * 100).toFixed(1) : 0;
+						self.renderScorecard({
+							score: self.correctCount,
+							total_marks: totalQ,
+							percentage: acc,
+							attempted: attempted,
+							total_questions: totalQ,
+							correct_count: self.correctCount,
+							incorrect_count: self.incorrectCount,
+							highest_streak: self.highestStreak
+						});
+						return;
+					}
 					self.isSubmitting = false;
 					$btn.prop('disabled', false).text('Yes, Submit Final Test \u2192');
 					alert('Network error during submission. Please try again.');
@@ -1352,12 +1399,13 @@
 			$btn.prop('disabled', true);
 
 			$.ajax({
-				url: window.iaqQuizData.ajaxUrl,
+				url: self.getAjaxUrl(),
 				type: 'POST',
+				xhrFields: { withCredentials: true },
 				data: {
 					action: 'iaq_get_attempt_review',
 					attempt_id: self.attemptId,
-					nonce: window.iaqQuizData.nonce
+					nonce: self.getNonce()
 				},
 				dataType: 'json',
 				success: function (res) {
@@ -1721,7 +1769,7 @@
 				postData.push({ name: 'nonce', value: (window.iaqQuizData ? window.iaqQuizData.nonce : '') });
 				postData.push({ name: 'current_url', value: window.location.href });
 
-				$.post(window.iaqQuizData ? window.iaqQuizData.ajaxUrl : '/wp-admin/admin-ajax.php', postData, function (res) {
+				$.post(self.getAjaxUrl(), postData, function (res) {
 					if (res && res.success && res.data && res.data.redirect_url) {
 						$status.css('color', '#16a34a').text('Test generated! Launching...');
 						window.location.href = res.data.redirect_url;
@@ -1743,9 +1791,9 @@
 				var qid = $btn.data('question-id');
 				var $card = $('#iaq-bookmark-row-' + qid);
 
-				$.post(window.iaqQuizData ? window.iaqQuizData.ajaxUrl : '/wp-admin/admin-ajax.php', {
+				$.post(self.getAjaxUrl(), {
 					action: 'iaq_toggle_bookmark',
-					nonce: window.iaqQuizData ? window.iaqQuizData.nonce : '',
+					nonce: self.getNonce(),
 					question_id: qid
 				}, function (res) {
 					if (res && res.success) {
@@ -1765,9 +1813,9 @@
 				var originalHtml = $btn.html();
 				$btn.prop('disabled', true).html(IAQ_ICONS.spinner + ' Preparing Revision Drill...');
 
-				$.post(window.iaqQuizData ? window.iaqQuizData.ajaxUrl : '/wp-admin/admin-ajax.php', {
+				$.post(self.getAjaxUrl(), {
 					action: 'iaq_create_revision_quiz',
-					nonce: window.iaqQuizData ? window.iaqQuizData.nonce : '',
+					nonce: self.getNonce(),
 					current_url: window.location.href
 				}, function (res) {
 					if (res && res.success && res.data && res.data.redirect_url) {
@@ -1789,9 +1837,9 @@
 				var qid = $btn.data('question-id');
 				var $card = $('#iaq-wrong-row-' + qid);
 
-				$.post(window.iaqQuizData ? window.iaqQuizData.ajaxUrl : '/wp-admin/admin-ajax.php', {
+				$.post(self.getAjaxUrl(), {
 					action: 'iaq_update_notebook_status',
-					nonce: window.iaqQuizData ? window.iaqQuizData.nonce : '',
+					nonce: self.getNonce(),
 					question_id: qid,
 					status: 'resolved'
 				}, function (res) {
@@ -1809,9 +1857,9 @@
 				var qid = $btn.data('question-id');
 				var $card = $('#iaq-wrong-row-' + qid);
 
-				$.post(window.iaqQuizData ? window.iaqQuizData.ajaxUrl : '/wp-admin/admin-ajax.php', {
+				$.post(self.getAjaxUrl(), {
 					action: 'iaq_remove_notebook_entry',
-					nonce: window.iaqQuizData ? window.iaqQuizData.nonce : '',
+					nonce: self.getNonce(),
 					question_id: qid
 				}, function (res) {
 					if (res && res.success) {
@@ -1831,9 +1879,9 @@
 				var originalHtml = $btn.html();
 				$btn.prop('disabled', true).html(IAQ_ICONS.spinner + ' Generating Retry Drill...');
 
-				$.post(window.iaqQuizData ? window.iaqQuizData.ajaxUrl : '/wp-admin/admin-ajax.php', {
+				$.post(self.getAjaxUrl(), {
 					action: 'iaq_create_retry_quiz',
-					nonce: window.iaqQuizData ? window.iaqQuizData.nonce : '',
+					nonce: self.getNonce(),
 					current_url: window.location.href
 				}, function (res) {
 					if (res && res.success && res.data && res.data.redirect_url) {
@@ -1869,9 +1917,9 @@
 
 				$btn.prop('disabled', true).html('<span class="iaq-spin" style="margin-right:6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg></span> Saving...');
 
-				$.post(window.iaqQuizData ? window.iaqQuizData.ajaxUrl : '/wp-admin/admin-ajax.php', {
+				$.post(self.getAjaxUrl(), {
 					action: 'iaq_update_study_goals',
-					nonce: window.iaqQuizData ? window.iaqQuizData.nonce : '',
+					nonce: self.getNonce(),
 					weekly_tests: tests,
 					weekly_questions: qs
 				}, function (res) {

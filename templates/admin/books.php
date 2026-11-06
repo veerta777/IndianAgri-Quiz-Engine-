@@ -72,8 +72,8 @@ if ( 'manage_sets' === $action && $book_id ) :
 							<div class="iaq-form-group">
 								<label for="new-set-access"><?php esc_html_e( 'Access Control / Paywall', 'indianagri-quiz-engine' ); ?> <span class="iaq-required">*</span></label>
 								<select name="access_type" id="new-set-access" class="iaq-select iaq-full-width">
-									<option value="paid" selected><?php esc_html_e( 'Paid (Subscription Required)', 'indianagri-quiz-engine' ); ?></option>
-									<option value="free"><?php esc_html_e( 'Free (Open Demo / Free Sample)', 'indianagri-quiz-engine' ); ?></option>
+									<option value="free" selected><?php esc_html_e( 'Free (Open Practice / Demo)', 'indianagri-quiz-engine' ); ?></option>
+									<option value="paid"><?php esc_html_e( 'Paid (Subscription Required)', 'indianagri-quiz-engine' ); ?></option>
 								</select>
 								<span class="iaq-card-help"><?php esc_html_e( 'Paid practice sets require an active student subscription to attempt.', 'indianagri-quiz-engine' ); ?></span>
 							</div>

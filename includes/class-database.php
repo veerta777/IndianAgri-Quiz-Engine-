@@ -515,11 +515,12 @@ CREATE TABLE {$table_mock_test_relations} (
 
 		dbDelta( $sql );
 
-		// Migrate existing practice sets and books to paid access by default
+		// Ensure practice sets are open practice drills with immediate feedback and free access by default
 		$table_quizzes = self::get_table_name( 'quizzes' );
 		$table_books   = self::get_table_name( 'books' );
-		$wpdb->query( "UPDATE {$table_quizzes} SET access_type = 'paid' WHERE quiz_type = 'practice' AND (access_type = 'free' OR access_type IS NULL OR access_type = '')" );
-		$wpdb->query( "UPDATE {$table_books} SET access_type = 'paid' WHERE access_type = 'free' OR access_type IS NULL OR access_type = ''" );
+		$wpdb->query( "UPDATE {$table_quizzes} SET show_answers_mode = 'immediate' WHERE quiz_type = 'practice'" );
+		$wpdb->query( "UPDATE {$table_quizzes} SET access_type = 'free' WHERE quiz_type = 'practice' AND (title NOT LIKE '%Premium VIP%')" );
+		$wpdb->query( "UPDATE {$table_books} SET access_type = 'free'" );
 		// Ensure all practice sets have randomize question order and option order enabled by default.
 		$wpdb->query( "UPDATE {$table_quizzes} SET shuffle_questions = 1 WHERE shuffle_questions = 0 AND quiz_type = 'practice'" );
 		$wpdb->query( "UPDATE {$table_quizzes} SET shuffle_options = 1 WHERE shuffle_options = 0 AND quiz_type = 'practice'" );

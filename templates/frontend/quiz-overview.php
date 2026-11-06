@@ -17,13 +17,17 @@ if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 $types     = IAQ_Quiz_Builder::get_quiz_types();
 $type_meta = isset( $types[ $quiz->quiz_type ] ) ? $types[ $quiz->quiz_type ] : array( 'label' => ucfirst( $quiz->quiz_type ), 'badge_color' => '#117E3A' );
 
+$is_practice_mode = ( 'mock' !== $quiz->quiz_type && ( 'practice' === $quiz->quiz_type || 'immediate' === $quiz->show_answers_mode ) );
+
 // Preload questions for instantaneous 0ms client-side CBT startup
 $preload_payload = array(
 	'quiz_id'           => (int) $quiz->id,
+	'quiz_type'         => $quiz->quiz_type,
+	'attempt_id'        => ( ! empty( $active_attempt ) && ! empty( $active_attempt->id ) ) ? (int) $active_attempt->id : ( 9999000 + (int) $quiz->id ),
 	'questions'         => array(),
 	'remaining_seconds' => ( (int) $quiz->duration_minutes > 0 ) ? ( (int) $quiz->duration_minutes * 60 ) : null,
-	'is_immediate'      => ( 'mock' !== $quiz->quiz_type && 'immediate' === $quiz->show_answers_mode ),
-	'show_answers_mode' => $quiz->show_answers_mode,
+	'is_immediate'      => $is_practice_mode,
+	'show_answers_mode' => $is_practice_mode ? 'immediate' : $quiz->show_answers_mode,
 );
 
 if ( class_exists( 'IAQ_Quiz_Builder' ) ) {
@@ -45,7 +49,7 @@ if ( class_exists( 'IAQ_Quiz_Builder' ) ) {
 			if ( ! empty( $rq->option_c_hi ) ) $opt_c['text_hi'] = $rq->option_c_hi;
 			if ( ! empty( $rq->option_d_hi ) ) $opt_d['text_hi'] = $rq->option_d_hi;
 
-			$preload_payload['questions'][] = array(
+			$q_payload = array(
 				'index'            => $p_idx++,
 				'id'               => (int) $rq->id,
 				'question_text'    => $rq->question_text,
@@ -58,6 +62,13 @@ if ( class_exists( 'IAQ_Quiz_Builder' ) ) {
 				'selected'         => null,
 				'is_marked'        => 0,
 			);
+
+			if ( $is_practice_mode ) {
+				$q_payload['correct_option'] = strtoupper( trim( $rq->correct_option ) );
+				$q_payload['explanation']    = class_exists( 'IAQ_Quiz_Attempt' ) ? IAQ_Quiz_Attempt::clean_explanation( $rq->explanation ) : $rq->explanation;
+			}
+
+			$preload_payload['questions'][] = $q_payload;
 		}
 	}
 }

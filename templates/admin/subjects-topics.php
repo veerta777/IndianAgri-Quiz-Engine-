@@ -285,8 +285,8 @@ if ( isset( $_GET['edit_topic'] ) ) {
 											<?php esc_html_e( 'Access Control / Paywall', 'indianagri-quiz-engine' ); ?> <span class="iaq-required">*</span>
 										</label>
 										<select name="access_type" id="new-subj-set-access" class="iaq-select iaq-full-width" style="font-size: 13px;">
-											<option value="paid" selected><?php esc_html_e( 'Paid (Subscription Required)', 'indianagri-quiz-engine' ); ?></option>
-											<option value="free"><?php esc_html_e( 'Free (Open Demo / Free Sample)', 'indianagri-quiz-engine' ); ?></option>
+											<option value="free" selected><?php esc_html_e( 'Free (Open Practice / Demo)', 'indianagri-quiz-engine' ); ?></option>
+											<option value="paid"><?php esc_html_e( 'Paid (Subscription Required)', 'indianagri-quiz-engine' ); ?></option>
 										</select>
 									</div>
 

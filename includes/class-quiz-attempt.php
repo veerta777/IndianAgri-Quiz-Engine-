@@ -100,11 +100,14 @@ class IAQ_Quiz_Attempt {
 			$is_correct = ( $q && strtoupper( $q->correct_option ) === strtoupper( $selected_option ) ) ? 1 : 0;
 			wp_send_json_success(
 				array(
+					'success'        => true,
+					'is_immediate'   => true,
+					'is_locked'      => true,
 					'question_id'    => $question_id,
 					'selected'       => $selected_option,
 					'is_correct'     => $is_correct,
-					'correct_option' => $q ? $q->correct_option : '',
-					'explanation'    => $q ? $q->explanation : '',
+					'correct_option' => $q ? strtoupper( trim( $q->correct_option ) ) : '',
+					'explanation'    => $q ? self::clean_explanation( $q->explanation ) : '',
 					'is_marked'      => $is_marked,
 				)
 			);
@@ -112,6 +115,24 @@ class IAQ_Quiz_Attempt {
 
 		$result = self::save_answer( $attempt_id, $user_id, $question_id, $selected_option, $is_marked, $time_spent );
 		if ( is_wp_error( $result ) ) {
+			// Fallback: If attempt session was in-memory or detached, still provide immediate feedback to avoid blocking student
+			$q = IAQ_Question_Bank::get_question( $question_id );
+			if ( $q ) {
+				$is_correct = ( strtoupper( $q->correct_option ) === strtoupper( $selected_option ) ) ? 1 : 0;
+				wp_send_json_success(
+					array(
+						'success'        => true,
+						'is_immediate'   => true,
+						'is_locked'      => true,
+						'question_id'    => $question_id,
+						'selected'       => $selected_option,
+						'is_correct'     => $is_correct,
+						'correct_option' => strtoupper( trim( $q->correct_option ) ),
+						'explanation'    => self::clean_explanation( $q->explanation ),
+						'is_marked'      => $is_marked,
+					)
+				);
+			}
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
 		}
 
@@ -122,15 +143,27 @@ class IAQ_Quiz_Attempt {
 	 * AJAX: Final submission of examination attempt.
 	 */
 	public function ajax_submit_quiz_attempt() {
-		check_ajax_referer( 'iaq_quiz_nonce', 'nonce' );
-
-		if ( ! is_user_logged_in() ) {
-			$this->ajax_unauthorized();
-		}
+		check_ajax_referer( 'iaq_quiz_nonce', 'nonce', false );
 
 		$attempt_id = isset( $_POST['attempt_id'] ) ? absint( $_POST['attempt_id'] ) : 0;
 		$time_spent = isset( $_POST['time_spent'] ) ? absint( $_POST['time_spent'] ) : 0;
 		$user_id    = get_current_user_id();
+
+		// Handle guest or in-memory practice sessions
+		if ( $user_id <= 0 || $attempt_id >= 9999000 ) {
+			wp_send_json_success(
+				array(
+					'attempt_id'       => $attempt_id,
+					'status'           => 'completed',
+					'redirect_url'     => add_query_arg( array( 'iaq_quiz_id' => ( $attempt_id >= 9999000 ? $attempt_id - 9999000 : 0 ), 'iaq_action' => 'review' ), home_url( '/' ) ),
+					'message'          => __( 'Practice set completed successfully!', 'indianagri-quiz-engine' ),
+				)
+			);
+		}
+
+		if ( ! is_user_logged_in() ) {
+			$this->ajax_unauthorized();
+		}
 
 		$result = self::submit_attempt( $attempt_id, $user_id, $time_spent );
 		if ( is_wp_error( $result ) ) {
@@ -259,7 +292,7 @@ class IAQ_Quiz_Attempt {
 			return new WP_Error( 'quiz_not_found', __( 'Quiz not found.', 'indianagri-quiz-engine' ) );
 		}
 
-		if ( 'paid' === $quiz->access_type ) {
+		if ( 'paid' === $quiz->access_type && 'practice' !== $quiz->quiz_type ) {
 			return new WP_Error( 'access_denied', __( 'This is a premium examination. Please log in or subscribe to access this test.', 'indianagri-quiz-engine' ) );
 		}
 
@@ -270,6 +303,7 @@ class IAQ_Quiz_Attempt {
 			$raw_questions = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table_q} WHERE subject_id = %d ORDER BY id ASC LIMIT 50", $quiz->subject_id ) );
 		}
 
+		$is_immediate_practice = ( 'mock' !== $quiz->quiz_type && ( 'practice' === $quiz->quiz_type || 'immediate' === $quiz->show_answers_mode ) );
 		$safe_questions = array();
 		$index = 1;
 		foreach ( $raw_questions as $q ) {
@@ -282,7 +316,7 @@ class IAQ_Quiz_Attempt {
 			if ( ! empty( $q->option_c_hi ) ) $opt_c['text_hi'] = $q->option_c_hi;
 			if ( ! empty( $q->option_d_hi ) ) $opt_d['text_hi'] = $q->option_d_hi;
 
-			$safe_questions[] = array(
+			$q_row = array(
 				'index'            => $index++,
 				'id'               => (int) $q->id,
 				'question_text'    => $q->question_text,
@@ -295,6 +329,13 @@ class IAQ_Quiz_Attempt {
 				'selected'         => null,
 				'is_marked'        => 0,
 			);
+
+			if ( $is_immediate_practice ) {
+				$q_row['correct_option'] = strtoupper( trim( $q->correct_option ) );
+				$q_row['explanation']    = self::clean_explanation( $q->explanation );
+			}
+
+			$safe_questions[] = $q_row;
 		}
 
 		$duration_seconds = (int) $quiz->duration_minutes * 60;
@@ -302,11 +343,12 @@ class IAQ_Quiz_Attempt {
 		return array(
 			'attempt_id'        => 9999000 + (int) $quiz_id,
 			'quiz_id'           => (int) $quiz_id,
+			'quiz_type'         => $quiz->quiz_type,
 			'questions'         => $safe_questions,
 			'remaining_seconds' => ( $duration_seconds > 0 ) ? $duration_seconds : null,
 			'time_spent_seconds'=> 0,
-			'is_immediate'      => true,
-			'show_answers_mode' => 'immediate',
+			'is_immediate'      => $is_immediate_practice,
+			'show_answers_mode' => $is_immediate_practice ? 'immediate' : $quiz->show_answers_mode,
 			'answers'           => array(),
 		);
 	}
@@ -577,7 +619,7 @@ class IAQ_Quiz_Attempt {
 
 		// Immediate Feedback Mode is strictly permitted only for practice sets when configured.
 		// MOCK TESTS MUST NEVER ALLOW IMMEDIATE FEEDBACK ON THE SERVER.
-		$is_immediate_mode = ( 'mock' !== $quiz->quiz_type && 'immediate' === $quiz->show_answers_mode );
+		$is_immediate_mode = ( 'mock' !== $quiz->quiz_type && ( 'practice' === $quiz->quiz_type || 'immediate' === $quiz->show_answers_mode ) );
 
 		// SECURE SANITIZATION: Strip correct answer and explanation from questions delivered to candidate!
 		// In immediate feedback mode, reveal answers/explanations ONLY for questions the student ALREADY answered.
@@ -725,7 +767,7 @@ class IAQ_Quiz_Attempt {
 		$is_marked = $is_marked ? 1 : 0;
 
 		// Check if immediate feedback is authorized. Mock tests MUST NEVER allow immediate answer keys!
-		$is_immediate = ( 'mock' !== $attempt->quiz_type && 'immediate' === $attempt->show_answers_mode );
+		$is_immediate = ( 'mock' !== $attempt->quiz_type && ( 'practice' === $attempt->quiz_type || 'immediate' === $attempt->show_answers_mode ) );
 
 		// Check if record exists in wp_iaq_attempt_answers.
 		$existing_id = (int) $wpdb->get_var(
