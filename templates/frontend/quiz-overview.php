@@ -17,7 +17,7 @@ if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 $types     = IAQ_Quiz_Builder::get_quiz_types();
 $type_meta = isset( $types[ $quiz->quiz_type ] ) ? $types[ $quiz->quiz_type ] : array( 'label' => ucfirst( $quiz->quiz_type ), 'badge_color' => '#117E3A' );
 
-$is_practice_mode = ( 'mock' !== $quiz->quiz_type && 'previous_year' !== $quiz->quiz_type );
+$is_practice_mode = class_exists( 'IAQ_Quiz_Builder' ) ? IAQ_Quiz_Builder::is_practice_quiz( $quiz ) : ( 'mock' !== $quiz->quiz_type && 'previous_year' !== $quiz->quiz_type );
 
 // Preload questions for instantaneous 0ms client-side CBT startup
 $preload_payload = array(

@@ -18,12 +18,14 @@ class IAQ_Quiz_Attempt {
 	 * Initialize AJAX hooks for student quiz attempts.
 	 */
 	public function init() {
-		// One-time self-healing check to ensure existing practice sets have immediate feedback mode enabled
-		if ( ! get_option( 'iaq_practice_immediate_migrated_v2' ) ) {
+		// Self-healing migration: Ensure all textbook & subject practice sets have quiz_type = 'practice' and show_answers_mode = 'immediate'
+		if ( ! get_option( 'iaq_practice_immediate_migrated_v5' ) ) {
 			global $wpdb;
-			$table_quizzes = $wpdb->prefix . 'iaq_quizzes';
-			$wpdb->query( "UPDATE {$table_quizzes} SET show_answers_mode = 'immediate' WHERE quiz_type = 'practice' OR (quiz_type != 'mock' AND quiz_type != 'previous_year')" );
-			update_option( 'iaq_practice_immediate_migrated_v2', 1 );
+			$table_quizzes      = $wpdb->prefix . 'iaq_quizzes';
+			$table_book_quizzes = $wpdb->prefix . 'iaq_book_quizzes';
+			$table_esq          = $wpdb->prefix . 'iaq_exam_subject_quizzes';
+			$wpdb->query( "UPDATE {$table_quizzes} SET quiz_type = 'practice', show_answers_mode = 'immediate' WHERE id IN (SELECT quiz_id FROM {$table_book_quizzes}) OR id IN (SELECT quiz_id FROM {$table_esq}) OR title LIKE '%Sunda%' OR title LIKE '%Kantwa%' OR title LIKE '%Practice%' OR title LIKE '%Horticulture%' OR title LIKE '%Katyayan%' OR (duration_minutes = 0 AND quiz_type != 'previous_year')" );
+			update_option( 'iaq_practice_immediate_migrated_v5', 1 );
 		}
 
 		// Logged in and guest student attempts (allows immediate start).
@@ -319,7 +321,7 @@ class IAQ_Quiz_Attempt {
 			$raw_questions = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table_q} WHERE subject_id = %d ORDER BY id ASC LIMIT 50", $quiz->subject_id ) );
 		}
 
-		$is_immediate_practice = ( 'mock' !== $quiz->quiz_type && 'previous_year' !== $quiz->quiz_type );
+		$is_immediate_practice = class_exists( 'IAQ_Quiz_Builder' ) ? IAQ_Quiz_Builder::is_practice_quiz( $quiz ) : ( 'mock' !== $quiz->quiz_type && 'previous_year' !== $quiz->quiz_type );
 		$safe_questions = array();
 		$index = 1;
 		foreach ( $raw_questions as $q ) {
@@ -635,7 +637,7 @@ class IAQ_Quiz_Attempt {
 
 		// Immediate Feedback Mode is strictly permitted only for practice sets when configured.
 		// MOCK TESTS & PYQ PAPERS MUST NEVER ALLOW IMMEDIATE FEEDBACK ON THE SERVER.
-		$is_immediate_mode = ( 'mock' !== $quiz->quiz_type && 'previous_year' !== $quiz->quiz_type );
+		$is_immediate_mode = class_exists( 'IAQ_Quiz_Builder' ) ? IAQ_Quiz_Builder::is_practice_quiz( $quiz ) : ( 'mock' !== $quiz->quiz_type && 'previous_year' !== $quiz->quiz_type );
 
 		// SECURE SANITIZATION: Strip correct answer and explanation from questions delivered to candidate!
 		// In immediate feedback mode, reveal answers/explanations ONLY for questions the student ALREADY answered.
@@ -783,7 +785,8 @@ class IAQ_Quiz_Attempt {
 		$is_marked = $is_marked ? 1 : 0;
 
 		// Check if immediate feedback is authorized. Mock tests and PYQ papers MUST NEVER allow immediate answer keys!
-		$is_immediate = ( 'mock' !== $attempt->quiz_type && 'previous_year' !== $attempt->quiz_type );
+		$quiz_obj     = ( ! empty( $attempt->quiz_id ) && class_exists( 'IAQ_Quiz_Builder' ) ) ? IAQ_Quiz_Builder::get_quiz( $attempt->quiz_id ) : (object) array( 'id' => $attempt->quiz_id, 'quiz_type' => $attempt->quiz_type, 'title' => '', 'duration_minutes' => $attempt->duration_minutes, 'show_answers_mode' => $attempt->show_answers_mode );
+		$is_immediate = class_exists( 'IAQ_Quiz_Builder' ) ? IAQ_Quiz_Builder::is_practice_quiz( $quiz_obj ) : ( 'mock' !== $attempt->quiz_type && 'previous_year' !== $attempt->quiz_type );
 
 		// Check if record exists in wp_iaq_attempt_answers.
 		$existing_id = (int) $wpdb->get_var(

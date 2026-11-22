@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 	return;
 }
-$is_practice_mode = ( 'mock' !== $quiz->quiz_type && 'previous_year' !== $quiz->quiz_type );
+$is_practice_mode = class_exists( 'IAQ_Quiz_Builder' ) ? IAQ_Quiz_Builder::is_practice_quiz( $quiz ) : ( 'mock' !== $quiz->quiz_type && 'previous_year' !== $quiz->quiz_type );
 ?>
 
 <!-- Examination Portal (Hidden until started/resumed) -->

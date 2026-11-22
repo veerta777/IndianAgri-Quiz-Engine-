@@ -53,6 +53,88 @@ class IAQ_Quiz_Builder {
 	}
 
 	/**
+	 * Determine whether a quiz is a Practice Set (eligible for instant evaluation, explanations, and streaks).
+	 *
+	 * @param object|int $quiz Quiz object or ID.
+	 * @return bool
+	 */
+	public static function is_practice_quiz( $quiz ) {
+		if ( empty( $quiz ) ) {
+			return false;
+		}
+		if ( is_numeric( $quiz ) ) {
+			$quiz = self::get_quiz( (int) $quiz );
+		}
+		if ( ! is_object( $quiz ) ) {
+			return false;
+		}
+
+		// Explicit URL override: ?iaq_mode=practice
+		if ( isset( $_GET['iaq_mode'] ) && 'practice' === $_GET['iaq_mode'] ) {
+			return true;
+		}
+
+		// Check if quiz is linked to Reference Books in iaq_book_quizzes or exam-subjects
+		global $wpdb;
+		$is_linked_to_book = false;
+		if ( isset( $wpdb ) && class_exists( 'IAQ_Database' ) && ! empty( $quiz->id ) ) {
+			$t_bq = IAQ_Database::get_table_name( 'book_quizzes' );
+			if ( $t_bq ) {
+				$is_linked_to_book = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$t_bq} WHERE quiz_id = %d LIMIT 1", $quiz->id ) ) > 0;
+			}
+			if ( ! $is_linked_to_book ) {
+				$t_esq = IAQ_Database::get_table_name( 'exam_subject_quizzes' );
+				if ( $t_esq ) {
+					$is_linked_to_book = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$t_esq} WHERE quiz_id = %d LIMIT 1", $quiz->id ) ) > 0;
+				}
+			}
+		}
+
+		// If it's a mock or pyq AND not linked to a book/subject practice set, it is strictly an exam!
+		if ( ( 'mock' === $quiz->quiz_type || 'previous_year' === $quiz->quiz_type ) && ! $is_linked_to_book ) {
+			return false;
+		}
+
+		// Explicit practice type
+		if ( 'practice' === $quiz->quiz_type ) {
+			return true;
+		}
+
+		// If linked to a book or exam-subject practice set, it's a practice set
+		if ( $is_linked_to_book ) {
+			return true;
+		}
+
+		// Immediate review mode on non-mock
+		if ( 'immediate' === $quiz->show_answers_mode ) {
+			return true;
+		}
+
+		// Check title keywords for textbooks
+		$title = ! empty( $quiz->title ) ? strtolower( $quiz->title ) : '';
+		$practice_patterns = array(
+			'sunda',
+			'kantwa',
+			'katyayan',
+			'horticulture',
+			'glance',
+			'practice',
+		);
+		foreach ( $practice_patterns as $pat ) {
+			if ( strpos( $title, $pat ) !== false ) {
+				return true;
+			}
+		}
+
+		// Untimed quizzes (0 minutes) that are not mock/pyq
+		if ( (int) $quiz->duration_minutes <= 0 && 'mock' !== $quiz->quiz_type && 'previous_year' !== $quiz->quiz_type ) {
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
 	 * Cache store for quizzes.
 	 *
 	 * @var array

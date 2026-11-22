@@ -53,7 +53,10 @@
 			self.quizId = parseInt($portal.data('quiz-id'), 10);
 			self.quizType = $portal.data('quiz-type') || '';
 			var portalImmediate = $portal.data('is-immediate');
-			if (portalImmediate === 1 || portalImmediate === '1' || (self.quizType && self.quizType !== 'mock' && self.quizType !== 'previous_year') || window.location.href.indexOf('practice') !== -1) {
+			var showAnswersMode = $portal.data('show-answers-mode');
+			var urlParams = new URLSearchParams(window.location.search);
+			var isPracticeUrl = (urlParams.get('iaq_mode') === 'practice') || (urlParams.get('iaq_tab') === 'practice-sets') || (window.location.href.indexOf('practice') !== -1);
+			if (portalImmediate === 1 || portalImmediate === '1' || showAnswersMode === 'immediate' || self.quizType === 'practice' || (self.quizType !== 'mock' && self.quizType !== 'previous_year') || isPracticeUrl) {
 				self.isImmediate = true;
 			}
 
@@ -225,9 +228,12 @@
 			self.remainingSeconds = (d.remaining_seconds != null) ? d.remaining_seconds : ((d.duration_minutes || 0) * 60 || null);
 			self.timeSpentSeconds = d.time_spent_seconds || 0;
 			self.quizType = d.quiz_type || self.quizType || '';
-			var isMockOrPyq = (self.quizType === 'mock' || self.quizType === 'previous_year');
-			self.isImmediate = (!isMockOrPyq) || !!d.is_immediate || (d.show_answers_mode === 'immediate') || (self.isImmediate) || (window.location.href.indexOf('practice') !== -1);
-			self.showAnswersMode = d.show_answers_mode || (self.isImmediate ? 'immediate' : 'after_submission');
+			var urlParams = new URLSearchParams(window.location.search);
+			var isPracticeRequested = (urlParams.get('iaq_mode') === 'practice') || (urlParams.get('iaq_tab') === 'practice-sets') || (window.location.href.indexOf('practice') !== -1);
+			var hasImmediateData = !!d.is_immediate || (d.show_answers_mode === 'immediate') || (d.quiz_type === 'practice') || (self.quizType === 'practice');
+			var isExplicitMockOrPyq = (self.quizType === 'mock' || self.quizType === 'previous_year');
+			self.isImmediate = isPracticeRequested || hasImmediateData || (self.isImmediate) || (!isExplicitMockOrPyq);
+			self.showAnswersMode = self.isImmediate ? 'immediate' : (d.show_answers_mode || 'after_submission');
 			self.feedbackData = {};
 
 			// Pre-populate answers dictionary and restore immediate feedback state

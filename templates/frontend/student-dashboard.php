@@ -506,11 +506,14 @@ $subscription_plans_html = isset( $subscription_plans_html ) ? $subscription_pla
 						$iaq_books_img    = $iaq_img_base . '/assets/images/pathway_books.jpg';
 						$iaq_subjects_img = $iaq_img_base . '/assets/images/pathway_subjects.jpg';
 						$iaq_exams_img    = $iaq_img_base . '/assets/images/pathway_exams.jpg';
+						$ps_card_url      = 'https://indianagriexam.com/practice-quiz/?iaq_tab=practice-sets#practice-sets';
+						$mt_card_url      = 'https://indianagriexam.com/practice-quiz/?iaq_tab=mock-tests#mock-tests';
+						$pyq_card_url     = 'https://indianagriexam.com/practice-quiz/?iaq_tab=pyq#pyq';
 						?>
 
 						<div class="iaq-pathways-grid iaq-front-three-cards-grid">
 							<!-- Card 1: Practice Sets -->
-							<div class="iaq-pathway-card is-books iaq-dash-nav-trigger" data-target="practice-sets" id="card-practice-sets" style="cursor:pointer;">
+							<div class="iaq-pathway-card is-books" id="card-practice-sets" style="cursor:pointer;" onclick="window.location.href='<?php echo esc_url( $ps_card_url ); ?>';">
 								<div class="iaq-pathway-card-top">
 									<div class="iaq-pathway-info">
 										<div class="iaq-pathway-icon-squircle">
@@ -542,7 +545,7 @@ $subscription_plans_html = isset( $subscription_plans_html ) ? $subscription_pla
 									</span>
 								</div>
 
-								<a href="#iaq-pane-practice-sets" class="iaq-pathway-btn is-green iaq-dash-nav-trigger" data-target="practice-sets" onclick="event.stopPropagation();">
+								<a href="<?php echo esc_url( $ps_card_url ); ?>" class="iaq-pathway-btn is-green" onclick="event.stopPropagation(); window.location.href='<?php echo esc_url( $ps_card_url ); ?>';">
 									<span class="iaq-pathway-btn-text"><?php esc_html_e( 'Explore Practice Sets &rarr;', 'indianagri-quiz-engine' ); ?></span>
 									<span class="iaq-pathway-btn-arrow">
 										<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -551,7 +554,7 @@ $subscription_plans_html = isset( $subscription_plans_html ) ? $subscription_pla
 							</div>
 
 							<!-- Card 2: Mock Tests -->
-							<div class="iaq-pathway-card is-subjects iaq-dash-nav-trigger" data-target="mock-tests" id="card-mock-tests" style="cursor:pointer;">
+							<div class="iaq-pathway-card is-subjects" id="card-mock-tests" style="cursor:pointer;" onclick="window.location.href='<?php echo esc_url( $mt_card_url ); ?>';">
 								<div class="iaq-pathway-card-top">
 									<div class="iaq-pathway-info">
 										<div class="iaq-pathway-icon-squircle">
@@ -583,7 +586,7 @@ $subscription_plans_html = isset( $subscription_plans_html ) ? $subscription_pla
 									</span>
 								</div>
 
-								<a href="#iaq-pane-mock-tests" class="iaq-pathway-btn is-blue iaq-dash-nav-trigger" data-target="mock-tests" onclick="event.stopPropagation();">
+								<a href="<?php echo esc_url( $mt_card_url ); ?>" class="iaq-pathway-btn is-blue" onclick="event.stopPropagation(); window.location.href='<?php echo esc_url( $mt_card_url ); ?>';">
 									<span class="iaq-pathway-btn-text"><?php esc_html_e( 'Take Mock Tests &rarr;', 'indianagri-quiz-engine' ); ?></span>
 									<span class="iaq-pathway-btn-arrow">
 										<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -592,7 +595,7 @@ $subscription_plans_html = isset( $subscription_plans_html ) ? $subscription_pla
 							</div>
 
 							<!-- Card 3: Previous Year Questions (PYQ) -->
-							<div class="iaq-pathway-card is-purple iaq-dash-nav-trigger" data-target="pyq" id="card-pyq" style="cursor:pointer;">
+							<div class="iaq-pathway-card is-purple" id="card-pyq" style="cursor:pointer;" onclick="window.location.href='<?php echo esc_url( $pyq_card_url ); ?>';">
 								<div class="iaq-pathway-card-top">
 									<div class="iaq-pathway-info">
 										<div class="iaq-pathway-icon-squircle">
@@ -624,7 +627,7 @@ $subscription_plans_html = isset( $subscription_plans_html ) ? $subscription_pla
 									</span>
 								</div>
 
-								<a href="#iaq-pane-pyq" class="iaq-pathway-btn is-purple iaq-dash-nav-trigger" data-target="pyq" onclick="event.stopPropagation();">
+								<a href="<?php echo esc_url( $pyq_card_url ); ?>" class="iaq-pathway-btn is-purple" onclick="event.stopPropagation(); window.location.href='<?php echo esc_url( $pyq_card_url ); ?>';">
 									<span class="iaq-pathway-btn-text"><?php esc_html_e( 'Browse PYQ Papers &rarr;', 'indianagri-quiz-engine' ); ?></span>
 									<span class="iaq-pathway-btn-arrow">
 										<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>

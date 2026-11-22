@@ -20,7 +20,7 @@ $attempt_status = isset( $pq->attempt_status ) ? $pq->attempt_status : 'not_atte
 $set_num   = isset( $pq->practice_set_number ) ? (int) $pq->practice_set_number : 1;
 
 // Target URL for attempting test
-$attempt_url = add_query_arg( array( 'iaq_quiz_id' => (int) $pq->id ), get_permalink() );
+$attempt_url = add_query_arg( array( 'iaq_quiz_id' => (int) $pq->id, 'iaq_mode' => 'practice' ), get_permalink() );
 ?>
 
 <div class="iaq-ps-set-card" id="practice-set-card-<?php echo esc_attr( $pq->id ); ?>">

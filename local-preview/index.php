@@ -1933,6 +1933,7 @@ function wp_enqueue_style() { return true; }
 function wp_enqueue_script() { return true; }
 function wp_localize_script() { return true; }
 function is_admin() { return true; }
+function wp_doing_ajax() { return false; }
 function wpautop( $pee ) { return '<p>' . nl2br( (string) $pee ) . '</p>'; }
 function wp_trim_words( $text, $num_words = 55, $more = null ) {
 	if ( null === $more ) {
