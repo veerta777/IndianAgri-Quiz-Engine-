@@ -1991,6 +1991,20 @@ function add_query_arg( ...$args ) {
 	$merged = array_merge( $existing, $params );
 	return $base . '?' . http_build_query( $merged );
 }
+function remove_query_arg( $key, $url = '' ) {
+	$parts = explode( '?', (string) $url );
+	$base  = $parts[0];
+	$query = array();
+	if ( isset( $parts[1] ) ) {
+		parse_str( $parts[1], $query );
+	}
+	if ( is_array( $key ) ) {
+		foreach ( $key as $k ) unset( $query[ $k ] );
+	} else {
+		unset( $query[ $key ] );
+	}
+	return empty( $query ) ? $base : $base . '?' . http_build_query( $query );
+}
 function wp_safe_redirect( $location ) {
 	header( 'Location: ' . $location );
 	exit;
@@ -2062,6 +2076,7 @@ require_once IAQ_PLUGIN_DIR . 'includes/class-access-control.php';
 require_once IAQ_PLUGIN_DIR . 'includes/class-quiz-builder.php';
 require_once IAQ_PLUGIN_DIR . 'includes/class-practice-sets.php';
 require_once IAQ_PLUGIN_DIR . 'includes/class-mock-tests.php';
+require_once IAQ_PLUGIN_DIR . 'includes/class-pyq.php';
 require_once IAQ_PLUGIN_DIR . 'includes/class-quiz-attempt.php';
 require_once IAQ_PLUGIN_DIR . 'includes/class-bookmarks.php';
 require_once IAQ_PLUGIN_DIR . 'includes/class-wrong-notebook.php';
@@ -2071,6 +2086,7 @@ require_once IAQ_PLUGIN_DIR . 'includes/class-study-streaks.php';
 require_once IAQ_PLUGIN_DIR . 'includes/class-import-export.php';
 require_once IAQ_PLUGIN_DIR . 'includes/class-frontend.php';
 require_once IAQ_PLUGIN_DIR . 'includes/class-admin.php';
+require_once IAQ_PLUGIN_DIR . 'includes/class-rest-api.php';
 require_once IAQ_PLUGIN_DIR . 'includes/class-plugin.php';
 
 IAQ_Access_Control::init();
