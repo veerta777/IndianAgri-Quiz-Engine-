@@ -5304,6 +5304,13 @@ body.iaq-portal-active {
 	border-color: #fed7aa;
 }
 
+.iaq-pathway-card.is-purple::before {
+	background: radial-gradient(circle, rgba(243, 232, 255, 0.85) 0%, rgba(243, 232, 255, 0) 70%);
+}
+.iaq-pathway-card.is-purple:hover {
+	border-color: #d8b4fe;
+}
+
 /* Top Section: Left Text + Right 3D Art */
 .iaq-pathway-card-top {
 	display: flex;
@@ -5345,6 +5352,9 @@ body.iaq-portal-active {
 .iaq-pathway-card.is-exams .iaq-pathway-icon-squircle {
 	background: #ea580c;
 }
+.iaq-pathway-card.is-purple .iaq-pathway-icon-squircle {
+	background: #7c3aed;
+}
 
 .iaq-pathway-overline {
 	font-size: 10.5px;
@@ -5373,6 +5383,9 @@ body.iaq-portal-active {
 }
 .iaq-pathway-name .iaq-accent-text.is-orange {
 	color: #ea580c;
+}
+.iaq-pathway-name .iaq-accent-text.is-purple {
+	color: #7c3aed;
 }
 
 .iaq-pathway-desc {
@@ -5444,6 +5457,9 @@ body.iaq-portal-active {
 }
 .iaq-pathway-card.is-exams .iaq-pathway-feat svg {
 	color: #ea580c;
+}
+.iaq-pathway-card.is-purple .iaq-pathway-feat svg {
+	color: #7c3aed;
 }
 
 /* Bottom Action Button */
@@ -5526,6 +5542,19 @@ body.iaq-portal-active {
 .iaq-pathway-btn.is-orange:hover {
 	background: linear-gradient(135deg, #c2410c 0%, #9a3412 100%);
 	box-shadow: 0 6px 20px rgba(234, 88, 12, 0.45);
+	transform: translateY(-1px);
+}
+
+.iaq-pathway-btn.is-purple {
+	background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+	box-shadow: 0 4px 14px rgba(124, 58, 237, 0.3);
+}
+.iaq-pathway-btn.is-purple .iaq-pathway-btn-arrow {
+	color: #6d28d9;
+}
+.iaq-pathway-btn.is-purple:hover {
+	background: linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%);
+	box-shadow: 0 6px 20px rgba(124, 58, 237, 0.45);
 	transform: translateY(-1px);
 }
 
