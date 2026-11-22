@@ -341,7 +341,8 @@ class IAQ_Quiz_Builder {
 		// Access & review mode.
 		$access_type       = ( isset( $data['access_type'] ) && in_array( $data['access_type'], array( 'paid', 'premium' ), true ) ) ? 'paid' : 'free';
 		$wc_product_id     = ! empty( $data['wc_product_id'] ) ? absint( $data['wc_product_id'] ) : null;
-		$show_answers_mode = isset( $data['show_answers_mode'] ) && in_array( $data['show_answers_mode'], array( 'immediate', 'after_submission', 'never' ), true ) ? $data['show_answers_mode'] : 'after_submission';
+		$default_show_mode = ( 'mock' === $quiz_type || 'previous_year' === $quiz_type ) ? 'after_submission' : 'immediate';
+		$show_answers_mode = isset( $data['show_answers_mode'] ) && in_array( $data['show_answers_mode'], array( 'immediate', 'after_submission', 'never' ), true ) ? $data['show_answers_mode'] : $default_show_mode;
 
 		// PYQ specifics.
 		$pyq_year           = ! empty( $data['pyq_year'] ) ? absint( $data['pyq_year'] ) : null;

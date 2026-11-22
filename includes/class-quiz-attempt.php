@@ -18,6 +18,14 @@ class IAQ_Quiz_Attempt {
 	 * Initialize AJAX hooks for student quiz attempts.
 	 */
 	public function init() {
+		// One-time self-healing check to ensure existing practice sets have immediate feedback mode enabled
+		if ( ! get_option( 'iaq_practice_immediate_migrated_v2' ) ) {
+			global $wpdb;
+			$table_quizzes = $wpdb->prefix . 'iaq_quizzes';
+			$wpdb->query( "UPDATE {$table_quizzes} SET show_answers_mode = 'immediate' WHERE quiz_type = 'practice' OR (quiz_type != 'mock' AND quiz_type != 'previous_year')" );
+			update_option( 'iaq_practice_immediate_migrated_v2', 1 );
+		}
+
 		// Logged in and guest student attempts (allows immediate start).
 		add_action( 'wp_ajax_iaq_start_quiz_attempt', array( $this, 'ajax_start_or_resume_attempt' ) );
 		add_action( 'wp_ajax_iaq_save_answer', array( $this, 'ajax_save_answer' ) );
@@ -100,15 +108,19 @@ class IAQ_Quiz_Attempt {
 			$is_correct = ( $q && strtoupper( $q->correct_option ) === strtoupper( $selected_option ) ) ? 1 : 0;
 			wp_send_json_success(
 				array(
-					'success'        => true,
-					'is_immediate'   => true,
-					'is_locked'      => true,
-					'question_id'    => $question_id,
-					'selected'       => $selected_option,
-					'is_correct'     => $is_correct,
-					'correct_option' => $q ? strtoupper( trim( $q->correct_option ) ) : '',
-					'explanation'    => $q ? self::clean_explanation( $q->explanation ) : '',
-					'is_marked'      => $is_marked,
+					'success'          => true,
+					'is_immediate'     => true,
+					'is_locked'        => true,
+					'question_id'      => $question_id,
+					'selected'         => $selected_option,
+					'is_correct'       => $is_correct,
+					'correct_option'   => $q ? strtoupper( trim( $q->correct_option ) ) : '',
+					'explanation'      => $q ? self::clean_explanation( $q->explanation ) : '',
+					'marks_awarded'    => ( 1 === $is_correct ) ? ( $q ? (float) $q->marks : 1.0 ) : ( $q ? -1 * abs( (float) $q->negative_marks ) : 0.0 ),
+					'feedback_message' => ( 1 === $is_correct )
+						? __( 'Excellent! Correct Answer!', 'indianagri-quiz-engine' )
+						: __( 'Not quite! Don\'t give up. Review the explanation below to master this concept.', 'indianagri-quiz-engine' ),
+					'is_marked'        => $is_marked,
 				)
 			);
 		}
@@ -121,15 +133,19 @@ class IAQ_Quiz_Attempt {
 				$is_correct = ( strtoupper( $q->correct_option ) === strtoupper( $selected_option ) ) ? 1 : 0;
 				wp_send_json_success(
 					array(
-						'success'        => true,
-						'is_immediate'   => true,
-						'is_locked'      => true,
-						'question_id'    => $question_id,
-						'selected'       => $selected_option,
-						'is_correct'     => $is_correct,
-						'correct_option' => strtoupper( trim( $q->correct_option ) ),
-						'explanation'    => self::clean_explanation( $q->explanation ),
-						'is_marked'      => $is_marked,
+						'success'          => true,
+						'is_immediate'     => true,
+						'is_locked'        => true,
+						'question_id'      => $question_id,
+						'selected'         => $selected_option,
+						'is_correct'       => $is_correct,
+						'correct_option'   => strtoupper( trim( $q->correct_option ) ),
+						'explanation'      => self::clean_explanation( $q->explanation ),
+						'marks_awarded'    => ( 1 === $is_correct ) ? (float) $q->marks : ( -1 * abs( (float) $q->negative_marks ) ),
+						'feedback_message' => ( 1 === $is_correct )
+							? __( 'Excellent! Correct Answer!', 'indianagri-quiz-engine' )
+							: __( 'Not quite! Don\'t give up. Review the explanation below to master this concept.', 'indianagri-quiz-engine' ),
+						'is_marked'        => $is_marked,
 					)
 				);
 			}
@@ -303,7 +319,7 @@ class IAQ_Quiz_Attempt {
 			$raw_questions = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table_q} WHERE subject_id = %d ORDER BY id ASC LIMIT 50", $quiz->subject_id ) );
 		}
 
-		$is_immediate_practice = ( 'mock' !== $quiz->quiz_type && ( 'practice' === $quiz->quiz_type || 'immediate' === $quiz->show_answers_mode ) );
+		$is_immediate_practice = ( 'mock' !== $quiz->quiz_type && 'previous_year' !== $quiz->quiz_type );
 		$safe_questions = array();
 		$index = 1;
 		foreach ( $raw_questions as $q ) {
@@ -618,8 +634,8 @@ class IAQ_Quiz_Attempt {
 		}
 
 		// Immediate Feedback Mode is strictly permitted only for practice sets when configured.
-		// MOCK TESTS MUST NEVER ALLOW IMMEDIATE FEEDBACK ON THE SERVER.
-		$is_immediate_mode = ( 'mock' !== $quiz->quiz_type && ( 'practice' === $quiz->quiz_type || 'immediate' === $quiz->show_answers_mode ) );
+		// MOCK TESTS & PYQ PAPERS MUST NEVER ALLOW IMMEDIATE FEEDBACK ON THE SERVER.
+		$is_immediate_mode = ( 'mock' !== $quiz->quiz_type && 'previous_year' !== $quiz->quiz_type );
 
 		// SECURE SANITIZATION: Strip correct answer and explanation from questions delivered to candidate!
 		// In immediate feedback mode, reveal answers/explanations ONLY for questions the student ALREADY answered.
@@ -766,8 +782,8 @@ class IAQ_Quiz_Attempt {
 
 		$is_marked = $is_marked ? 1 : 0;
 
-		// Check if immediate feedback is authorized. Mock tests MUST NEVER allow immediate answer keys!
-		$is_immediate = ( 'mock' !== $attempt->quiz_type && ( 'practice' === $attempt->quiz_type || 'immediate' === $attempt->show_answers_mode ) );
+		// Check if immediate feedback is authorized. Mock tests and PYQ papers MUST NEVER allow immediate answer keys!
+		$is_immediate = ( 'mock' !== $attempt->quiz_type && 'previous_year' !== $attempt->quiz_type );
 
 		// Check if record exists in wp_iaq_attempt_answers.
 		$existing_id = (int) $wpdb->get_var(

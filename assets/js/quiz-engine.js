@@ -19,7 +19,12 @@
 
 	function cleanExplanationText(txt) {
 		if (!txt) return '';
-		return txt.replace(/\s*\[cite:\s*[^\]]+\]/gi, '');
+		txt = String(txt).replace(/\s*\[cite:\s*[^\]]+\]/gi, '').trim();
+		if (txt.indexOf('<p>') === -1 && txt.indexOf('<br') === -1 && txt.indexOf('<div') === -1) {
+			txt = txt.replace(/\n\n+/g, '</p><p>').replace(/\n/g, '<br>');
+			txt = '<p>' + txt + '</p>';
+		}
+		return txt;
 	}
 
 	var IAQQuizEngine = {
@@ -46,6 +51,11 @@
 			}
 
 			self.quizId = parseInt($portal.data('quiz-id'), 10);
+			self.quizType = $portal.data('quiz-type') || '';
+			var portalImmediate = $portal.data('is-immediate');
+			if (portalImmediate === 1 || portalImmediate === '1' || (self.quizType && self.quizType !== 'mock' && self.quizType !== 'previous_year') || window.location.href.indexOf('practice') !== -1) {
+				self.isImmediate = true;
+			}
 
 			// Bind Start / Resume button on Overview Card.
 			$(document).on('click', '#iaq-start-quiz-btn, .iaq-btn-start', function (e) {
@@ -214,7 +224,9 @@
 			self.questions = d.questions || [];
 			self.remainingSeconds = (d.remaining_seconds != null) ? d.remaining_seconds : ((d.duration_minutes || 0) * 60 || null);
 			self.timeSpentSeconds = d.time_spent_seconds || 0;
-			self.isImmediate = !!d.is_immediate || (d.quiz_type === 'practice') || (self.quizType === 'practice');
+			self.quizType = d.quiz_type || self.quizType || '';
+			var isMockOrPyq = (self.quizType === 'mock' || self.quizType === 'previous_year');
+			self.isImmediate = (!isMockOrPyq) || !!d.is_immediate || (d.show_answers_mode === 'immediate') || (self.isImmediate) || (window.location.href.indexOf('practice') !== -1);
 			self.showAnswersMode = d.show_answers_mode || (self.isImmediate ? 'immediate' : 'after_submission');
 			self.feedbackData = {};
 
@@ -494,7 +506,9 @@
 
 			var qIdx = self.currentIndex || 0;
 			var feedbackMsg;
-			if (isCorrect) {
+			if (fb.feedback_message) {
+				feedbackMsg = fb.feedback_message;
+			} else if (isCorrect) {
 				feedbackMsg = congratulatoryMsgs[qIdx % congratulatoryMsgs.length];
 			} else {
 				feedbackMsg = supportiveMsgs[qIdx % supportiveMsgs.length];
@@ -502,14 +516,15 @@
 
 			// Clearly identify correct answer option key and text
 			var correctOptObj = null;
+			var targetKey = fb.correct_option || q.correct_option;
 			if (q.options && q.options.length) {
 				$.each(q.options, function (oi, opt) {
-					if (opt.key === fb.correct_option) {
+					if (opt.key === targetKey) {
 						correctOptObj = opt;
 					}
 				});
 			}
-			var correctOptText = correctOptObj ? ('Option ' + fb.correct_option + ': ' + correctOptObj.text) : ('Option ' + fb.correct_option);
+			var correctOptText = correctOptObj ? ('Option ' + targetKey + ': ' + correctOptObj.text) : ('Option ' + targetKey);
 
 			var html = '<div class="iaq-feedback-banner ' + bannerCls + '">';
 			html += '<div class="iaq-feedback-msg-group">';
@@ -526,7 +541,7 @@
 			html += '</div>';
 
 			// Heading: "Correct Answer – Explanation"
-			var expl = cleanExplanationText(fb.explanation);
+			var expl = cleanExplanationText(fb.explanation || q.explanation);
 			if (!expl || $.trim(expl).length === 0) {
 				expl = 'Explanation is not available for this question.';
 			}
@@ -545,6 +560,12 @@
 			html += '</div>';
 
 			$fbBox.html(html).slideDown(200);
+
+			if ($fbBox.offset()) {
+				$('html, body').animate({
+					scrollTop: $fbBox.offset().top - 120
+				}, 250);
+			}
 		},
 
 		/**
@@ -576,16 +597,16 @@
 		 * Display celebratory streak toast message.
 		 */
 		showCelebrationToast: function (message, isMega) {
-			var $container = $('#iaq-celebration-container');
+			var $container = $('#iaq-global-celebration-container');
 			if (!$container.length) {
-				$container = $('<div class="iaq-celebration-container" id="iaq-celebration-container"></div>').appendTo('body');
+				$container = $('<div class="iaq-celebration-container" id="iaq-global-celebration-container" style="position:fixed;top:28px;left:50%;transform:translateX(-50%);z-index:999999;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:10px;"></div>').appendTo('body');
 			}
 			var megaCls = isMega ? ' is-mega-streak' : '';
 			var $toast = $('<div class="iaq-streak-toast' + megaCls + '">' + message + '</div>');
 			$container.append($toast);
 			setTimeout(function () {
-				$toast.remove();
-			}, 2600);
+				$toast.fadeOut(300, function () { $(this).remove(); });
+			}, 2800);
 		},
 
 		/**
@@ -759,9 +780,16 @@
 				);
 
 				function applyImmediateFeedback(fb) {
+					if (self.feedbackData[q.id] && self.feedbackData[q.id].is_applied) {
+						return;
+					}
+					fb.is_applied = true;
 					self.feedbackData[q.id] = fb;
 					curAns.selected = fb.selected;
 					self.answers[q.id] = curAns;
+
+					if (fb.correct_option) q.correct_option = fb.correct_option;
+					if (fb.explanation) q.explanation = fb.explanation;
 
 					var isCor = !!fb.is_correct;
 					if (isCor) {
@@ -773,12 +801,14 @@
 
 						// Streak milestones celebration (intelligent non-repetitive notifications)
 						if (self.currentStreak === 1) {
-							self.showCelebrationToast('Good start! Keep it up!', false);
+							self.showCelebrationToast('Good start! 1 Correct Answer!', false);
 						} else if (self.currentStreak === 2) {
 							self.showCelebrationToast('Great! 2 correct in a row!', false);
 						} else if (self.currentStreak === 3) {
 							self.showCelebrationToast('🔥 3 in a Row! Excellent Performance!', true);
 							self.triggerConfetti();
+						} else if (self.currentStreak === 4) {
+							self.showCelebrationToast('Superb! 4 in a Row!', false);
 						} else if (self.currentStreak === 5) {
 							self.showCelebrationToast('Amazing! 5 Correct Answers in a Row!', true);
 							self.triggerConfetti();
@@ -866,19 +896,63 @@
 							'Synchronized'
 						);
 
-						if (!hasClientKey && res && res.success && res.data) {
-							applyImmediateFeedback(res.data);
+						if (res && res.success && res.data) {
+							if (res.data.correct_option) q.correct_option = res.data.correct_option;
+							if (res.data.explanation) q.explanation = res.data.explanation;
+							if (!hasClientKey) {
+								applyImmediateFeedback(res.data);
+							}
+						} else if (!hasClientKey) {
+							tryRestFallback(optKey);
 						}
 					},
 					error: function () {
 						if (!hasClientKey) {
-							$statusTag.removeClass('is-saving').find('.iaq-save-text').text('Offline');
-							$('.iaq-option-item').removeClass('is-disabled');
+							tryRestFallback(optKey);
 						} else {
 							$statusTag.removeClass('is-saving').find('.iaq-save-text').text('Saved Locally');
 						}
 					}
 				});
+
+				function tryRestFallback(chosenOpt) {
+					var restUrl = '/wp-json/iaq/v1/quiz/' + self.quizId + '/questions';
+					$.ajax({
+						url: restUrl,
+						type: 'GET',
+						dataType: 'json',
+						timeout: 3500,
+						xhrFields: { withCredentials: true },
+						success: function (qList) {
+							var qs = (qList && qList.questions) ? qList.questions : (Array.isArray(qList) ? qList : []);
+							var found = null;
+							$.each(qs, function (_, item) {
+								if (parseInt(item.id, 10) === parseInt(q.id, 10)) {
+									found = item;
+								}
+							});
+							if (found && (found.correct_option || found.demo_answer)) {
+								var cOpt = (found.correct_option || found.demo_answer || '').toUpperCase().trim();
+								var cExp = found.explanation || found.demo_explanation || '';
+								var isC = (chosenOpt.toUpperCase().trim() === cOpt) ? 1 : 0;
+								applyImmediateFeedback({
+									question_id: q.id,
+									selected: chosenOpt,
+									is_correct: isC,
+									correct_option: cOpt,
+									explanation: cExp
+								});
+								$statusTag.removeClass('is-saving').find('.iaq-save-text').text('Synchronized');
+							} else {
+								$statusTag.removeClass('is-saving').find('.iaq-save-text').text('Offline');
+							}
+						},
+						error: function () {
+							$statusTag.removeClass('is-saving').find('.iaq-save-text').text('Offline');
+						}
+					});
+				}
+				return;
 				return;
 			}
 

@@ -17,7 +17,7 @@ if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 $types     = IAQ_Quiz_Builder::get_quiz_types();
 $type_meta = isset( $types[ $quiz->quiz_type ] ) ? $types[ $quiz->quiz_type ] : array( 'label' => ucfirst( $quiz->quiz_type ), 'badge_color' => '#117E3A' );
 
-$is_practice_mode = ( 'mock' !== $quiz->quiz_type && ( 'practice' === $quiz->quiz_type || 'immediate' === $quiz->show_answers_mode ) );
+$is_practice_mode = ( 'mock' !== $quiz->quiz_type && 'previous_year' !== $quiz->quiz_type );
 
 // Preload questions for instantaneous 0ms client-side CBT startup
 $preload_payload = array(
@@ -147,15 +147,23 @@ if ( class_exists( 'IAQ_Quiz_Builder' ) ) {
 	<!-- CTA Bar -->
 	<div class="iaq-start-bar">
 		<?php if ( ! is_user_logged_in() ) : ?>
-			<div class="iaq-login-alert">
-				<?php
-				printf(
-					/* translators: %s: login url */
-					wp_kses_post( __( 'Please <a href="%s">log in to your account</a> to attempt this examination.', 'indianagri-quiz-engine' ) ),
-					esc_url( wp_login_url( get_permalink() ) )
-				);
-				?>
-			</div>
+			<?php if ( $is_practice_mode && 'paid' !== $quiz->access_type ) : ?>
+				<div class="iaq-cta-actions">
+					<button type="button" class="iaq-btn-start" id="iaq-start-quiz-btn" data-quiz-id="<?php echo esc_attr( $quiz->id ); ?>">
+						<?php esc_html_e( 'Start Practice Now', 'indianagri-quiz-engine' ); ?> &rarr;
+					</button>
+				</div>
+			<?php else : ?>
+				<div class="iaq-login-alert">
+					<?php
+					printf(
+						/* translators: %s: login url */
+						wp_kses_post( __( 'Please <a href="%s">log in to your account</a> to attempt this examination.', 'indianagri-quiz-engine' ) ),
+						esc_url( wp_login_url( get_permalink() ) )
+					);
+					?>
+				</div>
+			<?php endif; ?>
 		<?php else : ?>
 			<?php
 			$user_id     = get_current_user_id();

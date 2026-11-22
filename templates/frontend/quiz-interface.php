@@ -13,10 +13,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 if ( empty( $quiz ) || ! is_object( $quiz ) ) {
 	return;
 }
+$is_practice_mode = ( 'mock' !== $quiz->quiz_type && 'previous_year' !== $quiz->quiz_type );
 ?>
 
 <!-- Examination Portal (Hidden until started/resumed) -->
-<div class="iaq-portal-wrapper" id="iaq-examination-portal" style="display:none;" data-quiz-id="<?php echo esc_attr( $quiz->id ); ?>">
+<div class="iaq-portal-wrapper" id="iaq-examination-portal" style="display:none;" data-quiz-id="<?php echo esc_attr( $quiz->id ); ?>" data-quiz-type="<?php echo esc_attr( $quiz->quiz_type ); ?>" data-is-immediate="<?php echo $is_practice_mode ? '1' : '0'; ?>" data-show-answers-mode="<?php echo esc_attr( $is_practice_mode ? 'immediate' : $quiz->show_answers_mode ); ?>">
 
 	<!-- Top Bar -->
 	<header class="iaq-exam-topbar">

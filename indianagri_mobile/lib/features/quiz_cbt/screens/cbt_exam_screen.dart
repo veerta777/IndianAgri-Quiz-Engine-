@@ -248,6 +248,8 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
       } else if (_currentStreak == 3) {
         milestoneMsg = '🔥 3 in a Row! Excellent Performance!';
         isCelebration = true;
+      } else if (_currentStreak == 4) {
+        milestoneMsg = 'Superb! 4 in a Row!';
       } else if (_currentStreak == 5) {
         milestoneMsg = 'Amazing! 5 Correct Answers in a Row!';
         isCelebration = true;
@@ -347,8 +349,8 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
       _visitedQuestionIds.add(qId);
     });
 
-    // Client-side instant evaluation in demo practice mode
-    if (widget.isDemoMode || _attemptId >= 9999000) {
+    // Client-side instant evaluation in practice mode when answer key is present
+    if (widget.isDemoMode || _attemptId >= 9999000 || (_isImmediate && (q['demo_answer'] != null || q['correct_option'] != null))) {
       final correctOpt = (q['demo_answer'] ?? q['correct_option'] ?? 'A').toString().toUpperCase().trim();
       final isCorrect = optionKey.toUpperCase().trim() == correctOpt;
       final exp = (q['demo_explanation'] ?? q['explanation'] ?? 'Review this agricultural concept thoroughly for upcoming examinations.').toString();
@@ -364,11 +366,24 @@ class _CbtExamScreenState extends State<CbtExamScreen> {
           'is_correct': isCorrect,
           'correct_option': correctOpt,
           'explanation': exp,
-          'feedback_message': isCorrect ? 'Correct! Outstanding work!' : 'Good try! Master the concept below:',
+          'feedback_message': isCorrect ? 'Excellent! Correct Answer!' : 'Good try! Master the concept below:',
           'marks_awarded': isCorrect ? posMarks : -negMarks.abs(),
         };
       });
       _updatePracticeStreak(isCorrect);
+
+      // Background sync to server if registered attempt exists
+      if (_attemptId < 9999000) {
+        ApiClient.post(
+          ApiEndpoints.saveAnswer(_attemptId),
+          body: {
+            'question_id': qId,
+            'selected_option': optionKey,
+            'is_marked_for_review': _markedForReview[qId] == true ? 1 : 0,
+            'time_spent_seconds': _totalDurationSeconds - _secondsRemaining,
+          },
+        ).catchError((_) {});
+      }
       return;
     }
 

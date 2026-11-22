@@ -1364,7 +1364,7 @@ class IAQ_Rest_Api {
 			$raw_questions = $wpdb->get_results( $sql );
 		}
 
-		$is_practice = ( 'practice' === $quiz->quiz_type || 'immediate' === $quiz->show_answers_mode );
+		$is_practice = ( 'mock' !== $quiz->quiz_type && 'previous_year' !== $quiz->quiz_type );
 		$safe_questions = array();
 		$index = 1;
 
