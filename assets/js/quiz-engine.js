@@ -276,10 +276,14 @@
 					}
 				});
 				self.currentStreak = runningStreak;
-				$('#iaq-practice-dashboard').show();
+				$('#iaq-practice-dashboard').css('display', 'flex').show();
+				$('#iaq-submit-btn-label').text('Finish Practice');
+				$('.iaq-legend-marked, .iaq-legend-ans-marked').hide();
 				self.updatePracticeDashboard();
 			} else {
 				$('#iaq-practice-dashboard').hide();
+				$('#iaq-submit-btn-label').text('Submit Examination');
+				$('.iaq-legend-marked, .iaq-legend-ans-marked').show();
 			}
 
 			// Switch UI to Examination Portal immediately.

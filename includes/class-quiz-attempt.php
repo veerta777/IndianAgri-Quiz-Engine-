@@ -18,14 +18,22 @@ class IAQ_Quiz_Attempt {
 	 * Initialize AJAX hooks for student quiz attempts.
 	 */
 	public function init() {
-		// Self-healing migration: Ensure all textbook & subject practice sets have quiz_type = 'practice' and show_answers_mode = 'immediate'
-		if ( ! get_option( 'iaq_practice_immediate_migrated_v5' ) ) {
+		// Self-healing migration v6: Guarantee all textbook and untimed quizzes are classified as practice sets with immediate feedback
+		if ( ! get_option( 'iaq_practice_immediate_migrated_v6' ) ) {
 			global $wpdb;
 			$table_quizzes      = $wpdb->prefix . 'iaq_quizzes';
 			$table_book_quizzes = $wpdb->prefix . 'iaq_book_quizzes';
 			$table_esq          = $wpdb->prefix . 'iaq_exam_subject_quizzes';
-			$wpdb->query( "UPDATE {$table_quizzes} SET quiz_type = 'practice', show_answers_mode = 'immediate' WHERE id IN (SELECT quiz_id FROM {$table_book_quizzes}) OR id IN (SELECT quiz_id FROM {$table_esq}) OR title LIKE '%Sunda%' OR title LIKE '%Kantwa%' OR title LIKE '%Practice%' OR title LIKE '%Horticulture%' OR title LIKE '%Katyayan%' OR (duration_minutes = 0 AND quiz_type != 'previous_year')" );
-			update_option( 'iaq_practice_immediate_migrated_v5', 1 );
+			$wpdb->query( "UPDATE {$table_quizzes} SET quiz_type = 'practice', show_answers_mode = 'immediate' WHERE id IN (SELECT quiz_id FROM {$table_book_quizzes}) OR id IN (SELECT quiz_id FROM {$table_esq}) OR title LIKE '%Sunda%' OR title LIKE '%Kantwa%' OR title LIKE '%Practice%' OR title LIKE '%Horticulture%' OR title LIKE '%Katyayan%' OR title LIKE '%Glance%' OR (duration_minutes = 0 AND quiz_type != 'previous_year')" );
+			update_option( 'iaq_practice_immediate_migrated_v6', 1 );
+		}
+
+		// Self-healing migration: Guarantee every question of practice sets, mock tests, and pyq is randomized with options & question numbers
+		if ( ! get_option( 'iaq_shuffle_all_quizzes_migrated_v2' ) ) {
+			global $wpdb;
+			$table_quizzes = $wpdb->prefix . 'iaq_quizzes';
+			$wpdb->query( "UPDATE {$table_quizzes} SET shuffle_questions = 1, shuffle_options = 1 WHERE shuffle_questions = 0 OR shuffle_options = 0" );
+			update_option( 'iaq_shuffle_all_quizzes_migrated_v2', 1 );
 		}
 
 		// Logged in and guest student attempts (allows immediate start).
@@ -322,6 +330,14 @@ class IAQ_Quiz_Attempt {
 		}
 
 		$is_immediate_practice = class_exists( 'IAQ_Quiz_Builder' ) ? IAQ_Quiz_Builder::is_practice_quiz( $quiz ) : ( 'mock' !== $quiz->quiz_type && 'previous_year' !== $quiz->quiz_type );
+
+		// Randomize Question Order
+		$should_shuffle_questions = ! isset( $quiz->shuffle_questions ) || (int) $quiz->shuffle_questions !== 0;
+		if ( $should_shuffle_questions && ! empty( $raw_questions ) ) {
+			shuffle( $raw_questions );
+		}
+
+		$should_shuffle_options = ! isset( $quiz->shuffle_options ) || (int) $quiz->shuffle_options !== 0;
 		$safe_questions = array();
 		$index = 1;
 		foreach ( $raw_questions as $q ) {
@@ -334,6 +350,12 @@ class IAQ_Quiz_Attempt {
 			if ( ! empty( $q->option_c_hi ) ) $opt_c['text_hi'] = $q->option_c_hi;
 			if ( ! empty( $q->option_d_hi ) ) $opt_d['text_hi'] = $q->option_d_hi;
 
+			$opts = array( $opt_a, $opt_b, $opt_c, $opt_d );
+			// Randomize Option Order
+			if ( $should_shuffle_options ) {
+				shuffle( $opts );
+			}
+
 			$q_row = array(
 				'index'            => $index++,
 				'id'               => (int) $q->id,
@@ -343,7 +365,7 @@ class IAQ_Quiz_Attempt {
 				'topic_name'       => isset( $q->topic_name ) ? $q->topic_name : '',
 				'marks'            => (float) $q->marks,
 				'negative_marks'   => (float) $q->negative_marks,
-				'options'          => array( $opt_a, $opt_b, $opt_c, $opt_d ),
+				'options'          => $opts,
 				'selected'         => null,
 				'is_marked'        => 0,
 			);

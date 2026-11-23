@@ -38,6 +38,16 @@ if ( class_exists( 'IAQ_Quiz_Builder' ) ) {
 		$raw_assigned = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t_q} WHERE subject_id = %d ORDER BY id ASC LIMIT 50", $quiz->subject_id ) );
 	}
 	if ( ! empty( $raw_assigned ) ) {
+		// Randomize Question Order (q no) across Practice Sets, Mock Tests, and PYQ Papers
+		$should_shuffle_questions = ! isset( $quiz->shuffle_questions ) || (int) $quiz->shuffle_questions !== 0;
+		if ( $should_shuffle_questions ) {
+			$q_seed = ( ! empty( $active_attempt ) && ! empty( $active_attempt->id ) ) ? (int) $active_attempt->id : ( (int) $quiz->id * 1000 + mt_rand( 1000, 99999999 ) );
+			mt_srand( $q_seed );
+			shuffle( $raw_assigned );
+			mt_srand();
+		}
+
+		$should_shuffle_options = ! isset( $quiz->shuffle_options ) || (int) $quiz->shuffle_options !== 0;
 		$p_idx = 1;
 		foreach ( $raw_assigned as $rq ) {
 			$opt_a = array( 'key' => 'A', 'text' => $rq->option_a );
@@ -49,6 +59,16 @@ if ( class_exists( 'IAQ_Quiz_Builder' ) ) {
 			if ( ! empty( $rq->option_c_hi ) ) $opt_c['text_hi'] = $rq->option_c_hi;
 			if ( ! empty( $rq->option_d_hi ) ) $opt_d['text_hi'] = $rq->option_d_hi;
 
+			$opts = array( $opt_a, $opt_b, $opt_c, $opt_d );
+
+			// Randomize Option Order (A, B, C, D) for every question
+			if ( $should_shuffle_options ) {
+				$opt_seed = ( ! empty( $active_attempt ) && ! empty( $active_attempt->id ) ) ? (int) ( $active_attempt->id * 1000 + $rq->id ) : ( (int) $rq->id * 100 + mt_rand( 100, 999999 ) );
+				mt_srand( $opt_seed );
+				shuffle( $opts );
+				mt_srand();
+			}
+
 			$q_payload = array(
 				'index'            => $p_idx++,
 				'id'               => (int) $rq->id,
@@ -58,7 +78,7 @@ if ( class_exists( 'IAQ_Quiz_Builder' ) ) {
 				'topic_name'       => isset( $rq->topic_name ) ? $rq->topic_name : '',
 				'marks'            => (float) $rq->marks,
 				'negative_marks'   => (float) $rq->negative_marks,
-				'options'          => array( $opt_a, $opt_b, $opt_c, $opt_d ),
+				'options'          => $opts,
 				'selected'         => null,
 				'is_marked'        => 0,
 			);

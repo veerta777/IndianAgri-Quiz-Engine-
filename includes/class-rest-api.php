@@ -1365,6 +1365,14 @@ class IAQ_Rest_Api {
 		}
 
 		$is_practice = class_exists( 'IAQ_Quiz_Builder' ) ? IAQ_Quiz_Builder::is_practice_quiz( $quiz ) : ( 'mock' !== $quiz->quiz_type && 'previous_year' !== $quiz->quiz_type );
+
+		// Randomize Question Order
+		$should_shuffle_questions = ! isset( $quiz->shuffle_questions ) || (int) $quiz->shuffle_questions !== 0;
+		if ( $should_shuffle_questions && ! empty( $raw_questions ) ) {
+			shuffle( $raw_questions );
+		}
+
+		$should_shuffle_options = ! isset( $quiz->shuffle_options ) || (int) $quiz->shuffle_options !== 0;
 		$safe_questions = array();
 		$index = 1;
 
@@ -1375,6 +1383,10 @@ class IAQ_Rest_Api {
 				array( 'key' => 'C', 'text' => $q->option_c, 'text_hi' => ! empty( $q->option_c_hi ) ? $q->option_c_hi : '' ),
 				array( 'key' => 'D', 'text' => $q->option_d, 'text_hi' => ! empty( $q->option_d_hi ) ? $q->option_d_hi : '' ),
 			);
+
+			if ( $should_shuffle_options ) {
+				shuffle( $opts );
+			}
 
 			$item = array(
 				'index'            => $index++,

@@ -474,12 +474,12 @@ if ( $edit_id > 0 ) {
 							</th>
 							<td>
 								<label style="display:block;margin-bottom:6px;">
-									<input type="checkbox" name="shuffle_questions" value="1" <?php checked( $edit_paper ? $edit_paper->shuffle_questions : 0, 1 ); ?>>
-									<?php esc_html_e( 'Shuffle Question Order (Default is unchecked to preserve original paper sequence)', 'indianagri-quiz-engine' ); ?>
+									<input type="checkbox" name="shuffle_questions" value="1" <?php checked( $edit_paper ? $edit_paper->shuffle_questions : 1, 1 ); ?>>
+									<?php esc_html_e( 'Shuffle Question Order (Randomize question sequence and numbers)', 'indianagri-quiz-engine' ); ?>
 								</label>
 								<label style="display:block;">
-									<input type="checkbox" name="shuffle_options" value="1" <?php checked( $edit_paper ? $edit_paper->shuffle_options : 0, 1 ); ?>>
-									<?php esc_html_e( 'Shuffle Option Sequence (A, B, C, D)', 'indianagri-quiz-engine' ); ?>
+									<input type="checkbox" name="shuffle_options" value="1" <?php checked( $edit_paper ? $edit_paper->shuffle_options : 1, 1 ); ?>>
+									<?php esc_html_e( 'Shuffle Option Sequence (Randomize options A, B, C, D)', 'indianagri-quiz-engine' ); ?>
 								</label>
 							</td>
 						</tr>

@@ -518,12 +518,15 @@ CREATE TABLE {$table_mock_test_relations} (
 		// Ensure practice sets are open practice drills with immediate feedback and free access by default
 		$table_quizzes = self::get_table_name( 'quizzes' );
 		$table_books   = self::get_table_name( 'books' );
+		$table_bq      = self::get_table_name( 'book_quizzes' );
+		$table_esq     = self::get_table_name( 'exam_subject_quizzes' );
+		$wpdb->query( "UPDATE {$table_quizzes} SET quiz_type = 'practice', show_answers_mode = 'immediate' WHERE id IN (SELECT quiz_id FROM {$table_bq}) OR id IN (SELECT quiz_id FROM {$table_esq}) OR title LIKE '%Sunda%' OR title LIKE '%Kantwa%' OR title LIKE '%Practice%' OR title LIKE '%Horticulture%' OR title LIKE '%Katyayan%' OR title LIKE '%Glance%' OR (duration_minutes <= 0 AND quiz_type != 'previous_year')" );
 		$wpdb->query( "UPDATE {$table_quizzes} SET show_answers_mode = 'immediate' WHERE quiz_type = 'practice'" );
 		$wpdb->query( "UPDATE {$table_quizzes} SET access_type = 'free' WHERE quiz_type = 'practice' AND (title NOT LIKE '%Premium VIP%')" );
 		$wpdb->query( "UPDATE {$table_books} SET access_type = 'free'" );
-		// Ensure all practice sets have randomize question order and option order enabled by default.
-		$wpdb->query( "UPDATE {$table_quizzes} SET shuffle_questions = 1 WHERE shuffle_questions = 0 AND quiz_type = 'practice'" );
-		$wpdb->query( "UPDATE {$table_quizzes} SET shuffle_options = 1 WHERE shuffle_options = 0 AND quiz_type = 'practice'" );
+		// Ensure all practice sets, mock tests, and pyq papers have randomize question order and option order enabled by default.
+		$wpdb->query( "UPDATE {$table_quizzes} SET shuffle_questions = 1 WHERE shuffle_questions = 0" );
+		$wpdb->query( "UPDATE {$table_quizzes} SET shuffle_options = 1 WHERE shuffle_options = 0" );
 
 		update_option( 'iaq_db_version', IAQ_DB_VERSION );
 	}

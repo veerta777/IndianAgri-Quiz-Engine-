@@ -58,7 +58,7 @@ $is_practice_mode = class_exists( 'IAQ_Quiz_Builder' ) ? IAQ_Quiz_Builder::is_pr
 		<section class="iaq-exam-workspace">
 			
 			<!-- Practice Mode Progress & Streak Dashboard (Practice Sets Only) -->
-			<div class="iaq-practice-dashboard" id="iaq-practice-dashboard" style="display:none;" role="region" aria-label="<?php esc_attr_e( 'Practice Session Statistics', 'indianagri-quiz-engine' ); ?>">
+			<div class="iaq-practice-dashboard" id="iaq-practice-dashboard" style="<?php echo $is_practice_mode ? 'display:flex;' : 'display:none;'; ?>" role="region" aria-label="<?php esc_attr_e( 'Practice Session Statistics', 'indianagri-quiz-engine' ); ?>">
 				<div class="iaq-dash-item">
 					<span class="iaq-dash-label"><?php esc_html_e( 'Attempted', 'indianagri-quiz-engine' ); ?></span>
 					<span class="iaq-dash-value" id="iaq-dash-attempted">0 / 0</span>
@@ -163,11 +163,11 @@ $is_practice_mode = class_exists( 'IAQ_Quiz_Builder' ) ? IAQ_Quiz_Builder::is_pr
 						<span class="iaq-legend-dot is-not-visited" id="iaq-count-not-visited">0</span>
 						<span class="iaq-legend-name"><?php esc_html_e( 'Not Visited', 'indianagri-quiz-engine' ); ?></span>
 					</div>
-					<div class="iaq-legend-item">
+					<div class="iaq-legend-item iaq-legend-marked" style="<?php echo $is_practice_mode ? 'display:none;' : ''; ?>">
 						<span class="iaq-legend-dot is-marked" id="iaq-count-marked">0</span>
 						<span class="iaq-legend-name"><?php esc_html_e( 'Marked Review', 'indianagri-quiz-engine' ); ?></span>
 					</div>
-					<div class="iaq-legend-item">
+					<div class="iaq-legend-item iaq-legend-ans-marked" style="<?php echo $is_practice_mode ? 'display:none;' : ''; ?>">
 						<span class="iaq-legend-dot is-ans-marked" id="iaq-count-ans-marked">0</span>
 						<span class="iaq-legend-name"><?php esc_html_e( 'Answered & Marked', 'indianagri-quiz-engine' ); ?></span>
 					</div>
@@ -183,7 +183,7 @@ $is_practice_mode = class_exists( 'IAQ_Quiz_Builder' ) ? IAQ_Quiz_Builder::is_pr
 				<!-- Final Submit Button -->
 				<div class="iaq-palette-submit-bar">
 					<button type="button" class="iaq-btn-finalize-submit" id="iaq-btn-open-submit">
-						<svg class="iaq-icon" viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true" style="vertical-align:-2px;margin-right:6px;"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg> <?php esc_html_e( 'Submit Examination', 'indianagri-quiz-engine' ); ?>
+						<svg class="iaq-icon" viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true" style="vertical-align:-2px;margin-right:6px;"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg> <span id="iaq-submit-btn-label"><?php echo $is_practice_mode ? esc_html__( 'Finish Practice', 'indianagri-quiz-engine' ) : esc_html__( 'Submit Examination', 'indianagri-quiz-engine' ); ?></span>
 					</button>
 				</div>
 

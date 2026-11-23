@@ -245,9 +245,12 @@ class IAQ_PYQ {
 		// Strictly enforce previous_year quiz type
 		$data['quiz_type'] = 'previous_year';
 
-		// Preserve original sequence by default (no shuffling unless explicitly requested)
+		// Default to randomized question and option order for all PYQ papers
 		if ( ! isset( $data['shuffle_questions'] ) ) {
-			$data['shuffle_questions'] = 0;
+			$data['shuffle_questions'] = 1;
+		}
+		if ( ! isset( $data['shuffle_options'] ) ) {
+			$data['shuffle_options'] = 1;
 		}
 
 		$data['pyq_year']    = ! empty( $data['pyq_year'] ) ? absint( $data['pyq_year'] ) : ( ! empty( $data['year'] ) ? absint( $data['year'] ) : date( 'Y' ) );

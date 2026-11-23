@@ -69,12 +69,38 @@ class IAQ_Quiz_Builder {
 			return false;
 		}
 
-		// Explicit URL override: ?iaq_mode=practice
-		if ( isset( $_GET['iaq_mode'] ) && 'practice' === $_GET['iaq_mode'] ) {
+		// 1. Explicit URL override: ?iaq_mode=practice, ?iaq_tab=practice-sets, or accessed on /practice-quiz/
+		if ( ( isset( $_GET['iaq_mode'] ) && 'practice' === $_GET['iaq_mode'] ) || ( isset( $_GET['iaq_tab'] ) && 'practice-sets' === $_GET['iaq_tab'] ) ) {
+			return true;
+		}
+		if ( isset( $_SERVER['REQUEST_URI'] ) && false !== strpos( $_SERVER['REQUEST_URI'], 'practice-quiz' ) ) {
 			return true;
 		}
 
-		// Check if quiz is linked to Reference Books in iaq_book_quizzes or exam-subjects
+		// 2. Explicit practice type
+		if ( 'practice' === $quiz->quiz_type ) {
+			return true;
+		}
+
+		// 3. Textbook & Chapter/Topic Practice Set title keywords
+		$title = ! empty( $quiz->title ) ? strtolower( $quiz->title ) : '';
+		$practice_patterns = array(
+			'sunda',
+			'kantwa',
+			'katyayan',
+			'horticulture',
+			'glance',
+			'practice',
+			'chapter',
+			'topic',
+		);
+		foreach ( $practice_patterns as $pat ) {
+			if ( strpos( $title, $pat ) !== false ) {
+				return true;
+			}
+		}
+
+		// 4. Linked to Reference Books in iaq_book_quizzes or exam-subjects
 		global $wpdb;
 		$is_linked_to_book = false;
 		if ( isset( $wpdb ) && class_exists( 'IAQ_Database' ) && ! empty( $quiz->id ) ) {
@@ -89,45 +115,22 @@ class IAQ_Quiz_Builder {
 				}
 			}
 		}
-
-		// If it's a mock or pyq AND not linked to a book/subject practice set, it is strictly an exam!
-		if ( ( 'mock' === $quiz->quiz_type || 'previous_year' === $quiz->quiz_type ) && ! $is_linked_to_book ) {
-			return false;
-		}
-
-		// Explicit practice type
-		if ( 'practice' === $quiz->quiz_type ) {
-			return true;
-		}
-
-		// If linked to a book or exam-subject practice set, it's a practice set
 		if ( $is_linked_to_book ) {
 			return true;
 		}
 
-		// Immediate review mode on non-mock
-		if ( 'immediate' === $quiz->show_answers_mode ) {
+		// 5. Untimed quizzes (0 minutes) that are not PYQ
+		if ( (int) $quiz->duration_minutes <= 0 && 'previous_year' !== $quiz->quiz_type ) {
 			return true;
 		}
 
-		// Check title keywords for textbooks
-		$title = ! empty( $quiz->title ) ? strtolower( $quiz->title ) : '';
-		$practice_patterns = array(
-			'sunda',
-			'kantwa',
-			'katyayan',
-			'horticulture',
-			'glance',
-			'practice',
-		);
-		foreach ( $practice_patterns as $pat ) {
-			if ( strpos( $title, $pat ) !== false ) {
-				return true;
-			}
+		// 6. Strict Mock Examination & Authentic PYQ protection: Timed Full-Length Mock Exams and PYQ Papers must NEVER be practice mode!
+		if ( 'mock' === $quiz->quiz_type || 'previous_year' === $quiz->quiz_type ) {
+			return false;
 		}
 
-		// Untimed quizzes (0 minutes) that are not mock/pyq
-		if ( (int) $quiz->duration_minutes <= 0 && 'mock' !== $quiz->quiz_type && 'previous_year' !== $quiz->quiz_type ) {
+		// 7. Immediate review mode on any other non-mock quiz
+		if ( 'immediate' === $quiz->show_answers_mode ) {
 			return true;
 		}
 
