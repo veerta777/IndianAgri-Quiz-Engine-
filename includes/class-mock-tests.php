@@ -664,7 +664,7 @@ class IAQ_Mock_Tests {
 		$slug    = ! empty( $data['slug'] ) ? sanitize_title( $data['slug'] ) : sanitize_title( $title );
 		$desc    = isset( $data['description'] ) ? wp_kses_post( $data['description'] ) : '';
 		$total   = isset( $data['total_tests'] ) ? intval( $data['total_tests'] ) : 0;
-		$access  = ! empty( $data['access_type'] ) && in_array( $data['access_type'], array( 'free', 'paid', 'premium' ), true ) ? $data['access_type'] : 'free';
+		$access  = ! empty( $data['access_type'] ) && 'free' === $data['access_type'] ? 'free' : 'paid';
 		$order   = isset( $data['display_order'] ) ? intval( $data['display_order'] ) : 0;
 		$stat    = ! empty( $data['status'] ) && in_array( $data['status'], array( 'published', 'draft', 'archived' ), true ) ? $data['status'] : 'published';
 		$id      = ! empty( $data['id'] ) ? absint( $data['id'] ) : 0;

@@ -40,6 +40,7 @@ class IAQ_Access_Control {
 		// Self-healing: Ensure 5-Day Trial Plan is present in database.
 		if ( class_exists( 'IAQ_Database' ) ) {
 			IAQ_Database::ensure_trial_plan();
+			IAQ_Database::apply_access_tier_policy();
 		}
 	}
 

@@ -424,7 +424,7 @@ class IAQ_Quiz_Builder {
 		$max_attempts      = isset( $data['max_attempts'] ) ? max( 0, absint( $data['max_attempts'] ) ) : 0;
 
 		// Access & review mode.
-		$access_type       = ( isset( $data['access_type'] ) && in_array( $data['access_type'], array( 'paid', 'premium' ), true ) ) ? 'paid' : 'free';
+		$access_type       = ( isset( $data['access_type'] ) && 'free' === $data['access_type'] ) ? 'free' : 'paid';
 		$wc_product_id     = ! empty( $data['wc_product_id'] ) ? absint( $data['wc_product_id'] ) : null;
 		$default_show_mode = ( 'mock' === $quiz_type || 'previous_year' === $quiz_type ) ? 'after_submission' : 'immediate';
 		$show_answers_mode = isset( $data['show_answers_mode'] ) && in_array( $data['show_answers_mode'], array( 'immediate', 'after_submission', 'never' ), true ) ? $data['show_answers_mode'] : $default_show_mode;

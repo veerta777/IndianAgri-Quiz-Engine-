@@ -217,7 +217,7 @@ class IAQ_PYQ {
 
 			// Access control check
 			$can_solve_result = class_exists( 'IAQ_Access_Control' )
-				? IAQ_Access_Control::can_attempt_quiz( $user_id, $pq->id )
+				? IAQ_Access_Control::check_user_entitlement( $user_id, $pq->id )
 				: array( 'allowed' => true );
 
 			$pq->can_solve      = ! empty( $can_solve_result['allowed'] );
@@ -244,6 +244,11 @@ class IAQ_PYQ {
 
 		// Strictly enforce previous_year quiz type
 		$data['quiz_type'] = 'previous_year';
+
+		// Default to paid access unless explicitly configured
+		if ( ! isset( $data['access_type'] ) || empty( $data['access_type'] ) ) {
+			$data['access_type'] = 'paid';
+		}
 
 		// Default to randomized question and option order for all PYQ papers
 		if ( ! isset( $data['shuffle_questions'] ) ) {

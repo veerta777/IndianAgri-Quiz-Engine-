@@ -404,9 +404,9 @@ if ( ! empty( $settings['default_duration'] ) ) $default_duration = $settings['d
 						<div class="iaq-form-group">
 							<label for="quiz-access"><?php esc_html_e( 'Access Permission', 'indianagri-quiz-engine' ); ?></label>
 							<select name="access_type" id="quiz-access" class="iaq-select iaq-full-width">
-								<?php $current_access = $is_edit ? $quiz->access_type : 'free'; ?>
+								<?php $current_access = $is_edit ? $quiz->access_type : 'paid'; ?>
+								<option value="paid" <?php selected( $current_access, 'paid' ); ?>><?php esc_html_e( 'Paid (Requires Subscription / Entitlement)', 'indianagri-quiz-engine' ); ?></option>
 								<option value="free" <?php selected( $current_access, 'free' ); ?>><?php esc_html_e( 'Free (Open to Registered Students)', 'indianagri-quiz-engine' ); ?></option>
-								<option value="paid" <?php selected( $current_access, 'paid' ); ?>><?php esc_html_e( 'Paid (Requires WooCommerce Purchase)', 'indianagri-quiz-engine' ); ?></option>
 							</select>
 						</div>
 

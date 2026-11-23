@@ -186,8 +186,8 @@ $all_subjects   = IAQ_Question_Bank::get_subjects();
 							<div class="iaq-form-group" style="margin:0;">
 								<label for="mock-access" style="font-weight:600;display:block;margin-bottom:6px;"><?php esc_html_e( 'Access Tier', 'indianagri-quiz-engine' ); ?></label>
 								<select name="access_type" id="mock-access" class="iaq-select iaq-full-width">
+									<option value="paid" selected><?php esc_html_e( 'Premium / Paid Subscribers', 'indianagri-quiz-engine' ); ?></option>
 									<option value="free"><?php esc_html_e( 'Free for All Students', 'indianagri-quiz-engine' ); ?></option>
-									<option value="paid"><?php esc_html_e( 'Premium / Paid Subscribers', 'indianagri-quiz-engine' ); ?></option>
 								</select>
 							</div>
 						</div>

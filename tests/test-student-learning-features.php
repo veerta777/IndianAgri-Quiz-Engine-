@@ -103,6 +103,7 @@ class Test_Student_Learning_Features {
 				'duration_minutes' => 15,
 				'correct_marks'    => 2.0,
 				'negative_marks'   => 0.5,
+				'access_type'      => 'free',
 				'status'           => 'published',
 			)
 		);

@@ -275,6 +275,7 @@ class Test_Quiz_Attempt {
 				'negative_marks'    => 1.00,
 				'pass_percentage'   => 40.00,
 				'show_answers_mode' => 'immediate', // Intentionally configured to test server override!
+				'access_type'       => 'free',
 				'status'            => 'published',
 			)
 		);

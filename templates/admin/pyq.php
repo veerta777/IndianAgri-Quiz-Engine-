@@ -492,12 +492,12 @@ if ( $edit_id > 0 ) {
 							<td>
 								<div style="display:flex;gap:20px;align-items:center;">
 									<label style="cursor:pointer;">
-										<input type="radio" name="access_type" value="free" <?php checked( $edit_paper ? $edit_paper->access_type : 'free', 'free' ); ?>>
-										<span style="font-weight:700;color:#047857;">🌟 <?php esc_html_e( 'Free Access (All Registered Students)', 'indianagri-quiz-engine' ); ?></span>
+										<input type="radio" name="access_type" value="paid" <?php checked( $edit_paper ? $edit_paper->access_type : 'paid', 'paid' ); ?>>
+										<span style="font-weight:700;color:#b45309;">👑 <?php esc_html_e( 'Premium Access (Subscribers Only)', 'indianagri-quiz-engine' ); ?></span>
 									</label>
 									<label style="cursor:pointer;">
-										<input type="radio" name="access_type" value="paid" <?php checked( $edit_paper ? $edit_paper->access_type : 'free', 'paid' ); ?>>
-										<span style="font-weight:700;color:#b45309;">👑 <?php esc_html_e( 'Premium Access (Subscribers Only)', 'indianagri-quiz-engine' ); ?></span>
+										<input type="radio" name="access_type" value="free" <?php checked( $edit_paper ? $edit_paper->access_type : 'paid', 'free' ); ?>>
+										<span style="font-weight:700;color:#047857;">🌟 <?php esc_html_e( 'Free Access (All Registered Students)', 'indianagri-quiz-engine' ); ?></span>
 									</label>
 								</div>
 							</td>

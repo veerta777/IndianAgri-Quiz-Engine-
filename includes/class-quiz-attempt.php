@@ -350,7 +350,7 @@ class IAQ_Quiz_Attempt {
 			return new WP_Error( 'quiz_not_found', __( 'Quiz not found.', 'indianagri-quiz-engine' ) );
 		}
 
-		if ( 'paid' === $quiz->access_type && 'practice' !== $quiz->quiz_type ) {
+		if ( 'paid' === $quiz->access_type ) {
 			return new WP_Error( 'access_denied', __( 'This is a premium examination. Please log in or subscribe to access this test.', 'indianagri-quiz-engine' ) );
 		}
 

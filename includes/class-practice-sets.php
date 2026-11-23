@@ -227,7 +227,7 @@ class IAQ_Practice_Sets {
 			'cover_image_url' => isset( $data['cover_image_url'] ) ? esc_url_raw( $data['cover_image_url'] ) : '',
 			'subject_id'      => isset( $data['subject_id'] ) ? absint( $data['subject_id'] ) : 0,
 			'examination_id'  => isset( $data['examination_id'] ) ? absint( $data['examination_id'] ) : 0,
-			'access_type'     => isset( $data['access_type'] ) && 'paid' === $data['access_type'] ? 'paid' : 'free',
+			'access_type'     => isset( $data['access_type'] ) && 'free' === $data['access_type'] ? 'free' : 'paid',
 			'display_order'   => isset( $data['display_order'] ) ? intval( $data['display_order'] ) : 0,
 			'status'          => isset( $data['status'] ) && in_array( $data['status'], array( 'draft', 'published', 'archived' ), true ) ? $data['status'] : 'published',
 		);

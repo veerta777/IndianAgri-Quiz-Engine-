@@ -522,8 +522,16 @@ CREATE TABLE {$table_mock_test_relations} (
 		$table_esq     = self::get_table_name( 'exam_subject_quizzes' );
 		$wpdb->query( "UPDATE {$table_quizzes} SET quiz_type = 'practice', show_answers_mode = 'immediate' WHERE id IN (SELECT quiz_id FROM {$table_bq}) OR id IN (SELECT quiz_id FROM {$table_esq}) OR title LIKE '%Sunda%' OR title LIKE '%Kantwa%' OR title LIKE '%Practice%' OR title LIKE '%Horticulture%' OR title LIKE '%Katyayan%' OR title LIKE '%Glance%' OR (duration_minutes <= 0 AND quiz_type != 'previous_year')" );
 		$wpdb->query( "UPDATE {$table_quizzes} SET show_answers_mode = 'immediate' WHERE quiz_type = 'practice'" );
-		$wpdb->query( "UPDATE {$table_quizzes} SET access_type = 'free' WHERE quiz_type = 'practice' AND (title NOT LIKE '%Premium VIP%')" );
-		$wpdb->query( "UPDATE {$table_books} SET access_type = 'free'" );
+		// Enforce access tier policy: Mock Tests and PYQs are paid; practice sets are paid except selected free sets.
+		$wpdb->query( "UPDATE {$table_quizzes} SET access_type = 'paid' WHERE quiz_type IN ('mock', 'previous_year', 'pyq')" );
+		$wpdb->query( "UPDATE {$table_books} SET access_type = 'paid'" );
+		// Keep selected introductory practice sets (Set 1 / free demo) free; make subsequent sets paid by default.
+		if ( ! empty( $table_bq ) ) {
+			$wpdb->query( "UPDATE {$table_quizzes} q INNER JOIN {$table_bq} bq ON q.id = bq.quiz_id SET q.access_type = 'paid' WHERE bq.sort_order > 1" );
+		}
+		if ( ! empty( $table_esq ) ) {
+			$wpdb->query( "UPDATE {$table_quizzes} q INNER JOIN {$table_esq} esq ON q.id = esq.quiz_id SET q.access_type = 'paid' WHERE esq.sort_order > 1" );
+		}
 		// Ensure all practice sets, mock tests, and pyq papers have randomize question order and option order enabled by default.
 		$wpdb->query( "UPDATE {$table_quizzes} SET shuffle_questions = 1 WHERE shuffle_questions = 0" );
 		$wpdb->query( "UPDATE {$table_quizzes} SET shuffle_options = 1 WHERE shuffle_options = 0" );
@@ -1081,6 +1089,39 @@ CREATE TABLE {$table_mock_test_relations} (
 				),
 				array( '%s', '%s', '%s', '%f', '%s', '%d', '%s', '%s', '%d', '%d', '%s', '%s', '%s' )
 			);
+		}
+	}
+
+	/**
+	 * Enforce access tier policy: Mock Tests & PYQs are paid; practice sets are paid except selected free sets.
+	 */
+	public static function apply_access_tier_policy() {
+		global $wpdb;
+		$table_quizzes = self::get_table_name( 'quizzes' );
+		$table_books   = self::get_table_name( 'books' );
+		$table_bq      = self::get_table_name( 'book_quizzes' );
+		$table_esq     = self::get_table_name( 'exam_subject_quizzes' );
+		if ( empty( $table_quizzes ) ) {
+			return;
+		}
+
+		// 1. All Mock Tests are paid
+		$wpdb->query( "UPDATE {$table_quizzes} SET access_type = 'paid' WHERE quiz_type = 'mock'" );
+
+		// 2. All PYQ Papers are paid
+		$wpdb->query( "UPDATE {$table_quizzes} SET access_type = 'paid' WHERE quiz_type IN ('previous_year', 'pyq')" );
+
+		// 3. Books paid by default
+		if ( ! empty( $table_books ) ) {
+			$wpdb->query( "UPDATE {$table_books} SET access_type = 'paid' WHERE access_type != 'free'" );
+		}
+
+		// 4. Practice Sets: paid by default, keeping only selected introductory practice sets (Set 1 / free demo) free
+		if ( ! empty( $table_bq ) ) {
+			$wpdb->query( "UPDATE {$table_quizzes} q INNER JOIN {$table_bq} bq ON q.id = bq.quiz_id SET q.access_type = 'paid' WHERE bq.sort_order > 1" );
+		}
+		if ( ! empty( $table_esq ) ) {
+			$wpdb->query( "UPDATE {$table_quizzes} q INNER JOIN {$table_esq} esq ON q.id = esq.quiz_id SET q.access_type = 'paid' WHERE esq.sort_order > 1" );
 		}
 	}
 }
