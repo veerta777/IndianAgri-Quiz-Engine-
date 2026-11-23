@@ -291,6 +291,25 @@ class Test_Quiz_Attempt {
 		assert( ! isset( $mock_save['is_correct'] ), 'SECURITY: Mock test save_answer must NOT reveal is_correct!' );
 		echo "    [PASS] Mock test answer key and explanation strictly protected on the server\n";
 
+		// =========================================================================
+		// 8. Instant In-Memory Practice Sets Scorecard & Solutions Review
+		// =========================================================================
+		echo "  Testing Practice Set Instant Scorecard & Solutions Review...\n";
+
+		$mem_att_id = 9999000 + $practice_quiz_id;
+		$mem_scorecard = IAQ_Quiz_Attempt::get_attempt_scorecard( $mem_att_id, $student_id );
+		assert( ! is_wp_error( $mem_scorecard ), 'In-memory scorecard retrieval should succeed' );
+		assert( $mem_scorecard['attempt_id'] === $mem_att_id, 'Attempt ID must match in-memory ID' );
+		assert( $mem_scorecard['total_questions'] === 2, 'Total questions must be 2' );
+
+		$mem_review_qs = IAQ_Quiz_Attempt::get_attempt_review_questions( $mem_att_id, $student_id );
+		assert( count( $mem_review_qs ) === 2, 'Review questions must return all 2 questions' );
+		assert( ! empty( $mem_review_qs[0]['correct_option'] ), 'Correct option must be present in review questions' );
+		assert( ! empty( $mem_review_qs[0]['explanation'] ), 'Detailed explanation must be present in review questions' );
+		assert( ! empty( $mem_review_qs[0]['option_a'] ), 'Option A must be populated in review questions' );
+		assert( ! empty( $mem_review_qs[0]['option_b'] ), 'Option B must be populated in review questions' );
+		echo "    [PASS] In-memory practice set scorecard & review solutions verified with correct keys and explanations\n";
+
 		echo "All Quiz Attempt tests passed successfully!\n\n";
 		return true;
 	}

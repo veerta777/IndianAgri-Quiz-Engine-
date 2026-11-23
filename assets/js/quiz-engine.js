@@ -1382,6 +1382,14 @@
 				'Submitting...'
 			);
 
+			// Calculate local stats defensively
+			var totalQ = self.questions ? self.questions.length : 0;
+			var correctCount = self.correctCount || 0;
+			var incorrectCount = self.incorrectCount || 0;
+			var attempted = correctCount + incorrectCount;
+			var unattempted = Math.max(0, totalQ - attempted);
+			var acc = attempted > 0 ? ((correctCount / attempted) * 100).toFixed(1) : 0;
+
 			$.ajax({
 				url: self.getAjaxUrl(),
 				type: 'POST',
@@ -1390,6 +1398,10 @@
 					action: 'iaq_submit_quiz_attempt',
 					attempt_id: self.attemptId,
 					time_spent: self.timeSpentSeconds,
+					answers: JSON.stringify(self.answers),
+					correct_count: correctCount,
+					incorrect_count: incorrectCount,
+					unattempted: unattempted,
 					nonce: self.getNonce()
 				},
 				dataType: 'json',
@@ -1398,41 +1410,43 @@
 					$('#iaq-timeout-modal').hide();
 
 					if (res && res.success && res.data) {
-						if (res.data.redirect_url && (!res.data.scorecard_html && !res.data.score)) {
-							window.location.href = res.data.redirect_url;
-							return;
+						if (res.data.questions && res.data.questions.length > 0) {
+							self.reviewQuestions = res.data.questions;
 						}
+						// If server returned valid scorecard metrics or if practice/instant mode
 						self.renderScorecard(res.data);
 					} else {
-						var msg = (res && res.data && res.data.message) ? res.data.message : 'Error submitting test.';
-						alert(msg);
-						self.isSubmitting = false;
-						$btn.prop('disabled', false).text('Yes, Submit Final Test \u2192');
-					}
-				},
-				error: function (xhr) {
-					// Fallback for in-memory / guest practice sets: show practice scorecard
-					if (self.isImmediate && self.attemptId >= 9999000) {
-						$('#iaq-submit-modal').hide();
-						$('#iaq-timeout-modal').hide();
-						var attempted = self.correctCount + self.incorrectCount;
-						var totalQ = self.questions.length;
-						var acc = attempted > 0 ? ((self.correctCount / attempted) * 100).toFixed(1) : 0;
+						// Fallback to local scorecard
 						self.renderScorecard({
-							score: self.correctCount,
+							score: correctCount,
 							total_marks: totalQ,
 							percentage: acc,
 							attempted: attempted,
 							total_questions: totalQ,
-							correct_count: self.correctCount,
-							incorrect_count: self.incorrectCount,
-							highest_streak: self.highestStreak
+							correct_answers: correctCount,
+							incorrect_answers: incorrectCount,
+							unattempted_questions: unattempted,
+							time_spent_seconds: self.timeSpentSeconds,
+							passed: (acc >= 40)
 						});
-						return;
 					}
-					self.isSubmitting = false;
-					$btn.prop('disabled', false).text('Yes, Submit Final Test \u2192');
-					alert('Network error during submission. Please try again.');
+				},
+				error: function (xhr) {
+					$('#iaq-submit-modal').hide();
+					$('#iaq-timeout-modal').hide();
+					// Resilient fallback for immediate / practice or network hiccup: ALWAYS render scorecard accurately
+					self.renderScorecard({
+						score: correctCount,
+						total_marks: totalQ,
+						percentage: acc,
+						attempted: attempted,
+						total_questions: totalQ,
+						correct_answers: correctCount,
+						incorrect_answers: incorrectCount,
+						unattempted_questions: unattempted,
+						time_spent_seconds: self.timeSpentSeconds,
+						passed: (acc >= 40)
+					});
 				}
 			});
 		},
@@ -1442,31 +1456,64 @@
 		 */
 		renderScorecard: function (sc) {
 			var self = this;
+			if (!sc) sc = {};
 			self.lastScorecard = sc;
 
 			$('#iaq-examination-portal').slideUp(200);
 			var $res = $('#iaq-results-portal');
 
-			$('#iaq-res-category').text(sc.exam_category || 'Examination');
-			$('#iaq-res-title').text(sc.quiz_title);
+			$('#iaq-res-category').text(sc.exam_category || (window.iaqQuizData && window.iaqQuizData.category) || 'Examination');
+			$('#iaq-res-title').text(sc.quiz_title || (window.iaqQuizData && window.iaqQuizData.title) || '');
 
+			var totalQ = (sc.total_questions != null) ? parseInt(sc.total_questions, 10) : (self.questions ? self.questions.length : 0);
+			var correctCount = (sc.correct_answers != null) ? parseInt(sc.correct_answers, 10) :
+				((sc.correct_count != null) ? parseInt(sc.correct_count, 10) :
+				((sc.correct != null) ? parseInt(sc.correct, 10) : (self.correctCount || 0)));
+			var incorrectCount = (sc.incorrect_answers != null) ? parseInt(sc.incorrect_answers, 10) :
+				((sc.incorrect_count != null) ? parseInt(sc.incorrect_count, 10) :
+				((sc.incorrect != null) ? parseInt(sc.incorrect, 10) : (self.incorrectCount || 0)));
+			var unattempted = (sc.unattempted_questions != null) ? parseInt(sc.unattempted_questions, 10) :
+				((sc.unattempted != null) ? parseInt(sc.unattempted, 10) :
+				Math.max(0, totalQ - (correctCount + incorrectCount)));
+
+			var score = (sc.score != null) ? sc.score : correctCount;
+			var totalMarks = (sc.total_marks != null) ? sc.total_marks : totalQ;
+			var percent = (sc.percentage != null) ? sc.percentage : (totalMarks > 0 ? ((score / totalMarks) * 100).toFixed(1) : 0);
+
+			var timeFormatted = sc.time_spent_formatted;
+			if (!timeFormatted || timeFormatted === '--') {
+				var secs = (sc.time_spent_seconds != null) ? sc.time_spent_seconds : (self.timeSpentSeconds || 0);
+				if (secs > 0) {
+					var m = Math.floor(secs / 60);
+					var s = secs % 60;
+					timeFormatted = (m < 10 ? '0' : '') + m + 'm ' + (s < 10 ? '0' : '') + s + 's';
+				} else {
+					timeFormatted = '--';
+				}
+			}
+
+			var isPassed = (sc.passed != null) ? !!sc.passed : (percent >= (sc.pass_percentage || 40));
 			var $verdict = $('#iaq-res-verdict');
-			if (sc.passed) {
+			if (isPassed) {
 				$verdict.removeClass('iaq-verdict-failed').addClass('iaq-verdict-passed').text('PASSED');
 			} else {
 				$verdict.removeClass('iaq-verdict-passed').addClass('iaq-verdict-failed').text('NEEDS IMPROVEMENT');
 			}
 
-			$('#iaq-res-score').text(sc.score);
-			$('#iaq-res-total-marks').text(sc.total_marks);
-			$('#iaq-res-percent').text(sc.percentage);
-			$('#iaq-res-correct').text(sc.correct_answers);
-			$('#iaq-res-total-q').text(sc.total_questions);
-			$('#iaq-res-time').text(sc.time_spent_formatted || '--');
+			$('#iaq-res-score').text(score);
+			$('#iaq-res-total-marks').text(totalMarks);
+			$('#iaq-res-percent').text(percent);
+			$('#iaq-res-correct').text(correctCount);
+			$('#iaq-res-total-q').text(totalQ);
+			$('#iaq-res-time').text(timeFormatted);
 
-			$('#iaq-bd-correct').text(sc.correct_answers);
-			$('#iaq-bd-incorrect').text(sc.incorrect_answers);
-			$('#iaq-bd-unattempted').text(sc.unattempted_questions);
+			$('#iaq-bd-correct').text(correctCount);
+			$('#iaq-bd-incorrect').text(incorrectCount);
+			$('#iaq-bd-unattempted').text(unattempted);
+
+			if (sc.questions && sc.questions.length > 0) {
+				self.reviewQuestions = sc.questions;
+			}
 
 			// Render Subject-Wise Mastery Analytics.
 			var $subTable = $('#iaq-subject-tbody');
@@ -1504,71 +1551,176 @@
 		},
 
 		/**
+		 * Build question-by-question review items locally from in-memory test state.
+		 */
+		buildLocalReviewQuestions: function () {
+			var self = this;
+			var review = [];
+			if (!self.questions || 0 === self.questions.length) {
+				return review;
+			}
+
+			$.each(self.questions, function (i, q) {
+				var ans = self.answers[q.id] || {};
+				var fb = self.feedbackData[q.id] || {};
+				var selOpt = ans.selected || fb.selected || q.selected_option || q.selected || null;
+				if (selOpt) selOpt = String(selOpt).trim().toUpperCase();
+
+				var corOpt = q.correct_option || fb.correct_option || '';
+				if (corOpt) corOpt = String(corOpt).trim().toUpperCase();
+
+				var isCor = null;
+				if (selOpt && corOpt) {
+					isCor = (selOpt === corOpt) ? 1 : 0;
+				} else if (fb.is_correct != null) {
+					isCor = fb.is_correct ? 1 : 0;
+				}
+
+				var posMarks = q.marks ? parseFloat(q.marks) : 1.0;
+				var negMarks = q.negative_marks ? parseFloat(q.negative_marks) : 0.25;
+				var marksAwarded = 0.00;
+				if (isCor === 1) {
+					marksAwarded = posMarks;
+				} else if (isCor === 0) {
+					marksAwarded = -1 * Math.abs(negMarks);
+				}
+
+				var opts = [];
+				if (q.options && Array.isArray(q.options) && q.options.length > 0) {
+					opts = q.options;
+				} else {
+					opts = [
+						{ key: 'A', text: q.option_a || '', text_hi: q.option_a_hi || '' },
+						{ key: 'B', text: q.option_b || '', text_hi: q.option_b_hi || '' },
+						{ key: 'C', text: q.option_c || '', text_hi: q.option_c_hi || '' },
+						{ key: 'D', text: q.option_d || '', text_hi: q.option_d_hi || '' }
+					];
+				}
+
+				review.push({
+					index: i + 1,
+					id: q.id,
+					question_text: q.question_text || '',
+					question_text_hi: q.question_text_hi || '',
+					subject_name: q.subject_name || '',
+					topic_name: q.topic_name || '',
+					marks_awarded: marksAwarded >= 0 ? '+' + marksAwarded.toFixed(2) : marksAwarded.toFixed(2),
+					selected_option: selOpt,
+					correct_option: corOpt,
+					explanation: q.explanation || fb.explanation || '',
+					is_correct: isCor,
+					options: opts,
+					option_a: q.option_a || (opts[0] ? opts[0].text : ''),
+					option_b: q.option_b || (opts[1] ? opts[1].text : ''),
+					option_c: q.option_c || (opts[2] ? opts[2].text : ''),
+					option_d: q.option_d || (opts[3] ? opts[3].text : '')
+				});
+			});
+
+			return review;
+		},
+
+		/**
+		 * Display detailed question solutions portal.
+		 */
+		displaySolutionsPortal: function () {
+			var self = this;
+			if (!self.reviewQuestions || 0 === self.reviewQuestions.length) {
+				self.reviewQuestions = self.buildLocalReviewQuestions();
+			}
+
+			var quizTitle = (self.lastScorecard && self.lastScorecard.quiz_title) ?
+				self.lastScorecard.quiz_title :
+				((window.iaqQuizData && window.iaqQuizData.title) ? window.iaqQuizData.title : '');
+			$('#iaq-sol-quiz-title').text(quizTitle);
+
+			var total = self.reviewQuestions.length;
+			var correct = 0;
+			var incorrect = 0;
+			var unattempted = 0;
+
+			$.each(self.reviewQuestions, function (i, rq) {
+				if (rq.is_correct === 1) {
+					correct++;
+				} else if (rq.is_correct === 0) {
+					incorrect++;
+				} else {
+					unattempted++;
+				}
+			});
+
+			$('#iaq-tab-count-all').text(total);
+			$('#iaq-tab-count-correct').text(correct);
+			$('#iaq-tab-count-incorrect').text(incorrect);
+			$('#iaq-tab-count-unattempted').text(unattempted);
+
+			$('.iaq-filter-tab').removeClass('is-active');
+			$('.iaq-filter-tab[data-filter="all"]').addClass('is-active');
+
+			self.renderSolutionsList('all');
+
+			$('#iaq-results-portal').slideUp(200);
+			$('#iaq-solutions-portal').fadeIn(300);
+
+			$('html, body').animate({
+				scrollTop: $('#iaq-solutions-portal').offset().top - 20
+			}, 300);
+		},
+
+		/**
 		 * Fetch and display question-by-question solutions and explanations.
 		 */
 		loadSolutionsReview: function () {
 			var self = this;
 			var $btn = $('#iaq-res-review-btn');
-			$btn.prop('disabled', true);
 
-			$.ajax({
-				url: self.getAjaxUrl(),
-				type: 'POST',
-				xhrFields: { withCredentials: true },
-				data: {
-					action: 'iaq_get_attempt_review',
-					attempt_id: self.attemptId,
-					nonce: self.getNonce()
-				},
-				dataType: 'json',
-				success: function (res) {
-					$btn.prop('disabled', false);
-					if (res && res.success && res.data) {
-						self.reviewQuestions = res.data.questions || [];
-						$('#iaq-sol-quiz-title').text(res.data.scorecard.quiz_title);
+			// If we already have review questions, display immediately without network latency
+			if (self.reviewQuestions && self.reviewQuestions.length > 0) {
+				self.displaySolutionsPortal();
+				return;
+			}
 
-						// Calculate filter counts.
-						var total = self.reviewQuestions.length;
-						var correct = 0;
-						var incorrect = 0;
-						var unattempted = 0;
-
-						$.each(self.reviewQuestions, function (i, rq) {
-							if (rq.is_correct === 1) {
-								correct++;
-							} else if (rq.is_correct === 0) {
-								incorrect++;
-							} else {
-								unattempted++;
+			// If valid database attempt (< 9999000), fetch official server review
+			if (self.attemptId && self.attemptId < 9999000) {
+				$btn.prop('disabled', true);
+				$.ajax({
+					url: self.getAjaxUrl(),
+					type: 'POST',
+					xhrFields: { withCredentials: true },
+					data: {
+						action: 'iaq_get_attempt_review',
+						attempt_id: self.attemptId,
+						nonce: self.getNonce()
+					},
+					dataType: 'json',
+					success: function (res) {
+						$btn.prop('disabled', false);
+						if (res && res.success && res.data && res.data.questions && res.data.questions.length > 0) {
+							self.reviewQuestions = res.data.questions;
+							if (res.data.scorecard && res.data.scorecard.quiz_title) {
+								if (!self.lastScorecard) self.lastScorecard = {};
+								self.lastScorecard.quiz_title = res.data.scorecard.quiz_title;
 							}
-						});
-
-						$('#iaq-tab-count-all').text(total);
-						$('#iaq-tab-count-correct').text(correct);
-						$('#iaq-tab-count-incorrect').text(incorrect);
-						$('#iaq-tab-count-unattempted').text(unattempted);
-
-						$('.iaq-filter-tab').removeClass('is-active');
-						$('.iaq-filter-tab[data-filter="all"]').addClass('is-active');
-
-						self.renderSolutionsList('all');
-
-						$('#iaq-results-portal').slideUp(200);
-						$('#iaq-solutions-portal').fadeIn(300);
-
-						$('html, body').animate({
-							scrollTop: $('#iaq-solutions-portal').offset().top - 20
-						}, 300);
-					} else {
-						var msg = (res && res.data && res.data.message) ? res.data.message : 'Error loading solutions.';
-						alert(msg);
+							self.displaySolutionsPortal();
+						} else {
+							// Resilient fallback to local evaluation
+							self.reviewQuestions = self.buildLocalReviewQuestions();
+							self.displaySolutionsPortal();
+						}
+					},
+					error: function () {
+						$btn.prop('disabled', false);
+						// Resilient fallback to local evaluation
+						self.reviewQuestions = self.buildLocalReviewQuestions();
+						self.displaySolutionsPortal();
 					}
-				},
-				error: function () {
-					$btn.prop('disabled', false);
-					alert('Failed to retrieve question solutions.');
-				}
-			});
+				});
+				return;
+			}
+
+			// In-memory or immediate practice set: build locally and show immediately
+			self.reviewQuestions = self.buildLocalReviewQuestions();
+			self.displaySolutionsPortal();
 		},
 
 		/**
@@ -1607,10 +1759,14 @@
 				}
 
 				var $statusBadge = $('<span class="iaq-sol-status-badge is-' + status + '"></span>');
+				var marksTxt = q.marks_awarded != null ? q.marks_awarded : '0.00';
+				if (typeof marksTxt === 'number') {
+					marksTxt = (marksTxt >= 0 ? '+' : '') + marksTxt.toFixed(2);
+				}
 				if (status === 'correct') {
-					$statusBadge.html(IAQ_ICONS.check + ' Correct (+' + q.marks_awarded + ')');
+					$statusBadge.html(IAQ_ICONS.check + ' Correct (' + marksTxt + ')');
 				} else if (status === 'incorrect') {
-					$statusBadge.html(IAQ_ICONS.cross + ' Incorrect (' + q.marks_awarded + ')');
+					$statusBadge.html(IAQ_ICONS.cross + ' Incorrect (' + marksTxt + ')');
 				} else {
 					$statusBadge.html(IAQ_ICONS.minus + ' Not Attempted (0.00)');
 				}
@@ -1618,22 +1774,35 @@
 				$head.append($badges).append($statusBadge);
 				$card.append($head);
 
-				// Question text
-				var $qText = $('<div class="iaq-sol-qtext"></div>').html(cleanContentText(q.question_text));
+				// Question text (English and Hindi)
+				var qHtml = cleanContentText(q.question_text);
+				if (q.question_text_hi && q.question_text_hi !== q.question_text) {
+					qHtml += '<div class="iaq-qtext-hi" style="margin-top:6px;color:#334155;font-weight:500;">' + cleanContentText(q.question_text_hi) + '</div>';
+				}
+				var $qText = $('<div class="iaq-sol-qtext"></div>').html(qHtml);
 				$card.append($qText);
 
-				// 4 Options
+				// 4 Options Grid
 				var $opts = $('<div class="iaq-sol-options-grid"></div>');
-				var optList = [
-					{ key: 'A', text: cleanContentText(q.option_a) },
-					{ key: 'B', text: cleanContentText(q.option_b) },
-					{ key: 'C', text: cleanContentText(q.option_c) },
-					{ key: 'D', text: cleanContentText(q.option_d) }
-				];
+				var optList = [];
+				if (q.options && Array.isArray(q.options) && q.options.length > 0) {
+					optList = q.options;
+				} else {
+					optList = [
+						{ key: 'A', text: cleanContentText(q.option_a), text_hi: cleanContentText(q.option_a_hi) },
+						{ key: 'B', text: cleanContentText(q.option_b), text_hi: cleanContentText(q.option_b_hi) },
+						{ key: 'C', text: cleanContentText(q.option_c), text_hi: cleanContentText(q.option_c_hi) },
+						{ key: 'D', text: cleanContentText(q.option_d), text_hi: cleanContentText(q.option_d_hi) }
+					];
+				}
+
+				var corKey = q.correct_option ? String(q.correct_option).trim().toUpperCase() : '';
+				var selKey = q.selected_option ? String(q.selected_option).trim().toUpperCase() : '';
 
 				$.each(optList, function (oi, opt) {
-					var isCorrectKey = (opt.key === q.correct_option);
-					var isSelectedKey = (opt.key === q.selected_option);
+					var optKey = String(opt.key).trim().toUpperCase();
+					var isCorrectKey = (optKey === corKey);
+					var isSelectedKey = (optKey === selKey);
 
 					var $optDiv = $('<div class="iaq-sol-option-item"></div>');
 					if (isCorrectKey) {
@@ -1643,8 +1812,12 @@
 						$optDiv.addClass('is-user-wrong');
 					}
 
-					var $keyBadge = $('<span class="iaq-sol-opt-key">' + opt.key + '</span>');
-					var $label = $('<span class="iaq-sol-opt-label"></span>').html(opt.text);
+					var $keyBadge = $('<span class="iaq-sol-opt-key">' + optKey + '</span>');
+					var optTxt = cleanContentText(opt.text);
+					if (opt.text_hi && opt.text_hi !== opt.text) {
+						optTxt += ' <span class="iaq-opt-hi" style="color:#64748b;font-weight:normal;">(' + cleanContentText(opt.text_hi) + ')</span>';
+					}
+					var $label = $('<span class="iaq-sol-opt-label"></span>').html(optTxt);
 					var $tag = $('<span class="iaq-sol-opt-tag"></span>');
 
 					if (isCorrectKey && isSelectedKey) {

@@ -207,14 +207,193 @@ class IAQ_Quiz_Attempt {
 		$time_spent = isset( $_POST['time_spent'] ) ? absint( $_POST['time_spent'] ) : 0;
 		$user_id    = get_current_user_id();
 
+		// Check if an in-progress database attempt exists for logged-in users
+		if ( $attempt_id >= 9999000 && $user_id > 0 ) {
+			global $wpdb;
+			$table_attempts = $wpdb->prefix . 'iaq_quiz_attempts';
+			$real_id = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT id FROM {$table_attempts} WHERE quiz_id = %d AND user_id = %d AND status = 'in_progress' ORDER BY id DESC LIMIT 1",
+					$attempt_id - 9999000,
+					$user_id
+				)
+			);
+			if ( $real_id > 0 ) {
+				$attempt_id = $real_id;
+			}
+		}
+
 		// Handle guest or in-memory practice sessions
 		if ( $user_id <= 0 || $attempt_id >= 9999000 ) {
+			$quiz_id   = ( $attempt_id >= 9999000 ) ? ( $attempt_id - 9999000 ) : ( isset( $_POST['quiz_id'] ) ? absint( $_POST['quiz_id'] ) : 0 );
+			$quiz      = $quiz_id > 0 ? IAQ_Quiz_Builder::get_quiz( $quiz_id ) : null;
+			$questions = $quiz_id > 0 ? IAQ_Quiz_Builder::get_quiz_questions( $quiz_id ) : array();
+
+			$candidate_answers = array();
+			if ( ! empty( $_POST['answers'] ) ) {
+				$raw_ans = json_decode( wp_unslash( $_POST['answers'] ), true );
+				if ( is_array( $raw_ans ) ) {
+					$candidate_answers = $raw_ans;
+				}
+			}
+
+			$total_questions       = count( $questions );
+			$attempted_questions   = 0;
+			$correct_answers       = 0;
+			$incorrect_answers     = 0;
+			$unattempted_questions = 0;
+			$earned_score          = 0.00;
+			$max_score             = 0.00;
+			$review_questions      = array();
+			$index                 = 1;
+
+			foreach ( $questions as $q ) {
+				$qid         = (int) $q->id;
+				$correct_opt = strtoupper( trim( $q->correct_option ) );
+				$pos_marks   = (float) $q->marks > 0 ? (float) $q->marks : 1.00;
+				$neg_marks   = (float) $q->negative_marks > 0 ? (float) $q->negative_marks : 0.25;
+				$max_score  += $pos_marks;
+
+				$user_sel = null;
+				if ( isset( $candidate_answers[ $qid ] ) ) {
+					if ( is_array( $candidate_answers[ $qid ] ) && isset( $candidate_answers[ $qid ]['selected'] ) ) {
+						$user_sel = $candidate_answers[ $qid ]['selected'];
+					} elseif ( is_string( $candidate_answers[ $qid ] ) ) {
+						$user_sel = $candidate_answers[ $qid ];
+					}
+				}
+				$user_sel = $user_sel ? strtoupper( trim( $user_sel ) ) : null;
+
+				$is_cor        = null;
+				$marks_awarded = 0.00;
+				if ( ! empty( $user_sel ) ) {
+					$attempted_questions++;
+					if ( $user_sel === $correct_opt ) {
+						$correct_answers++;
+						$is_cor        = 1;
+						$marks_awarded = $pos_marks;
+					} else {
+						$incorrect_answers++;
+						$is_cor        = 0;
+						$marks_awarded = -1 * abs( $neg_marks );
+					}
+				} else {
+					$unattempted_questions++;
+				}
+				$earned_score += $marks_awarded;
+
+				$review_questions[] = array(
+					'index'            => $index++,
+					'id'               => $qid,
+					'question_text'    => self::clean_content( $q->question_text ),
+					'question_text_hi' => ! empty( $q->question_text_hi ) ? self::clean_content( $q->question_text_hi ) : '',
+					'subject_name'     => isset( $q->subject_name ) ? $q->subject_name : '',
+					'topic_name'       => isset( $q->topic_name ) ? $q->topic_name : '',
+					'option_a'         => self::clean_content( $q->option_a ),
+					'option_b'         => self::clean_content( $q->option_b ),
+					'option_c'         => self::clean_content( $q->option_c ),
+					'option_d'         => self::clean_content( $q->option_d ),
+					'option_a_hi'      => ! empty( $q->option_a_hi ) ? self::clean_content( $q->option_a_hi ) : '',
+					'option_b_hi'      => ! empty( $q->option_b_hi ) ? self::clean_content( $q->option_b_hi ) : '',
+					'option_c_hi'      => ! empty( $q->option_c_hi ) ? self::clean_content( $q->option_c_hi ) : '',
+					'option_d_hi'      => ! empty( $q->option_d_hi ) ? self::clean_content( $q->option_d_hi ) : '',
+					'selected_option'  => $user_sel,
+					'correct_option'   => $correct_opt,
+					'is_correct'       => $is_cor,
+					'marks_awarded'    => ( $marks_awarded >= 0 ? '+' : '' ) . number_format( $marks_awarded, 2, '.', '' ),
+					'explanation'      => self::clean_explanation( $q->explanation ),
+				);
+			}
+
+			// If client passed pre-calculated stats (from immediate interactive feedback), use them
+			if ( isset( $_POST['correct_count'] ) && $attempted_questions === 0 && ! empty( $_POST['correct_count'] ) ) {
+				$correct_answers       = absint( $_POST['correct_count'] );
+				$incorrect_answers     = isset( $_POST['incorrect_count'] ) ? absint( $_POST['incorrect_count'] ) : 0;
+				$attempted_questions   = $correct_answers + $incorrect_answers;
+				$unattempted_questions = max( 0, $total_questions - $attempted_questions );
+				$earned_score          = (float) $correct_answers;
+			}
+
+			$mins           = floor( $time_spent / 60 );
+			$secs           = $time_spent % 60;
+			$formatted_time = sprintf( '%02dm %02ds', $mins, $secs );
+			$percentage     = $max_score > 0 ? round( ( $earned_score / $max_score ) * 100, 1 ) : 0.0;
+			$passed         = ( $percentage >= ( $quiz ? (float) $quiz->pass_percentage : 40.0 ) ) ? 1 : 0;
+
+			// If logged in, log to database so history and wrong answers notebook are updated
+			if ( $user_id > 0 && $quiz_id > 0 ) {
+				global $wpdb;
+				$table_attempts = $wpdb->prefix . 'iaq_quiz_attempts';
+				$table_answers  = $wpdb->prefix . 'iaq_attempt_answers';
+				self::ensure_attempt_tables_exist();
+
+				$wpdb->insert(
+					$table_attempts,
+					array(
+						'attempt_token'         => 'att_' . wp_generate_password( 24, false, false ) . '_' . time(),
+						'quiz_id'               => $quiz_id,
+						'user_id'               => $user_id,
+						'attempt_number'        => 1,
+						'status'                => 'completed',
+						'start_time'            => current_time( 'mysql' ),
+						'end_time'              => current_time( 'mysql' ),
+						'time_spent_seconds'    => $time_spent,
+						'total_questions'       => $total_questions,
+						'attempted_questions'   => $attempted_questions,
+						'correct_answers'       => $correct_answers,
+						'incorrect_answers'     => $incorrect_answers,
+						'unattempted_questions' => $unattempted_questions,
+						'score'                 => $earned_score,
+						'total_marks'           => $max_score,
+						'percentage'            => $percentage,
+						'passed'                => $passed,
+						'created_at'            => current_time( 'mysql' ),
+					)
+				);
+				$saved_att_id = (int) $wpdb->insert_id;
+
+				if ( $saved_att_id > 0 ) {
+					foreach ( $review_questions as $rq ) {
+						$wpdb->insert(
+							$table_answers,
+							array(
+								'attempt_id'      => $saved_att_id,
+								'question_id'     => $rq['id'],
+								'selected_option' => $rq['selected_option'],
+								'is_correct'      => $rq['is_correct'],
+								'marks_awarded'   => (float) $rq['marks_awarded'],
+								'answered_at'     => current_time( 'mysql' ),
+							)
+						);
+					}
+					if ( class_exists( 'IAQ_Wrong_Notebook' ) ) {
+						IAQ_Wrong_Notebook::ingest_attempt_wrong_answers( $saved_att_id );
+					}
+					if ( class_exists( 'IAQ_Study_Streaks' ) ) {
+						IAQ_Study_Streaks::record_activity( $user_id, 'quiz_completed', $saved_att_id, $attempted_questions, $time_spent );
+					}
+				}
+			}
+
 			wp_send_json_success(
 				array(
-					'attempt_id'       => $attempt_id,
-					'status'           => 'completed',
-					'redirect_url'     => add_query_arg( array( 'iaq_quiz_id' => ( $attempt_id >= 9999000 ? $attempt_id - 9999000 : 0 ), 'iaq_action' => 'review' ), home_url( '/' ) ),
-					'message'          => __( 'Practice set completed successfully!', 'indianagri-quiz-engine' ),
+					'attempt_id'            => $attempt_id,
+					'quiz_id'               => $quiz_id,
+					'quiz_title'            => $quiz ? $quiz->title : '',
+					'exam_category'         => $quiz ? $quiz->exam_category : 'Examination',
+					'status'                => 'completed',
+					'score'                 => $earned_score,
+					'total_marks'           => $max_score,
+					'percentage'            => $percentage,
+					'correct_answers'       => $correct_answers,
+					'incorrect_answers'     => $incorrect_answers,
+					'unattempted_questions' => $unattempted_questions,
+					'attempted_questions'   => $attempted_questions,
+					'time_spent_seconds'    => $time_spent,
+					'time_spent_formatted'  => $formatted_time,
+					'passed'                => (bool) $passed,
+					'questions'             => $review_questions,
+					'message'               => __( 'Practice set completed successfully!', 'indianagri-quiz-engine' ),
 				)
 			);
 		}
@@ -237,15 +416,54 @@ class IAQ_Quiz_Attempt {
 	public function ajax_get_attempt_review() {
 		check_ajax_referer( 'iaq_quiz_nonce', 'nonce' );
 
-		if ( ! is_user_logged_in() ) {
-			$this->ajax_unauthorized();
-		}
-
 		$attempt_id = isset( $_REQUEST['attempt_id'] ) ? absint( $_REQUEST['attempt_id'] ) : 0;
 		$user_id    = get_current_user_id();
 
 		if ( ! $attempt_id ) {
 			wp_send_json_error( array( 'message' => __( 'Invalid Attempt ID.', 'indianagri-quiz-engine' ) ) );
+		}
+
+		// Handle in-memory or instant sessions gracefully
+		if ( $attempt_id >= 9999000 ) {
+			$quiz_id = $attempt_id - 9999000;
+			$quiz    = IAQ_Quiz_Builder::get_quiz( $quiz_id );
+			$raw_q   = IAQ_Quiz_Builder::get_quiz_questions( $quiz_id );
+			$questions = array();
+			$idx = 1;
+			foreach ( $raw_q as $rq ) {
+				$questions[] = array(
+					'index'            => $idx++,
+					'id'               => (int) $rq->id,
+					'question_text'    => self::clean_content( $rq->question_text ),
+					'question_text_hi' => ! empty( $rq->question_text_hi ) ? self::clean_content( $rq->question_text_hi ) : '',
+					'subject_name'     => isset( $rq->subject_name ) ? $rq->subject_name : '',
+					'topic_name'       => isset( $rq->topic_name ) ? $rq->topic_name : '',
+					'option_a'         => self::clean_content( $rq->option_a ),
+					'option_b'         => self::clean_content( $rq->option_b ),
+					'option_c'         => self::clean_content( $rq->option_c ),
+					'option_d'         => self::clean_content( $rq->option_d ),
+					'selected_option'  => null,
+					'correct_option'   => strtoupper( trim( $rq->correct_option ) ),
+					'is_correct'       => null,
+					'marks_awarded'    => 0.00,
+					'explanation'      => self::clean_explanation( $rq->explanation ),
+				);
+			}
+
+			wp_send_json_success(
+				array(
+					'scorecard'         => array(
+						'attempt_id' => $attempt_id,
+						'quiz_title' => $quiz ? $quiz->title : '',
+					),
+					'questions'         => $questions,
+					'subject_breakdown' => array(),
+				)
+			);
+		}
+
+		if ( ! is_user_logged_in() ) {
+			$this->ajax_unauthorized();
 		}
 
 		$scorecard = self::get_attempt_scorecard( $attempt_id, $user_id );
@@ -1297,6 +1515,41 @@ class IAQ_Quiz_Attempt {
 	public static function get_attempt_scorecard( $attempt_id, $user_id ) {
 		global $wpdb;
 
+		if ( $attempt_id >= 9999000 ) {
+			$quiz_id = $attempt_id - 9999000;
+			$quiz    = IAQ_Quiz_Builder::get_quiz( $quiz_id );
+			if ( $quiz ) {
+				$questions = IAQ_Quiz_Builder::get_quiz_questions( $quiz_id );
+				$total_q   = count( $questions );
+				return array(
+					'attempt_id'            => $attempt_id,
+					'quiz_id'               => (int) $quiz->id,
+					'quiz_title'            => $quiz->title,
+					'quiz_type'             => $quiz->quiz_type,
+					'exam_category'         => $quiz->exam_category,
+					'status'                => 'completed',
+					'start_time'            => current_time( 'mysql' ),
+					'end_time'              => current_time( 'mysql' ),
+					'time_spent_seconds'    => 0,
+					'time_spent_formatted'  => '--',
+					'total_questions'       => $total_q,
+					'attempted_questions'   => 0,
+					'correct_answers'       => 0,
+					'incorrect_answers'     => 0,
+					'unattempted_questions' => $total_q,
+					'negative_deductions'   => 0.00,
+					'percentile'            => null,
+					'cohort_count'          => 0,
+					'score'                 => 0.00,
+					'total_marks'           => (float) $quiz->total_marks,
+					'percentage'            => 0.00,
+					'passed'                => false,
+					'pass_percentage'       => (float) $quiz->pass_percentage,
+					'subject_breakdown'     => array(),
+				);
+			}
+		}
+
 		$table_attempts = $wpdb->prefix . 'iaq_quiz_attempts';
 		$table_quizzes  = $wpdb->prefix . 'iaq_quizzes';
 
@@ -1394,6 +1647,33 @@ class IAQ_Quiz_Attempt {
 	 */
 	public static function get_attempt_review_questions( $attempt_id, $user_id ) {
 		global $wpdb;
+
+		if ( $attempt_id >= 9999000 ) {
+			$quiz_id = $attempt_id - 9999000;
+			$raw_q   = IAQ_Quiz_Builder::get_quiz_questions( $quiz_id );
+			$questions = array();
+			$index = 1;
+			foreach ( $raw_q as $rq ) {
+				$questions[] = array(
+					'index'            => $index++,
+					'id'               => (int) $rq->id,
+					'question_text'    => self::clean_content( $rq->question_text ),
+					'question_text_hi' => ! empty( $rq->question_text_hi ) ? self::clean_content( $rq->question_text_hi ) : '',
+					'subject_name'     => isset( $rq->subject_name ) ? $rq->subject_name : '',
+					'topic_name'       => isset( $rq->topic_name ) ? $rq->topic_name : '',
+					'option_a'         => self::clean_content( $rq->option_a ),
+					'option_b'         => self::clean_content( $rq->option_b ),
+					'option_c'         => self::clean_content( $rq->option_c ),
+					'option_d'         => self::clean_content( $rq->option_d ),
+					'selected_option'  => null,
+					'correct_option'   => strtoupper( trim( $rq->correct_option ) ),
+					'is_correct'       => null,
+					'marks_awarded'    => 0.00,
+					'explanation'      => self::clean_explanation( $rq->explanation ),
+				);
+			}
+			return $questions;
+		}
 
 		$table_attempts  = $wpdb->prefix . 'iaq_quiz_attempts';
 		$table_answers   = $wpdb->prefix . 'iaq_attempt_answers';
