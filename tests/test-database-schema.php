@@ -32,6 +32,7 @@ class Test_Database_Schema {
 			'books'                    => 'wp_iaq_books',
 			'book_quizzes'             => 'wp_iaq_book_quizzes',
 			'exam_subjects'            => 'wp_iaq_exam_subjects',
+			'exam_subject_titles'      => 'wp_iaq_exam_subject_titles',
 			'exam_subject_quizzes'     => 'wp_iaq_exam_subject_quizzes',
 			'mock_categories'          => 'wp_iaq_mock_categories',
 			'mock_series'              => 'wp_iaq_mock_series',
@@ -44,7 +45,7 @@ class Test_Database_Schema {
 			$actual = IAQ_Database::get_table_name( $short );
 			assert( $actual === $full, "Table name mismatch for '{$short}'. Expected '{$full}', got '{$actual}'" );
 		}
-		echo "  [PASS] All 22 Table names properly prefixed with active \$wpdb->prefix.\n";
+		echo "  [PASS] All 23 Table names properly prefixed with active \$wpdb->prefix.\n";
 
 		// 2. Verify Table Creation (dbDelta call)
 		global $mock_dbdelta_calls;

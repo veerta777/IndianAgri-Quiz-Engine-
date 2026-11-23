@@ -40,6 +40,7 @@ class IAQ_Database {
 			'books'                => $wpdb->prefix . 'iaq_books',
 			'book_quizzes'         => $wpdb->prefix . 'iaq_book_quizzes',
 			'exam_subjects'        => $wpdb->prefix . 'iaq_exam_subjects',
+			'exam_subject_titles'  => $wpdb->prefix . 'iaq_exam_subject_titles',
 			'exam_subject_quizzes' => $wpdb->prefix . 'iaq_exam_subject_quizzes',
 			'mock_categories'          => $wpdb->prefix . 'iaq_mock_categories',
 			'mock_series'              => $wpdb->prefix . 'iaq_mock_series',
@@ -75,6 +76,7 @@ class IAQ_Database {
 		$table_books              = self::get_table_name( 'books' );
 		$table_book_quizzes       = self::get_table_name( 'book_quizzes' );
 		$table_exam_subjects      = self::get_table_name( 'exam_subjects' );
+		$table_exam_subject_titles = self::get_table_name( 'exam_subject_titles' );
 		$table_exam_subject_quizzes = self::get_table_name( 'exam_subject_quizzes' );
 		$table_mock_categories      = self::get_table_name( 'mock_categories' );
 		$table_mock_series          = self::get_table_name( 'mock_series' );
@@ -398,16 +400,35 @@ CREATE TABLE {$table_exam_subjects} (
   KEY idx_display_order (display_order)
 ) {$charset_collate};
 
+CREATE TABLE {$table_exam_subject_titles} (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  exam_id bigint(20) unsigned NOT NULL,
+  subject_id bigint(20) unsigned NOT NULL,
+  title varchar(255) NOT NULL,
+  slug varchar(191) DEFAULT NULL,
+  description text DEFAULT NULL,
+  display_order int(11) NOT NULL DEFAULT 0,
+  status enum('active','inactive') NOT NULL DEFAULT 'active',
+  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY  (id),
+  KEY idx_exam_subj (exam_id,subject_id),
+  KEY idx_display_order (display_order),
+  KEY idx_status (status)
+) {$charset_collate};
+
 CREATE TABLE {$table_exam_subject_quizzes} (
   id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   exam_id bigint(20) unsigned NOT NULL,
   subject_id bigint(20) unsigned NOT NULL,
+  main_title_id bigint(20) unsigned NOT NULL DEFAULT 0,
   quiz_id bigint(20) unsigned NOT NULL,
   sort_order int(11) NOT NULL DEFAULT 0,
   created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY  (id),
   UNIQUE KEY uq_exam_subj_quiz (exam_id,subject_id,quiz_id),
   KEY idx_exam_subj (exam_id,subject_id),
+  KEY idx_main_title (main_title_id),
   KEY idx_quiz_id (quiz_id),
   KEY idx_sort_order (sort_order)
 ) {$charset_collate};
@@ -514,6 +535,15 @@ CREATE TABLE {$table_mock_test_relations} (
 		}
 
 		dbDelta( $sql );
+
+		// Ensure main_title_id column exists on exam_subject_quizzes table
+		$table_esq = self::get_table_name( 'exam_subject_quizzes' );
+		if ( ! empty( $table_esq ) ) {
+			$col_check = $wpdb->get_results( $wpdb->prepare( "SHOW COLUMNS FROM {$table_esq} LIKE %s", 'main_title_id' ) );
+			if ( empty( $col_check ) ) {
+				$wpdb->query( "ALTER TABLE {$table_esq} ADD COLUMN main_title_id bigint(20) unsigned NOT NULL DEFAULT 0 AFTER subject_id, ADD INDEX idx_main_title (main_title_id)" );
+			}
+		}
 
 		// Ensure practice sets are open practice drills with immediate feedback and free access by default
 		$table_quizzes = self::get_table_name( 'quizzes' );

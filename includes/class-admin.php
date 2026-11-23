@@ -1037,24 +1037,65 @@ class IAQ_Admin {
 		// 32. Assign Quiz to Examination-Subject.
 		if ( isset( $_POST['iaq_assign_exam_subject_quiz'] ) ) {
 			check_admin_referer( 'iaq_assign_esq_nonce' );
-			$ex_id = absint( $_POST['exam_id'] );
-			$s_id  = absint( $_POST['subject_id'] );
-			$q_id  = absint( $_POST['quiz_id'] );
-			$order = isset( $_POST['sort_order'] ) ? intval( $_POST['sort_order'] ) : 0;
-			IAQ_Practice_Sets::assign_quiz_to_exam_subject( $ex_id, $s_id, $q_id, $order );
+			$ex_id         = absint( $_POST['exam_id'] );
+			$s_id          = absint( $_POST['subject_id'] );
+			$q_id          = absint( $_POST['quiz_id'] );
+			$order         = isset( $_POST['sort_order'] ) ? intval( $_POST['sort_order'] ) : 0;
+			$main_title_id = isset( $_POST['main_title_id'] ) ? absint( $_POST['main_title_id'] ) : 0;
+			IAQ_Practice_Sets::assign_quiz_to_exam_subject( $ex_id, $s_id, $q_id, $order, $main_title_id );
 			wp_safe_redirect( add_query_arg( array( 'page' => 'iaq-examinations', 'action' => 'manage_subject_quizzes', 'exam_id' => $ex_id, 'subject_id' => $s_id, 'message' => 'esq_saved' ), admin_url( 'admin.php' ) ) );
 			exit;
 		}
 
-		// 32b. Create Practice Set for Examination + Subject (with optional Bulk CSV/JSON Import).
+		// 32a. Save Main Title for Examination + Subject.
+		if ( isset( $_POST['iaq_save_main_title'] ) ) {
+			check_admin_referer( 'iaq_save_main_title_nonce' );
+			$ex_id = absint( $_POST['exam_id'] );
+			$s_id  = absint( $_POST['subject_id'] );
+			$res   = IAQ_Practice_Sets::save_exam_subject_main_title( $_POST );
+			if ( is_wp_error( $res ) ) {
+				$this->add_notice( 'error', $res->get_error_message() );
+			}
+			wp_safe_redirect( add_query_arg( array( 'page' => 'iaq-examinations', 'action' => 'manage_subject_quizzes', 'exam_id' => $ex_id, 'subject_id' => $s_id, 'message' => 'main_title_saved' ), admin_url( 'admin.php' ) ) );
+			exit;
+		}
+
+		// 32b. Delete Main Title from Examination + Subject.
+		if ( isset( $_GET['iaq_action'] ) && 'delete_main_title' === $_GET['iaq_action'] && isset( $_GET['title_id'] ) && isset( $_GET['exam_id'] ) && isset( $_GET['subject_id'] ) ) {
+			$t_id  = absint( $_GET['title_id'] );
+			$ex_id = absint( $_GET['exam_id'] );
+			$s_id  = absint( $_GET['subject_id'] );
+			check_admin_referer( 'iaq_delete_main_title_' . $t_id );
+			IAQ_Practice_Sets::delete_exam_subject_main_title( $t_id );
+			wp_safe_redirect( add_query_arg( array( 'page' => 'iaq-examinations', 'action' => 'manage_subject_quizzes', 'exam_id' => $ex_id, 'subject_id' => $s_id, 'message' => 'main_title_deleted' ), admin_url( 'admin.php' ) ) );
+			exit;
+		}
+
+		// 32c. Create Practice Set for Examination + Subject (with optional Bulk CSV/JSON Import).
 		if ( isset( $_POST['iaq_create_exam_subject_practice_set'] ) ) {
 			check_admin_referer( 'iaq_create_esq_practice_set_nonce' );
-			$ex_id      = absint( $_POST['exam_id'] );
-			$s_id       = absint( $_POST['subject_id'] );
-			$exam       = IAQ_Examinations::get_examination( $ex_id );
-			$subject    = IAQ_Question_Bank::get_subject( $s_id );
-			$sort_order = isset( $_POST['sort_order'] ) ? max( 1, intval( $_POST['sort_order'] ) ) : 1;
-			$set_title  = ! empty( $_POST['set_title'] ) ? sanitize_text_field( wp_unslash( $_POST['set_title'] ) ) : sprintf( __( 'Practice Set %d', 'indianagri-quiz-engine' ), $sort_order );
+			$ex_id         = absint( $_POST['exam_id'] );
+			$s_id          = absint( $_POST['subject_id'] );
+			$exam          = IAQ_Examinations::get_examination( $ex_id );
+			$subject       = IAQ_Question_Bank::get_subject( $s_id );
+			$sort_order    = isset( $_POST['sort_order'] ) ? max( 1, intval( $_POST['sort_order'] ) ) : 1;
+			$set_title     = ! empty( $_POST['set_title'] ) ? sanitize_text_field( wp_unslash( $_POST['set_title'] ) ) : sprintf( __( 'Practice Set %d', 'indianagri-quiz-engine' ), $sort_order );
+			$main_title_id = isset( $_POST['main_title_id'] ) ? absint( $_POST['main_title_id'] ) : 0;
+
+			// If admin typed a new Main Title name inline
+			if ( ! empty( $_POST['new_main_title_inline'] ) ) {
+				$inline_title = sanitize_text_field( wp_unslash( $_POST['new_main_title_inline'] ) );
+				$new_tid = IAQ_Practice_Sets::save_exam_subject_main_title(
+					array(
+						'exam_id'    => $ex_id,
+						'subject_id' => $s_id,
+						'title'      => $inline_title,
+					)
+				);
+				if ( ! is_wp_error( $new_tid ) && $new_tid > 0 ) {
+					$main_title_id = (int) $new_tid;
+				}
+			}
 
 			// Save Quiz
 			$quiz_data = array(
@@ -1080,8 +1121,8 @@ class IAQ_Admin {
 			if ( is_wp_error( $quiz_id ) ) {
 				$this->add_notice( 'error', $quiz_id->get_error_message() );
 			} else {
-				// Attach quiz to this exam-subject combination.
-				IAQ_Practice_Sets::assign_quiz_to_exam_subject( $ex_id, $s_id, $quiz_id, $sort_order );
+				// Attach quiz to this exam-subject-main_title combination.
+				IAQ_Practice_Sets::assign_quiz_to_exam_subject( $ex_id, $s_id, $quiz_id, $sort_order, $main_title_id );
 
 				// Check if bulk CSV or JSON was uploaded.
 				$imported_count = 0;
@@ -1585,6 +1626,8 @@ class IAQ_Admin {
 				'practice_set_imported'            => array( 'success', sprintf( __( '%d questions bulk imported and assigned to practice set successfully!', 'indianagri-quiz-engine' ), $count ) ),
 				'exam_subject_saved'               => array( 'success', __( 'Subject associated with examination successfully.', 'indianagri-quiz-engine' ) ),
 				'exam_subject_removed'    => array( 'success', __( 'Subject removed from examination.', 'indianagri-quiz-engine' ) ),
+				'main_title_saved'        => array( 'success', __( 'Main Title saved successfully.', 'indianagri-quiz-engine' ) ),
+				'main_title_deleted'      => array( 'success', __( 'Main Title removed successfully. Any attached quizzes were preserved.', 'indianagri-quiz-engine' ) ),
 				'esq_saved'               => array( 'success', __( 'Practice set assigned to examination subject.', 'indianagri-quiz-engine' ) ),
 				'esq_removed'             => array( 'success', __( 'Practice set removed from examination subject.', 'indianagri-quiz-engine' ) ),
 				'mock_category_saved'     => array( 'success', __( 'Mock test category saved successfully.', 'indianagri-quiz-engine' ) ),

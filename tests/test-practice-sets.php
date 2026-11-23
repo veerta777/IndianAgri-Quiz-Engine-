@@ -24,6 +24,7 @@ class Test_Practice_Sets {
 		self::test_exam_subject_practice_set_creation_and_import();
 		self::test_subject_practice_sets_management_and_bulk_upload();
 		self::test_unified_practice_pathways();
+		self::test_exam_subject_main_titles_hierarchy();
 
 		echo "Test_Practice_Sets: ALL PASS\n";
 	}
@@ -812,6 +813,178 @@ class Test_Practice_Sets {
 		}
 
 		echo "  [PASS] Unified Practice by Book & Practice by Subjects verified: dual pathways to the same underlying question bank with zero duplication.\n";
+	}
+
+	/**
+	 * 12. Examination -> Subject -> Main Title -> Multiple Practice Sets -> Questions hierarchy verified.
+	 */
+	private static function test_exam_subject_main_titles_hierarchy() {
+		$exams    = IAQ_Examinations::get_examinations();
+		$subjects = IAQ_Question_Bank::get_subjects();
+		$exam_id  = (int) $exams[0]->id;
+		$subj_id  = (int) $subjects[0]->id;
+
+		// 1. Create unlimited Main Titles under this exam + subject
+		$title_1_id = IAQ_Practice_Sets::save_exam_subject_main_title(
+			array(
+				'exam_id'       => $exam_id,
+				'subject_id'    => $subj_id,
+				'title'         => '1. Principles of Agronomy',
+				'display_order' => 1,
+			)
+		);
+		$title_2_id = IAQ_Practice_Sets::save_exam_subject_main_title(
+			array(
+				'exam_id'       => $exam_id,
+				'subject_id'    => $subj_id,
+				'title'         => '2. Crop Ecology and Geography',
+				'display_order' => 2,
+			)
+		);
+
+		if ( ! $title_1_id || is_wp_error( $title_1_id ) || ! $title_2_id || is_wp_error( $title_2_id ) ) {
+			throw new Exception( 'Failed to create Main Titles under examination and subject.' );
+		}
+
+		// 2. Attach multiple practice sets under Title 1
+		$q1 = IAQ_Quiz_Builder::save_quiz(
+			array(
+				'title'         => 'Agronomy Principles Set 1',
+				'quiz_type'     => 'practice',
+				'subject_id'    => $subj_id,
+				'exam_category' => $exams[0]->name,
+				'status'        => 'published',
+			)
+		);
+		$q2 = IAQ_Quiz_Builder::save_quiz(
+			array(
+				'title'         => 'Agronomy Principles Set 2',
+				'quiz_type'     => 'practice',
+				'subject_id'    => $subj_id,
+				'exam_category' => $exams[0]->name,
+				'status'        => 'published',
+			)
+		);
+
+		IAQ_Practice_Sets::assign_quiz_to_exam_subject( $exam_id, $subj_id, $q1, 1, $title_1_id );
+		IAQ_Practice_Sets::assign_quiz_to_exam_subject( $exam_id, $subj_id, $q2, 2, $title_1_id );
+
+		// 3. Attach multiple practice sets under Title 2
+		$q3 = IAQ_Quiz_Builder::save_quiz(
+			array(
+				'title'         => 'Crop Ecology Set 1',
+				'quiz_type'     => 'practice',
+				'subject_id'    => $subj_id,
+				'exam_category' => $exams[0]->name,
+				'status'        => 'published',
+			)
+		);
+		$q4 = IAQ_Quiz_Builder::save_quiz(
+			array(
+				'title'         => 'Crop Ecology Set 2',
+				'quiz_type'     => 'practice',
+				'subject_id'    => $subj_id,
+				'exam_category' => $exams[0]->name,
+				'status'        => 'published',
+			)
+		);
+		$q5 = IAQ_Quiz_Builder::save_quiz(
+			array(
+				'title'         => 'Crop Ecology Set 3',
+				'quiz_type'     => 'practice',
+				'subject_id'    => $subj_id,
+				'exam_category' => $exams[0]->name,
+				'status'        => 'published',
+			)
+		);
+
+		IAQ_Practice_Sets::assign_quiz_to_exam_subject( $exam_id, $subj_id, $q3, 1, $title_2_id );
+		IAQ_Practice_Sets::assign_quiz_to_exam_subject( $exam_id, $subj_id, $q4, 2, $title_2_id );
+		IAQ_Practice_Sets::assign_quiz_to_exam_subject( $exam_id, $subj_id, $q5, 3, $title_2_id );
+
+		// 4. Verify get_exam_subject_main_titles counts
+		$titles = IAQ_Practice_Sets::get_exam_subject_main_titles( $exam_id, $subj_id );
+		if ( count( $titles ) < 2 ) {
+			throw new Exception( 'Expected at least 2 main titles returned.' );
+		}
+
+		$t1 = null;
+		$t2 = null;
+		foreach ( $titles as $t ) {
+			if ( (int) $t->id === (int) $title_1_id ) $t1 = $t;
+			if ( (int) $t->id === (int) $title_2_id ) $t2 = $t;
+		}
+
+		if ( ! $t1 || 2 !== (int) $t1->practice_set_count ) {
+			throw new Exception( 'Title 1 practice set count expected 2, got: ' . ( $t1 ? $t1->practice_set_count : 'null' ) );
+		}
+		if ( ! $t2 || 3 !== (int) $t2->practice_set_count ) {
+			throw new Exception( 'Title 2 practice set count expected 3, got: ' . ( $t2 ? $t2->practice_set_count : 'null' ) );
+		}
+
+		// 5. Verify get_exam_subject_grouped_hierarchy
+		$grouped = IAQ_Practice_Sets::get_exam_subject_grouped_hierarchy( $exam_id, $subj_id );
+		$grp_t1 = null;
+		$grp_t2 = null;
+		foreach ( $grouped as $g ) {
+			if ( (int) $g['id'] === (int) $title_1_id ) $grp_t1 = $g;
+			if ( (int) $g['id'] === (int) $title_2_id ) $grp_t2 = $g;
+		}
+
+		if ( ! $grp_t1 || count( $grp_t1['practice_sets'] ) !== 2 ) {
+			throw new Exception( 'Grouped hierarchy Title 1 sets count mismatch.' );
+		}
+		if ( ! $grp_t2 || count( $grp_t2['practice_sets'] ) !== 3 ) {
+			throw new Exception( 'Grouped hierarchy Title 2 sets count mismatch.' );
+		}
+
+		// Verify practice_set_number restarts at 1 for each Main Title
+		if ( 1 !== (int) $grp_t1['practice_sets'][0]->practice_set_number || 2 !== (int) $grp_t1['practice_sets'][1]->practice_set_number ) {
+			throw new Exception( 'Practice set numbering within Title 1 must start at Set 1.' );
+		}
+		if ( 1 !== (int) $grp_t2['practice_sets'][0]->practice_set_number || 3 !== (int) $grp_t2['practice_sets'][2]->practice_set_number ) {
+			throw new Exception( 'Practice set numbering within Title 2 must start at Set 1.' );
+		}
+
+		// 6. Verify Frontend Shortcode Rendering of Main Titles Hierarchy
+		$frontend = new IAQ_Frontend();
+		$html = $frontend->render_practice_sets_shortcode(
+			array(
+				'view'       => 'exam_subject',
+				'exam_id'    => $exam_id,
+				'subject_id' => $subj_id,
+			)
+		);
+
+		if ( false === strpos( $html, '1. Principles of Agronomy' ) || false === strpos( $html, '2. Crop Ecology and Geography' ) ) {
+			throw new Exception( 'Frontend failed to render Main Titles headers in Practice by Exams view.' );
+		}
+		if ( false === strpos( $html, 'iaq-ps-main-title-section' ) ) {
+			throw new Exception( 'Frontend failed to render Main Titles sections.' );
+		}
+
+		// 7. Verify Main Title deletion safety (unlinks quizzes without deleting them)
+		$del_ok = IAQ_Practice_Sets::delete_exam_subject_main_title( $title_1_id );
+		if ( ! $del_ok ) {
+			throw new Exception( 'Failed to delete Main Title.' );
+		}
+
+		$post_del_titles = IAQ_Practice_Sets::get_exam_subject_main_titles( $exam_id, $subj_id );
+		$found_deleted = false;
+		foreach ( $post_del_titles as $pdt ) {
+			if ( (int) $pdt->id === (int) $title_1_id ) $found_deleted = true;
+		}
+		if ( $found_deleted ) {
+			throw new Exception( 'Deleted Main Title still returned in get_exam_subject_main_titles.' );
+		}
+
+		// Quizzes q1 and q2 must still exist
+		$q1_check = IAQ_Quiz_Builder::get_quiz( $q1 );
+		if ( ! $q1_check ) {
+			throw new Exception( 'Quiz q1 was erroneously deleted upon Main Title removal.' );
+		}
+
+		echo "  [PASS] Examination → Subject → Main Title → Multiple Practice Sets → Questions hierarchy verified.\n";
 	}
 }
 

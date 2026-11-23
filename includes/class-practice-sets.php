@@ -1009,10 +1009,11 @@ class IAQ_Practice_Sets {
 	 * @param int    $user_id    Optional user ID.
 	 * @return array
 	 */
-	public static function get_exam_subject_quizzes( $exam_id, $subject_id, $status = 'published', $user_id = 0 ) {
+	public static function get_exam_subject_quizzes( $exam_id, $subject_id, $status = 'published', $user_id = 0, $main_title_id = null ) {
 		global $wpdb;
 
 		$table_esq          = IAQ_Database::get_table_name( 'exam_subject_quizzes' );
+		$table_titles       = IAQ_Database::get_table_name( 'exam_subject_titles' );
 		$table_quizzes      = IAQ_Database::get_table_name( 'quizzes' );
 		$table_subjects     = IAQ_Database::get_table_name( 'subjects' );
 		$table_attempts     = IAQ_Database::get_table_name( 'quiz_attempts' );
@@ -1030,20 +1031,26 @@ class IAQ_Practice_Sets {
 		$exam_name = $exam ? $exam->name : '';
 
 		$status_clause = ! empty( $status ) ? $wpdb->prepare( 'AND q.status = %s', $status ) : "AND q.status != 'archived'";
+		$title_clause  = ( null !== $main_title_id ) ? $wpdb->prepare( 'AND esq.main_title_id = %d', absint( $main_title_id ) ) : '';
 
 		// First query explicitly mapped practice sets in table_esq (strictly excluding book sets).
 		$query = $wpdb->prepare(
 			"SELECT q.*,
 				esq.sort_order AS exam_sort_order,
 				esq.id AS exam_quiz_rel_id,
+				esq.main_title_id,
+				COALESCE(t.title, '') AS main_title_name,
+				COALESCE(t.display_order, 999999) AS main_title_order,
 				s.name AS subject_name
 			FROM {$table_esq} esq
 			INNER JOIN {$table_quizzes} q ON esq.quiz_id = q.id
+			LEFT JOIN {$table_titles} t ON esq.main_title_id = t.id
 			LEFT JOIN {$table_subjects} s ON q.subject_id = s.id
 			WHERE esq.exam_id = %d AND esq.subject_id = %d
 			  AND q.id NOT IN (SELECT bq.quiz_id FROM {$table_book_quizzes} bq)
 			  {$status_clause}
-			ORDER BY esq.sort_order ASC, q.id ASC",
+			  {$title_clause}
+			ORDER BY t.display_order ASC, esq.sort_order ASC, q.id ASC",
 			$exam_id,
 			$subject_id
 		);
@@ -1051,11 +1058,14 @@ class IAQ_Practice_Sets {
 		$rows = $wpdb->get_results( $query );
 
 		// If no explicit relation rows, fallback to matching by exam_category & subject_id.
-		if ( empty( $rows ) ) {
+		if ( empty( $rows ) && null === $main_title_id ) {
 			$fallback_query = $wpdb->prepare(
 				"SELECT q.*,
 					q.display_order AS exam_sort_order,
 					0 AS exam_quiz_rel_id,
+					0 AS main_title_id,
+					'' AS main_title_name,
+					0 AS main_title_order,
 					s.name AS subject_name
 				FROM {$table_quizzes} q
 				LEFT JOIN {$table_subjects} s ON q.subject_id = s.id
@@ -1088,21 +1098,23 @@ class IAQ_Practice_Sets {
 	}
 
 	/**
-	 * Assign a practice set to an examination-subject combination.
+	 * Assign a practice set to an examination-subject combination and optional Main Title.
 	 *
-	 * @param int $exam_id    Examination ID.
-	 * @param int $subject_id Subject ID.
-	 * @param int $quiz_id    Quiz ID.
-	 * @param int $sort_order Display order.
+	 * @param int $exam_id       Examination ID.
+	 * @param int $subject_id    Subject ID.
+	 * @param int $quiz_id       Quiz ID.
+	 * @param int $sort_order    Display order.
+	 * @param int $main_title_id Main Title ID (0 for unassigned/general).
 	 * @return bool
 	 */
-	public static function assign_quiz_to_exam_subject( $exam_id, $subject_id, $quiz_id, $sort_order = 0 ) {
+	public static function assign_quiz_to_exam_subject( $exam_id, $subject_id, $quiz_id, $sort_order = 0, $main_title_id = 0 ) {
 		global $wpdb;
 
-		$table_esq  = IAQ_Database::get_table_name( 'exam_subject_quizzes' );
-		$exam_id    = absint( $exam_id );
-		$subject_id = absint( $subject_id );
-		$quiz_id    = absint( $quiz_id );
+		$table_esq     = IAQ_Database::get_table_name( 'exam_subject_quizzes' );
+		$exam_id       = absint( $exam_id );
+		$subject_id    = absint( $subject_id );
+		$quiz_id       = absint( $quiz_id );
+		$main_title_id = absint( $main_title_id );
 
 		if ( ! $exam_id || ! $subject_id || ! $quiz_id ) {
 			return false;
@@ -1118,11 +1130,17 @@ class IAQ_Practice_Sets {
 		);
 
 		if ( $existing_id ) {
+			$update_data = array( 'sort_order' => intval( $sort_order ) );
+			$update_format = array( '%d' );
+			if ( $main_title_id >= 0 ) {
+				$update_data['main_title_id'] = $main_title_id;
+				$update_format[]              = '%d';
+			}
 			$wpdb->update(
 				$table_esq,
-				array( 'sort_order' => intval( $sort_order ) ),
+				$update_data,
 				array( 'id' => $existing_id ),
-				array( '%d' ),
+				$update_format,
 				array( '%d' )
 			);
 			return true;
@@ -1131,9 +1149,10 @@ class IAQ_Practice_Sets {
 		if ( 0 === $sort_order ) {
 			$max_order = (int) $wpdb->get_var(
 				$wpdb->prepare(
-					"SELECT MAX(sort_order) FROM {$table_esq} WHERE exam_id = %d AND subject_id = %d",
+					"SELECT MAX(sort_order) FROM {$table_esq} WHERE exam_id = %d AND subject_id = %d AND main_title_id = %d",
 					$exam_id,
-					$subject_id
+					$subject_id,
+					$main_title_id
 				)
 			);
 			$sort_order = $max_order + 1;
@@ -1142,16 +1161,232 @@ class IAQ_Practice_Sets {
 		$wpdb->insert(
 			$table_esq,
 			array(
-				'exam_id'    => $exam_id,
-				'subject_id' => $subject_id,
-				'quiz_id'    => $quiz_id,
-				'sort_order' => intval( $sort_order ),
-				'created_at' => current_time( 'mysql' ),
+				'exam_id'       => $exam_id,
+				'subject_id'    => $subject_id,
+				'main_title_id' => $main_title_id,
+				'quiz_id'       => $quiz_id,
+				'sort_order'    => intval( $sort_order ),
+				'created_at'    => current_time( 'mysql' ),
 			),
-			array( '%d', '%d', '%d', '%d', '%s' )
+			array( '%d', '%d', '%d', '%d', '%d', '%s' )
 		);
 
 		return true;
+	}
+
+	/**
+	 * Get all Main Titles for an examination and subject combination.
+	 *
+	 * @param int    $exam_id    Examination ID.
+	 * @param int    $subject_id Subject ID.
+	 * @param string $status     Status filter ('active', 'inactive', or '' for all).
+	 * @return array
+	 */
+	public static function get_exam_subject_main_titles( $exam_id, $subject_id, $status = 'active' ) {
+		global $wpdb;
+
+		$table_titles  = IAQ_Database::get_table_name( 'exam_subject_titles' );
+		$table_esq     = IAQ_Database::get_table_name( 'exam_subject_quizzes' );
+		$table_quizzes = IAQ_Database::get_table_name( 'quizzes' );
+
+		$exam_id    = absint( $exam_id );
+		$subject_id = absint( $subject_id );
+
+		if ( ! $exam_id || ! $subject_id || empty( $table_titles ) ) {
+			return array();
+		}
+
+		$status_clause = ! empty( $status ) ? $wpdb->prepare( 'AND t.status = %s', $status ) : '';
+
+		$query = $wpdb->prepare(
+			"SELECT t.*,
+				COUNT(DISTINCT esq.quiz_id) AS practice_set_count
+			FROM {$table_titles} t
+			LEFT JOIN {$table_esq} esq ON t.id = esq.main_title_id AND esq.exam_id = t.exam_id AND esq.subject_id = t.subject_id
+			WHERE t.exam_id = %d AND t.subject_id = %d {$status_clause}
+			GROUP BY t.id
+			ORDER BY t.display_order ASC, t.id ASC",
+			$exam_id,
+			$subject_id
+		);
+
+		$results = $wpdb->get_results( $query );
+		return $results ? $results : array();
+	}
+
+	/**
+	 * Get single Main Title by ID.
+	 *
+	 * @param int $title_id Main Title ID.
+	 * @return object|null
+	 */
+	public static function get_exam_subject_main_title( $title_id ) {
+		global $wpdb;
+		$table_titles = IAQ_Database::get_table_name( 'exam_subject_titles' );
+		$title_id     = absint( $title_id );
+
+		if ( ! $title_id || empty( $table_titles ) ) {
+			return null;
+		}
+
+		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table_titles} WHERE id = %d", $title_id ) );
+	}
+
+	/**
+	 * Create or update Main Title for an examination and subject.
+	 *
+	 * @param array $data Form data array.
+	 * @return int|WP_Error Title ID or WP_Error.
+	 */
+	public static function save_exam_subject_main_title( array $data ) {
+		global $wpdb;
+		$table_titles = IAQ_Database::get_table_name( 'exam_subject_titles' );
+
+		$exam_id    = isset( $data['exam_id'] ) ? absint( $data['exam_id'] ) : 0;
+		$subject_id = isset( $data['subject_id'] ) ? absint( $data['subject_id'] ) : 0;
+		$title      = isset( $data['title'] ) ? sanitize_text_field( wp_unslash( $data['title'] ) ) : '';
+
+		if ( ! $exam_id || ! $subject_id || empty( $title ) ) {
+			return new WP_Error( 'missing_fields', __( 'Examination, Subject, and Main Title are required.', 'indianagri-quiz-engine' ) );
+		}
+
+		$id            = isset( $data['id'] ) ? absint( $data['id'] ) : 0;
+		$slug          = ! empty( $data['slug'] ) ? sanitize_title( $data['slug'] ) : sanitize_title( $title );
+		$description   = isset( $data['description'] ) ? sanitize_textarea_field( wp_unslash( $data['description'] ) ) : '';
+		$status        = isset( $data['status'] ) && in_array( $data['status'], array( 'active', 'inactive' ), true ) ? $data['status'] : 'active';
+		$display_order = isset( $data['display_order'] ) ? intval( $data['display_order'] ) : 0;
+
+		if ( $display_order <= 0 && ! $id ) {
+			$max_order = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT MAX(display_order) FROM {$table_titles} WHERE exam_id = %d AND subject_id = %d",
+					$exam_id,
+					$subject_id
+				)
+			);
+			$display_order = $max_order + 1;
+		}
+
+		$fields = array(
+			'exam_id'       => $exam_id,
+			'subject_id'    => $subject_id,
+			'title'         => $title,
+			'slug'          => $slug,
+			'description'   => $description,
+			'display_order' => $display_order,
+			'status'        => $status,
+		);
+
+		if ( $id > 0 ) {
+			$wpdb->update( $table_titles, $fields, array( 'id' => $id ), array( '%d', '%d', '%s', '%s', '%s', '%d', '%s' ), array( '%d' ) );
+			return $id;
+		}
+
+		$fields['created_at'] = current_time( 'mysql' );
+		$wpdb->insert( $table_titles, $fields, array( '%d', '%d', '%s', '%s', '%s', '%d', '%s', '%s' ) );
+		return (int) $wpdb->insert_id;
+	}
+
+	/**
+	 * Delete a Main Title and unlink associated practice sets.
+	 *
+	 * @param int $title_id Main Title ID.
+	 * @return bool
+	 */
+	public static function delete_exam_subject_main_title( $title_id ) {
+		global $wpdb;
+		$table_titles = IAQ_Database::get_table_name( 'exam_subject_titles' );
+		$table_esq    = IAQ_Database::get_table_name( 'exam_subject_quizzes' );
+		$title_id     = absint( $title_id );
+
+		if ( ! $title_id || empty( $table_titles ) ) {
+			return false;
+		}
+
+		// Detach practice sets from this main title (set main_title_id to 0 so quizzes aren't lost).
+		$wpdb->update(
+			$table_esq,
+			array( 'main_title_id' => 0 ),
+			array( 'main_title_id' => $title_id ),
+			array( '%d' ),
+			array( '%d' )
+		);
+
+		$wpdb->delete( $table_titles, array( 'id' => $title_id ), array( '%d' ) );
+		return true;
+	}
+
+	/**
+	 * Get full grouped hierarchy: Examination -> Subject -> Main Titles -> Practice Sets.
+	 *
+	 * @param int    $exam_id    Examination ID.
+	 * @param int    $subject_id Subject ID.
+	 * @param string $status     Quiz status ('published' or '').
+	 * @param int    $user_id    User ID for attempt tracking.
+	 * @return array Array of groups, each containing title metadata and practice_sets.
+	 */
+	public static function get_exam_subject_grouped_hierarchy( $exam_id, $subject_id, $status = 'published', $user_id = 0 ) {
+		$exam_id    = absint( $exam_id );
+		$subject_id = absint( $subject_id );
+
+		if ( ! $exam_id || ! $subject_id ) {
+			return array();
+		}
+
+		$main_titles = self::get_exam_subject_main_titles( $exam_id, $subject_id, 'active' );
+		$all_quizzes = self::get_exam_subject_quizzes( $exam_id, $subject_id, $status, $user_id );
+
+		$grouped = array();
+		$unassigned = array();
+
+		// Index titles
+		foreach ( $main_titles as $mt ) {
+			$grouped[ (int) $mt->id ] = array(
+				'id'            => (int) $mt->id,
+				'title'         => $mt->title,
+				'slug'          => $mt->slug,
+				'description'   => $mt->description,
+				'display_order' => (int) $mt->display_order,
+				'practice_sets' => array(),
+			);
+		}
+
+		// Distribute practice sets to main titles
+		foreach ( $all_quizzes as $q ) {
+			$tid = ! empty( $q->main_title_id ) ? (int) $q->main_title_id : 0;
+			if ( $tid > 0 && isset( $grouped[ $tid ] ) ) {
+				$grouped[ $tid ]['practice_sets'][] = $q;
+			} else {
+				$unassigned[] = $q;
+			}
+		}
+
+		// Re-number practice_set_number sequentially starting at 1 within each Main Title
+		foreach ( $grouped as &$grp ) {
+			$seq = 1;
+			foreach ( $grp['practice_sets'] as &$ps ) {
+				$ps->practice_set_number = $seq++;
+			}
+		}
+
+		// If there are unassigned sets, group them under General
+		if ( ! empty( $unassigned ) ) {
+			$seq = 1;
+			foreach ( $unassigned as &$ups ) {
+				$ups->practice_set_number = $seq++;
+			}
+			$general_title = ! empty( $grouped ) ? __( 'General Practice Sets', 'indianagri-quiz-engine' ) : __( 'Practice Sets', 'indianagri-quiz-engine' );
+			$grouped[0] = array(
+				'id'            => 0,
+				'title'         => $general_title,
+				'slug'          => 'general',
+				'description'   => '',
+				'display_order' => 999999,
+				'practice_sets' => $unassigned,
+			);
+		}
+
+		return array_values( $grouped );
 	}
 
 	/**

@@ -1,0 +1,190 @@
+{
+  "questions": [
+    {
+      "questionType": "MCQ_SINGLE",
+      "stem": "Which crop is known as the \"King of Cereals\"? / किस फसल को \"अनाजों का राजा\" कहा जाता है?",
+      "explanation": "Wheat (Triticum aestivum) is widely known as the King of Cereals. / गेहूं (ट्रिटिकम एस्टीवम) को व्यापक रूप से अनाजों का राजा कहा जाता है।",
+      "difficulty": "EASY",
+      "subject": "Agronomy",
+      "topic": "Cereal Crop Production",
+      "exam_category": "ICAR AIEEA / UPSSSC AGTA",
+      "options": [
+        {
+          "label": "A",
+          "text": "Rice (Oryza sativa) / धान",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Wheat (Triticum aestivum) / गेहूं",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "Maize (Zea mays) / मक्का",
+          "isCorrect": false
+        },
+        {
+          "label": "D",
+          "text": "Barley (Hordeum vulgare) / जौ",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "questionType": "MCQ_SINGLE",
+      "stem": "\"Khaira disease\" of rice is caused by the deficiency of which nutrient? / धान का \"खैरा रोग\" किस पोषक तत्व की कमी के कारण होता है?",
+      "explanation": "Khaira disease of rice was first discovered by Dr. Y.L. Nene at Pantnagar (1966) and is caused by Zinc deficiency. / धान में खैरा रोग जिंक (Zn) की कमी के कारण होता है, जिसकी खोज 1966 में डॉ. वाई. एल. नेने द्वारा पंतनगर में की गई थी।",
+      "difficulty": "MEDIUM",
+      "subject": "Plant Pathology",
+      "topic": "Diseases of Field Crops",
+      "exam_category": "IBPS AFO / ICAR JRF",
+      "options": [
+        {
+          "label": "A",
+          "text": "Nitrogen (N) / नाइट्रोजन",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Phosphorus (P) / फास्फोरस",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "Zinc (Zn) / जस्ता (जिंक)",
+          "isCorrect": true
+        },
+        {
+          "label": "D",
+          "text": "Iron (Fe) / लोहा (आयरन)",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "questionType": "MCQ_SINGLE",
+      "stem": "Which clay mineral is predominantly found in Black Cotton Soils (Vertisols)? / काली मिट्टी (वर्टिसोल) में किस क्ले खनिज की प्रधानता होती है?",
+      "explanation": "Montmorillonite is a 2:1 expanding type clay mineral responsible for high swelling and shrinkage in black cotton soils. / काली मिट्टी में मोंटमोरिलोनाइट खनिज की प्रधानता होती है, जिसके कारण इसमें फूलने और सिकुड़ने की उच्च क्षमता होती है।",
+      "difficulty": "HARD",
+      "subject": "Soil Science",
+      "topic": "Soil Minerals & Physics",
+      "exam_category": "State Agriculture PSC / AO",
+      "options": [
+        {
+          "label": "A",
+          "text": "Kaolinite / काओलिनाइट",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Montmorillonite / मोंटमोरिलोनाइट",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "Illite / इलाइट",
+          "isCorrect": false
+        },
+        {
+          "label": "D",
+          "text": "Chlorite / क्लोराइट",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "questionType": "MCQ_SINGLE",
+      "stem": "What is the recommended seed rate for hybrid rice production per hectare in India? / भारत में संकर धान (हाइब्रिड राइस) की खेती के लिए प्रति हेक्टेयर अनुशंसित बीज दर क्या है?",
+      "explanation": "The recommended seed rate for hybrid rice is 12 to 15 kg per hectare. / संकर धान की खेती के लिए अनुशंसित बीज दर 12 से 15 किलोग्राम प्रति हेक्टेयर होती है।",
+      "difficulty": "MEDIUM",
+      "subject": "Agronomy",
+      "topic": "Seed Rate & Spacing",
+      "exam_category": "ICAR AIEEA / BPSC BAO",
+      "options": [
+        {
+          "label": "A",
+          "text": "12 - 15 kg/ha / 12 - 15 किग्रा/हेक्टेयर",
+          "isCorrect": true
+        },
+        {
+          "label": "B",
+          "text": "25 - 30 kg/ha / 25 - 30 किग्रा/हेक्टेयर",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "40 - 50 kg/ha / 40 - 50 किग्रा/हेक्टेयर",
+          "isCorrect": false
+        },
+        {
+          "label": "D",
+          "text": "75 - 100 kg/ha / 75 - 100 किग्रा/हेक्टेयर",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "questionType": "MCQ_SINGLE",
+      "stem": "राष्ट्रीय कृषि और ग्रामीण विकास बैंक (NABARD) की स्थापना किस समिति की सिफारिश पर की गई थी?",
+      "explanation": "नाबार्ड (NABARD) की स्थापना 12 जुलाई 1982 को बी. शिवरामन समिति (CRAFICARD) की सिफारिश के आधार पर की गई थी।",
+      "difficulty": "EASY",
+      "subject": "Agricultural Economics",
+      "topic": "Agricultural Finance & Banking",
+      "exam_category": "NABARD / IBPS AFO",
+      "options": [
+        {
+          "label": "A",
+          "text": "नरसिम्हम समिति (Narasimham Committee)",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "बी. शिवरामन समिति (B. Sivaraman Committee)",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "हिल्टन यंग आयोग (Hilton Young Commission)",
+          "isCorrect": false
+        },
+        {
+          "label": "D",
+          "text": "केलकर समिति (Kelkar Committee)",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "questionType": "MCQ_SINGLE",
+      "stem": "The Central Institute of Post-Harvest Engineering and Technology (CIPHET) is located at: / केंद्रीय कटाई उपरांत अभियांत्रिकी एवं प्रौद्योगिकी संस्थान (CIPHET) कहाँ स्थित है?",
+      "explanation": "ICAR-CIPHET was established on 29 December 1989 at Ludhiana, Punjab. / सीफेट (CIPHET) पंजाब के लुधियाना में स्थित है।",
+      "difficulty": "EASY",
+      "subject": "Agricultural Engineering",
+      "topic": "Research Institutes",
+      "exam_category": "General Agriculture",
+      "options": [
+        {
+          "label": "A",
+          "text": "Bhopal (Madhya Pradesh) / भोपाल",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Ludhiana (Punjab) / लुधियाना",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "Jodhpur (Rajasthan) / जोधपुर",
+          "isCorrect": false
+        },
+        {
+          "label": "D",
+          "text": "Nagpur (Maharashtra) / नागपुर",
+          "isCorrect": false
+        }
+      ]
+    }
+  ]
+}

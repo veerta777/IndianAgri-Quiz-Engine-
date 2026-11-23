@@ -766,6 +766,7 @@ class Mock_WPDB {
 			$this->prefix . 'iaq_books'                => array(),
 			$this->prefix . 'iaq_book_quizzes'         => array(),
 			$this->prefix . 'iaq_exam_subjects'        => array(),
+			$this->prefix . 'iaq_exam_subject_titles'  => array(),
 			$this->prefix . 'iaq_exam_subject_quizzes' => array(),
 			$this->prefix . 'iaq_mock_categories'          => array(),
 			$this->prefix . 'iaq_mock_series'              => array(),
@@ -1720,6 +1721,37 @@ class Mock_WPDB {
 			}
 		}
 
+		// Exam Subject Titles query
+		if ( strpos( $query, $this->prefix . 'iaq_exam_subject_titles' ) !== false && strpos( $query, 'COUNT(' ) !== false ) {
+			$eid_filter = preg_match( "/(?:t\.exam_id = |exam_id = )(\d+)/", $query, $em ) ? (int) $em[1] : 0;
+			$sid_filter = preg_match( "/(?:t\.subject_id = |subject_id = )(\d+)/", $query, $sm ) ? (int) $sm[1] : 0;
+			$list = array();
+			if ( isset( $this->tables[ $this->prefix . 'iaq_exam_subject_titles' ] ) ) {
+				foreach ( $this->tables[ $this->prefix . 'iaq_exam_subject_titles' ] as $t ) {
+					if ( $eid_filter > 0 && (int) $t->exam_id !== $eid_filter ) continue;
+					if ( $sid_filter > 0 && (int) $t->subject_id !== $sid_filter ) continue;
+					$clone = clone $t;
+					$ps_cnt = 0;
+					if ( isset( $this->tables[ $this->prefix . 'iaq_exam_subject_quizzes' ] ) ) {
+						foreach ( $this->tables[ $this->prefix . 'iaq_exam_subject_quizzes' ] as $esq ) {
+							if ( isset( $esq->main_title_id ) && (int) $esq->main_title_id === (int) $t->id ) {
+								$ps_cnt++;
+							}
+						}
+					}
+					$clone->practice_set_count = $ps_cnt;
+					$list[] = $clone;
+				}
+			}
+			usort( $list, function( $a, $b ) {
+				$oa = isset( $a->display_order ) ? (int) $a->display_order : 0;
+				$ob = isset( $b->display_order ) ? (int) $b->display_order : 0;
+				if ( $oa !== $ob ) return $oa <=> $ob;
+				return (int) $a->id <=> (int) $b->id;
+			} );
+			return $list;
+		}
+
 		// Exam Subject Quizzes query
 		if ( ( strpos( $query, $this->prefix . 'iaq_exam_subject_quizzes' ) !== false || strpos( $query, 'exam_sort_order' ) !== false ) && preg_match( "/(?:esq\.exam_id = |exam_id = )(\d+)/", $query, $em ) && preg_match( "/(?:esq\.subject_id = |subject_id = )(\d+)/", $query, $sm ) ) {
 			$exam_id = (int) $em[1];
@@ -1729,25 +1761,39 @@ class Mock_WPDB {
 				$status_match = $st_m[1];
 			}
 			$not_archived = ( strpos( $query, "q.status != 'archived'" ) !== false );
+			$filter_title_id = null;
+			if ( preg_match( "/esq\.main_title_id = (\d+)/", $query, $tm ) ) {
+				$filter_title_id = (int) $tm[1];
+			}
 
 			$list = array();
 			// Explicit mappings
 			foreach ( $this->tables[ $this->prefix . 'iaq_exam_subject_quizzes' ] as $esq ) {
 				if ( (int) $esq->exam_id === $exam_id && (int) $esq->subject_id === $subject_id ) {
+					$mid = isset( $esq->main_title_id ) ? (int) $esq->main_title_id : 0;
+					if ( null !== $filter_title_id && $mid !== $filter_title_id ) continue;
+
 					$qid = (int) $esq->quiz_id;
 					if ( isset( $this->tables[ $this->prefix . 'iaq_quizzes' ][ $qid ] ) ) {
 						$qz = clone $this->tables[ $this->prefix . 'iaq_quizzes' ][ $qid ];
 						if ( $status_match && isset( $qz->status ) && $qz->status !== $status_match ) continue;
 						if ( $not_archived && isset( $qz->status ) && 'archived' === $qz->status ) continue;
-						$qz->exam_sort_order  = (int) $esq->sort_order;
-						$qz->exam_quiz_rel_id = (int) $esq->id;
-						$qz->subject_name     = ( ! empty( $qz->subject_id ) && isset( $this->tables[ $this->prefix . 'iaq_subjects' ][ $qz->subject_id ] ) ) ? $this->tables[ $this->prefix . 'iaq_subjects' ][ $qz->subject_id ]->name : '';
+						$qz->exam_sort_order   = (int) $esq->sort_order;
+						$qz->exam_quiz_rel_id  = (int) $esq->id;
+						$qz->main_title_id     = $mid;
+						$qz->main_title_name   = '';
+						$qz->main_title_order  = 999999;
+						if ( $mid > 0 && isset( $this->tables[ $this->prefix . 'iaq_exam_subject_titles' ][ $mid ] ) ) {
+							$qz->main_title_name  = $this->tables[ $this->prefix . 'iaq_exam_subject_titles' ][ $mid ]->title;
+							$qz->main_title_order = (int) $this->tables[ $this->prefix . 'iaq_exam_subject_titles' ][ $mid ]->display_order;
+						}
+						$qz->subject_name      = ( ! empty( $qz->subject_id ) && isset( $this->tables[ $this->prefix . 'iaq_subjects' ][ $qz->subject_id ] ) ) ? $this->tables[ $this->prefix . 'iaq_subjects' ][ $qz->subject_id ]->name : '';
 						$list[] = $qz;
 					}
 				}
 			}
 			// Fallback by exam_category & subject_id if list empty
-			if ( empty( $list ) && isset( $this->tables[ $this->prefix . 'iaq_examinations' ][ $exam_id ] ) ) {
+			if ( empty( $list ) && null === $filter_title_id && isset( $this->tables[ $this->prefix . 'iaq_examinations' ][ $exam_id ] ) ) {
 				$ex_obj = $this->tables[ $this->prefix . 'iaq_examinations' ][ $exam_id ];
 				foreach ( $this->tables[ $this->prefix . 'iaq_quizzes' ] as $qz ) {
 					if ( ! empty( $qz->subject_id ) && (int) $qz->subject_id === $subject_id && isset( $qz->quiz_type ) && 'practice' === $qz->quiz_type ) {
@@ -1757,6 +1803,9 @@ class Mock_WPDB {
 							$clone = clone $qz;
 							$clone->exam_sort_order  = isset( $clone->display_order ) ? (int) $clone->display_order : 0;
 							$clone->exam_quiz_rel_id = 0;
+							$clone->main_title_id    = 0;
+							$clone->main_title_name  = '';
+							$clone->main_title_order = 999999;
 							$clone->subject_name     = ( ! empty( $clone->subject_id ) && isset( $this->tables[ $this->prefix . 'iaq_subjects' ][ $clone->subject_id ] ) ) ? $this->tables[ $this->prefix . 'iaq_subjects' ][ $clone->subject_id ]->name : '';
 							$list[] = $clone;
 						}
@@ -1764,6 +1813,9 @@ class Mock_WPDB {
 				}
 			}
 			usort( $list, function( $a, $b ) {
+				$to_a = isset( $a->main_title_order ) ? (int) $a->main_title_order : 999999;
+				$to_b = isset( $b->main_title_order ) ? (int) $b->main_title_order : 999999;
+				if ( $to_a !== $to_b ) return $to_a <=> $to_b;
 				if ( $a->exam_sort_order !== $b->exam_sort_order ) return $a->exam_sort_order <=> $b->exam_sort_order;
 				return (int) $a->id <=> (int) $b->id;
 			} );
@@ -1917,6 +1969,15 @@ class Mock_WPDB {
 
 	public function get_row( $query ) {
 		$this->queries[] = $query;
+
+		// Main Title by ID lookup
+		if ( strpos( $query, $this->prefix . 'iaq_exam_subject_titles' ) !== false && preg_match( "/WHERE id = (\d+)/", $query, $m ) ) {
+			$tid = (int) $m[1];
+			if ( isset( $this->tables[ $this->prefix . 'iaq_exam_subject_titles' ][ $tid ] ) ) {
+				return clone $this->tables[ $this->prefix . 'iaq_exam_subject_titles' ][ $tid ];
+			}
+			return null;
+		}
 
 		// Match quiz practice scope: Book quiz relation lookup
 		if ( strpos( $query, $this->prefix . 'iaq_book_quizzes' ) !== false && preg_match( "/bq\.quiz_id = (\d+)/", $query, $m ) ) {
@@ -2501,6 +2562,23 @@ class Mock_WPDB {
 					}
 				}
 				return null;
+			}
+		}
+
+		// Exam Subject Main Titles MAX display_order
+		if ( strpos( $query, $this->prefix . 'iaq_exam_subject_titles' ) !== false ) {
+			if ( preg_match( "/MAX\(display_order\) FROM [^\s]+ WHERE exam_id = (\d+) AND subject_id = (\d+)/", $query, $m ) ) {
+				$eid = (int) $m[1];
+				$sid = (int) $m[2];
+				$max = 0;
+				if ( isset( $this->tables[ $this->prefix . 'iaq_exam_subject_titles' ] ) ) {
+					foreach ( $this->tables[ $this->prefix . 'iaq_exam_subject_titles' ] as $t ) {
+						if ( (int) $t->exam_id === $eid && (int) $t->subject_id === $sid && (int) $t->display_order > $max ) {
+							$max = (int) $t->display_order;
+						}
+					}
+				}
+				return $max;
 			}
 		}
 

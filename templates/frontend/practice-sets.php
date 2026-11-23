@@ -1158,8 +1158,23 @@ $page_url = function( $subview = '', $params = array() ) {
 
 		<div class="iaq-ps-section-header">
 			<h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> <?php esc_html_e( 'Examination Subject Practice Sets', 'indianagri-quiz-engine' ); ?></h3>
-			<span class="iaq-card-help"><?php esc_html_e( 'Sequential drills with detailed explanations.', 'indianagri-quiz-engine' ); ?></span>
+			<span class="iaq-card-help"><?php esc_html_e( 'Sequential drills organized by Main Titles with detailed explanations.', 'indianagri-quiz-engine' ); ?></span>
 		</div>
+
+		<?php
+		$grouped_hierarchy = isset( $grouped_hierarchy ) && ! empty( $grouped_hierarchy )
+			? $grouped_hierarchy
+			: ( ( $exam && $subject ) ? IAQ_Practice_Sets::get_exam_subject_grouped_hierarchy( $exam->id, $subject->id, 'published', $user_id ) : array() );
+
+		// Check if any main titles are actually defined (group id > 0)
+		$has_main_titles = false;
+		foreach ( $grouped_hierarchy as $grp ) {
+			if ( ! empty( $grp['id'] ) ) {
+				$has_main_titles = true;
+				break;
+			}
+		}
+		?>
 
 		<?php if ( empty( $quizzes ) ) : ?>
 			<div class="iaq-ps-empty-state">
@@ -1169,6 +1184,37 @@ $page_url = function( $subview = '', $params = array() ) {
 				<a href="<?php echo esc_url( $page_url( 'exam', array( 'exam_id' => $exam->id ) ) ); ?>" class="iaq-btn iaq-btn-outline" style="margin-top:12px;">
 					&larr; <?php printf( esc_html__( 'Back to %s Subjects', 'indianagri-quiz-engine' ), esc_html( $exam->code ) ); ?>
 				</a>
+			</div>
+		<?php elseif ( $has_main_titles ) : ?>
+			<div class="iaq-ps-hierarchy-container" style="display:flex;flex-direction:column;gap:24px;margin-top:16px;">
+				<?php foreach ( $grouped_hierarchy as $group ) : ?>
+					<?php if ( empty( $group['practice_sets'] ) ) continue; ?>
+					<div class="iaq-ps-main-title-section" style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+						<div class="iaq-ps-main-title-header" style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #f1f5f9;padding-bottom:12px;margin-bottom:16px;">
+							<div style="display:flex;align-items:center;gap:10px;">
+								<span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:#e0f2fe;color:#0284c7;border-radius:8px;font-weight:700;font-size:14px;">
+									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+								</span>
+								<div>
+									<h3 style="margin:0;font-size:16px;font-weight:700;color:#0f172a;">
+										<?php echo esc_html( $group['title'] ); ?>
+									</h3>
+									<?php if ( ! empty( $group['description'] ) ) : ?>
+										<p style="margin:2px 0 0 0;font-size:12px;color:#64748b;"><?php echo esc_html( $group['description'] ); ?></p>
+									<?php endif; ?>
+								</div>
+							</div>
+							<span class="iaq-pill" style="background:#f0fdf4;color:#117E3A;font-weight:700;font-size:12px;">
+								<?php printf( esc_html( _n( '%d Practice Set', '%d Practice Sets', count( $group['practice_sets'] ), 'indianagri-quiz-engine' ) ), count( $group['practice_sets'] ) ); ?>
+							</span>
+						</div>
+						<div class="iaq-ps-sets-list">
+							<?php foreach ( $group['practice_sets'] as $pq ) : ?>
+								<?php include IAQ_PLUGIN_DIR . 'templates/frontend/practice-set-card.php'; ?>
+							<?php endforeach; ?>
+						</div>
+					</div>
+				<?php endforeach; ?>
 			</div>
 		<?php else : ?>
 			<div class="iaq-ps-sets-list">

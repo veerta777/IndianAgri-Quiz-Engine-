@@ -331,6 +331,7 @@ class IAQ_Frontend {
 				$exam    = IAQ_Examinations::get_examination( $e_id );
 				$subject = IAQ_Question_Bank::get_subject( $s_id );
 				$quizzes = ( $exam && $subject ) ? IAQ_Practice_Sets::get_exam_subject_quizzes( $exam->id, $subject->id, 'published', $user_id ) : array();
+				$grouped_hierarchy = ( $exam && $subject ) ? IAQ_Practice_Sets::get_exam_subject_grouped_hierarchy( $exam->id, $subject->id, 'published', $user_id ) : array();
 				break;
 
 			case 'landing':
