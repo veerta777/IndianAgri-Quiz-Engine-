@@ -36,6 +36,38 @@ class IAQ_Quiz_Attempt {
 			update_option( 'iaq_shuffle_all_quizzes_migrated_v2', 1 );
 		}
 
+		// Self-healing migration: Remove citation artifacts ([cite: 3], cite 3, etc.) from existing question bank rows
+		if ( ! get_option( 'iaq_clean_citations_migrated_v1' ) ) {
+			global $wpdb;
+			$table_questions = $wpdb->prefix . 'iaq_questions';
+			$rows = $wpdb->get_results( "SELECT id, question_text, option_a, option_b, option_c, option_d, explanation FROM {$table_questions} WHERE question_text LIKE '%cite%' OR option_a LIKE '%cite%' OR option_b LIKE '%cite%' OR option_c LIKE '%cite%' OR option_d LIKE '%cite%' OR explanation LIKE '%cite%' OR question_text LIKE '%source%' OR option_a LIKE '%source%' OR option_b LIKE '%source%' OR option_c LIKE '%source%' OR option_d LIKE '%source%' OR explanation LIKE '%source%'" );
+			if ( ! empty( $rows ) ) {
+				foreach ( $rows as $row ) {
+					$clean_q = self::clean_content( $row->question_text );
+					$clean_a = self::clean_content( $row->option_a );
+					$clean_b = self::clean_content( $row->option_b );
+					$clean_c = self::clean_content( $row->option_c );
+					$clean_d = self::clean_content( $row->option_d );
+					$clean_e = self::clean_content( $row->explanation );
+					if ( $clean_q !== $row->question_text || $clean_a !== $row->option_a || $clean_b !== $row->option_b || $clean_c !== $row->option_c || $clean_d !== $row->option_d || $clean_e !== $row->explanation ) {
+						$wpdb->update(
+							$table_questions,
+							array(
+								'question_text' => $clean_q,
+								'option_a'      => $clean_a,
+								'option_b'      => $clean_b,
+								'option_c'      => $clean_c,
+								'option_d'      => $clean_d,
+								'explanation'   => $clean_e,
+							),
+							array( 'id' => (int) $row->id )
+						);
+					}
+				}
+			}
+			update_option( 'iaq_clean_citations_migrated_v1', 1 );
+		}
+
 		// Logged in and guest student attempts (allows immediate start).
 		add_action( 'wp_ajax_iaq_start_quiz_attempt', array( $this, 'ajax_start_or_resume_attempt' ) );
 		add_action( 'wp_ajax_iaq_save_answer', array( $this, 'ajax_save_answer' ) );
@@ -341,14 +373,14 @@ class IAQ_Quiz_Attempt {
 		$safe_questions = array();
 		$index = 1;
 		foreach ( $raw_questions as $q ) {
-			$opt_a = array( 'key' => 'A', 'text' => $q->option_a );
-			$opt_b = array( 'key' => 'B', 'text' => $q->option_b );
-			$opt_c = array( 'key' => 'C', 'text' => $q->option_c );
-			$opt_d = array( 'key' => 'D', 'text' => $q->option_d );
-			if ( ! empty( $q->option_a_hi ) ) $opt_a['text_hi'] = $q->option_a_hi;
-			if ( ! empty( $q->option_b_hi ) ) $opt_b['text_hi'] = $q->option_b_hi;
-			if ( ! empty( $q->option_c_hi ) ) $opt_c['text_hi'] = $q->option_c_hi;
-			if ( ! empty( $q->option_d_hi ) ) $opt_d['text_hi'] = $q->option_d_hi;
+			$opt_a = array( 'key' => 'A', 'text' => self::clean_content( $q->option_a ) );
+			$opt_b = array( 'key' => 'B', 'text' => self::clean_content( $q->option_b ) );
+			$opt_c = array( 'key' => 'C', 'text' => self::clean_content( $q->option_c ) );
+			$opt_d = array( 'key' => 'D', 'text' => self::clean_content( $q->option_d ) );
+			if ( ! empty( $q->option_a_hi ) ) $opt_a['text_hi'] = self::clean_content( $q->option_a_hi );
+			if ( ! empty( $q->option_b_hi ) ) $opt_b['text_hi'] = self::clean_content( $q->option_b_hi );
+			if ( ! empty( $q->option_c_hi ) ) $opt_c['text_hi'] = self::clean_content( $q->option_c_hi );
+			if ( ! empty( $q->option_d_hi ) ) $opt_d['text_hi'] = self::clean_content( $q->option_d_hi );
 
 			$opts = array( $opt_a, $opt_b, $opt_c, $opt_d );
 			// Randomize Option Order
@@ -359,8 +391,8 @@ class IAQ_Quiz_Attempt {
 			$q_row = array(
 				'index'            => $index++,
 				'id'               => (int) $q->id,
-				'question_text'    => $q->question_text,
-				'question_text_hi' => ! empty( $q->question_text_hi ) ? $q->question_text_hi : '',
+				'question_text'    => self::clean_content( $q->question_text ),
+				'question_text_hi' => ! empty( $q->question_text_hi ) ? self::clean_content( $q->question_text_hi ) : '',
 				'subject_name'     => isset( $q->subject_name ) ? $q->subject_name : '',
 				'topic_name'       => isset( $q->topic_name ) ? $q->topic_name : '',
 				'marks'            => (float) $q->marks,
@@ -667,21 +699,21 @@ class IAQ_Quiz_Attempt {
 		$index = 1;
 
 		foreach ( $raw_questions as $q ) {
-			$opt_a = array( 'key' => 'A', 'text' => $q->option_a );
-			$opt_b = array( 'key' => 'B', 'text' => $q->option_b );
-			$opt_c = array( 'key' => 'C', 'text' => $q->option_c );
-			$opt_d = array( 'key' => 'D', 'text' => $q->option_d );
+			$opt_a = array( 'key' => 'A', 'text' => self::clean_content( $q->option_a ) );
+			$opt_b = array( 'key' => 'B', 'text' => self::clean_content( $q->option_b ) );
+			$opt_c = array( 'key' => 'C', 'text' => self::clean_content( $q->option_c ) );
+			$opt_d = array( 'key' => 'D', 'text' => self::clean_content( $q->option_d ) );
 			if ( ! empty( $q->option_a_hi ) ) {
-				$opt_a['text_hi'] = $q->option_a_hi;
+				$opt_a['text_hi'] = self::clean_content( $q->option_a_hi );
 			}
 			if ( ! empty( $q->option_b_hi ) ) {
-				$opt_b['text_hi'] = $q->option_b_hi;
+				$opt_b['text_hi'] = self::clean_content( $q->option_b_hi );
 			}
 			if ( ! empty( $q->option_c_hi ) ) {
-				$opt_c['text_hi'] = $q->option_c_hi;
+				$opt_c['text_hi'] = self::clean_content( $q->option_c_hi );
 			}
 			if ( ! empty( $q->option_d_hi ) ) {
-				$opt_d['text_hi'] = $q->option_d_hi;
+				$opt_d['text_hi'] = self::clean_content( $q->option_d_hi );
 			}
 			$opts = array( $opt_a, $opt_b, $opt_c, $opt_d );
 
@@ -702,7 +734,7 @@ class IAQ_Quiz_Attempt {
 			$q_data = array(
 				'index'          => $index++,
 				'id'             => $qid,
-				'question_text'  => $q->question_text,
+				'question_text'  => self::clean_content( $q->question_text ),
 				'subject_name'   => isset( $q->subject_name ) ? $q->subject_name : '',
 				'topic_name'     => isset( $q->topic_name ) ? $q->topic_name : '',
 				'marks'          => $q_pos_marks,
@@ -1050,11 +1082,35 @@ class IAQ_Quiz_Attempt {
 	 * @return string Sanitized clean explanation.
 	 */
 	public static function clean_explanation( $text ) {
-		if ( empty( $text ) ) {
-			return '';
+		return self::clean_content( $text );
+	}
+
+	/**
+	 * Clean and normalize text (options, questions, explanations):
+	 * Strips [cite: 3], [cite 3], cite 3, (cite 3), 【3†source】, [3], etc.
+	 *
+	 * @param string $text Raw input text.
+	 * @return string Sanitized clean text.
+	 */
+	public static function clean_content( $text ) {
+		if ( empty( $text ) || ! is_string( $text ) ) {
+			return $text;
 		}
-		// Strip [cite: 1], [cite: 1, 2], [cite: ...]
-		$text = preg_replace( '/\s*\[cite:\s*[^\]]+\]/i', '', $text );
+		// Strip [cite: 3], [cite: 1, 2], [cite 3], [cite: ...], [cite...]
+		$text = preg_replace( '/\s*\[cite:?\s*[^\]]+\]/i', '', $text );
+		// Strip (cite: 3), (cite 3), (cite: ...)
+		$text = preg_replace( '/\s*\(cite:?\s*[^\)]+\)/i', '', $text );
+		// Strip bare cite 3, cite: 3, cite 1
+		$text = preg_replace( '/\s*\bcite:?\s*\d+\b/i', '', $text );
+		// Strip ChatGPT 【3†source】
+		$text = preg_replace( '/\s*【[^】]+】/u', '', $text );
+		// Strip [citation: ...], [ref: ...], [source: ...]
+		$text = preg_replace( '/\s*\[(citation|ref|source):?\s*[^\]]+\]/i', '', $text );
+		// Strip standalone footnote numbers in brackets e.g. [3]
+		$text = preg_replace( '/\s*\[\d{1,2}\](?!\s*[\+\-\*\/=])/', '', $text );
+		// Strip <cite> tags
+		$text = preg_replace( '/<\/?cite[^>]*>/i', '', $text );
+
 		return trim( $text );
 	}
 
@@ -1382,18 +1438,18 @@ class IAQ_Quiz_Attempt {
 			$questions[] = array(
 				'index'           => $index++,
 				'id'              => (int) $r->question_id,
-				'question_text'   => $r->question_text,
+				'question_text'   => self::clean_content( $r->question_text ),
 				'subject_name'    => isset( $r->subject_name ) ? $r->subject_name : '',
 				'topic_name'      => isset( $r->topic_name ) ? $r->topic_name : '',
-				'option_a'        => $r->option_a,
-				'option_b'        => $r->option_b,
-				'option_c'        => $r->option_c,
-				'option_d'        => $r->option_d,
+				'option_a'        => self::clean_content( $r->option_a ),
+				'option_b'        => self::clean_content( $r->option_b ),
+				'option_c'        => self::clean_content( $r->option_c ),
+				'option_d'        => self::clean_content( $r->option_d ),
 				'selected_option' => $r->selected_option,
 				'correct_option'  => $r->correct_option,
 				'is_correct'      => ! is_null( $r->is_correct ) ? (int) $r->is_correct : null,
 				'marks_awarded'   => (float) $r->marks_awarded,
-				'explanation'     => $r->explanation,
+				'explanation'     => self::clean_explanation( $r->explanation ),
 			);
 		}
 

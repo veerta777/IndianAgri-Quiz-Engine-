@@ -245,6 +245,21 @@ class Test_Quiz_Attempt {
 		echo "    [PASS] Practice set scorecard calculated accurately (+4.00 - 1.00 = 3.00 / 8.00)\n";
 
 		// =========================================================================
+		// 6h. Citation Artifacts Sanitization Verification (cite 3, [cite: 3], etc.)
+		// =========================================================================
+		echo "  Testing Citation Artifacts Sanitization (cite 3, [cite: 3], options & questions)...\n";
+		assert( IAQ_Quiz_Attempt::clean_content( 'Jabalpur, Madhya Pradesh [cite: 3]' ) === 'Jabalpur, Madhya Pradesh', 'Must strip [cite: 3]' );
+		assert( IAQ_Quiz_Attempt::clean_content( 'Hisar, Haryana [cite 3]' ) === 'Hisar, Haryana', 'Must strip [cite 3]' );
+		assert( IAQ_Quiz_Attempt::clean_content( 'New Delhi (cite: 3)' ) === 'New Delhi', 'Must strip (cite: 3)' );
+		assert( IAQ_Quiz_Attempt::clean_content( 'New Delhi (cite 3)' ) === 'New Delhi', 'Must strip (cite 3)' );
+		assert( IAQ_Quiz_Attempt::clean_content( 'Hyderabad, Telangana cite 3' ) === 'Hyderabad, Telangana', 'Must strip bare cite 3' );
+		assert( IAQ_Quiz_Attempt::clean_content( 'Karnal 【3†source】' ) === 'Karnal', 'Must strip ChatGPT citation' );
+		assert( IAQ_Quiz_Attempt::clean_content( '[cite: 1] Bangalore' ) === 'Bangalore', 'Must strip leading [cite: 1]' );
+		assert( IAQ_Quiz_Attempt::clean_content( 'Patna [2]' ) === 'Patna', 'Must strip bracket footnote [2]' );
+		assert( IAQ_Quiz_Attempt::clean_content( 'Pure Agricultural Option Text' ) === 'Pure Agricultural Option Text', 'Must preserve clean text' );
+		echo "    [PASS] All citation artifacts ([cite: 3], [cite 3], cite 3, etc.) sanitized cleanly from options & stems\n";
+
+		// =========================================================================
 		// 7. Mock Test Protection Verification (Server-Side Enforced)
 		// =========================================================================
 		echo "  Testing Mock Test Strict Answer Key Protection...\n";

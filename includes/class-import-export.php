@@ -592,20 +592,24 @@ class IAQ_Import_Export {
 			}
 
 			// Build payload for Question Bank.
+			$clean_fn = function( $t ) {
+				return class_exists( 'IAQ_Quiz_Attempt' ) ? IAQ_Quiz_Attempt::clean_content( $t ) : trim( preg_replace( '/\s*\[cite:?\s*[^\]]+\]/i', '', $t ) );
+			};
+
 			$question_payload = array(
 				'subject_id'     => $subject_id,
 				'topic_id'       => $topic_id,
 				'exam_category'  => $exam_cat,
 				'difficulty'     => $difficulty,
-				'question_text'  => $row_data['question_text'],
-				'option_a'       => $row_data['option_a'],
-				'option_b'       => $row_data['option_b'],
-				'option_c'       => $row_data['option_c'],
-				'option_d'       => $row_data['option_d'],
+				'question_text'  => $clean_fn( $row_data['question_text'] ),
+				'option_a'       => $clean_fn( $row_data['option_a'] ),
+				'option_b'       => $clean_fn( $row_data['option_b'] ),
+				'option_c'       => $clean_fn( $row_data['option_c'] ),
+				'option_d'       => $clean_fn( $row_data['option_d'] ),
 				'correct_option' => $correct_option,
 				'marks'          => $marks,
 				'negative_marks' => $negative_marks,
-				'explanation'    => isset( $row_data['explanation'] ) ? $row_data['explanation'] : '',
+				'explanation'    => isset( $row_data['explanation'] ) ? $clean_fn( $row_data['explanation'] ) : '',
 				'status'         => $status,
 				'created_by'     => get_current_user_id(),
 			);
@@ -972,20 +976,24 @@ class IAQ_Import_Export {
 
 			$explanation = ! empty( $q_data['explanation'] ) ? $q_data['explanation'] : '';
 
+			$clean_fn = function( $t ) {
+				return class_exists( 'IAQ_Quiz_Attempt' ) ? IAQ_Quiz_Attempt::clean_content( $t ) : trim( preg_replace( '/\s*\[cite:?\s*[^\]]+\]/i', '', $t ) );
+			};
+
 			$question_payload = array(
 				'subject_id'     => $subject_id,
 				'topic_id'       => $topic_id,
 				'exam_category'  => $exam_cat,
 				'difficulty'     => $difficulty,
-				'question_text'  => $stem,
-				'option_a'       => $options_map['A'],
-				'option_b'       => $options_map['B'],
-				'option_c'       => $options_map['C'],
-				'option_d'       => $options_map['D'],
+				'question_text'  => $clean_fn( $stem ),
+				'option_a'       => $clean_fn( $options_map['A'] ),
+				'option_b'       => $clean_fn( $options_map['B'] ),
+				'option_c'       => $clean_fn( $options_map['C'] ),
+				'option_d'       => $clean_fn( $options_map['D'] ),
 				'correct_option' => $correct_option,
 				'marks'          => $marks,
 				'negative_marks' => $negative_marks,
-				'explanation'    => $explanation,
+				'explanation'    => $clean_fn( $explanation ),
 				'status'         => $status,
 				'created_by'     => get_current_user_id(),
 			);

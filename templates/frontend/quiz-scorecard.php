@@ -182,17 +182,17 @@ if ( empty( $scorecard ) || ! is_array( $scorecard ) ) {
 							</div>
 
 							<div class="iaq-sol-qtext">
-								<?php echo wp_kses_post( $q['question_text'] ); ?>
+								<?php echo wp_kses_post( class_exists( 'IAQ_Quiz_Attempt' ) ? IAQ_Quiz_Attempt::clean_content( $q['question_text'] ) : $q['question_text'] ); ?>
 							</div>
 
 							<!-- Options -->
 							<div class="iaq-sol-options-grid">
 								<?php
 								$options = array(
-									'A' => $q['option_a'],
-									'B' => $q['option_b'],
-									'C' => $q['option_c'],
-									'D' => $q['option_d'],
+									'A' => class_exists( 'IAQ_Quiz_Attempt' ) ? IAQ_Quiz_Attempt::clean_content( $q['option_a'] ) : $q['option_a'],
+									'B' => class_exists( 'IAQ_Quiz_Attempt' ) ? IAQ_Quiz_Attempt::clean_content( $q['option_b'] ) : $q['option_b'],
+									'C' => class_exists( 'IAQ_Quiz_Attempt' ) ? IAQ_Quiz_Attempt::clean_content( $q['option_c'] ) : $q['option_c'],
+									'D' => class_exists( 'IAQ_Quiz_Attempt' ) ? IAQ_Quiz_Attempt::clean_content( $q['option_d'] ) : $q['option_d'],
 								);
 								foreach ( $options as $k => $opt_text ) :
 									$is_correct_opt  = ( $k === $q['correct_option'] );

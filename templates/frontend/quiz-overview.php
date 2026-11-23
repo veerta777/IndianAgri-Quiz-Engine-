@@ -50,14 +50,18 @@ if ( class_exists( 'IAQ_Quiz_Builder' ) ) {
 		$should_shuffle_options = ! isset( $quiz->shuffle_options ) || (int) $quiz->shuffle_options !== 0;
 		$p_idx = 1;
 		foreach ( $raw_assigned as $rq ) {
-			$opt_a = array( 'key' => 'A', 'text' => $rq->option_a );
-			$opt_b = array( 'key' => 'B', 'text' => $rq->option_b );
-			$opt_c = array( 'key' => 'C', 'text' => $rq->option_c );
-			$opt_d = array( 'key' => 'D', 'text' => $rq->option_d );
-			if ( ! empty( $rq->option_a_hi ) ) $opt_a['text_hi'] = $rq->option_a_hi;
-			if ( ! empty( $rq->option_b_hi ) ) $opt_b['text_hi'] = $rq->option_b_hi;
-			if ( ! empty( $rq->option_c_hi ) ) $opt_c['text_hi'] = $rq->option_c_hi;
-			if ( ! empty( $rq->option_d_hi ) ) $opt_d['text_hi'] = $rq->option_d_hi;
+			$clean_fn = function( $txt ) {
+				return class_exists( 'IAQ_Quiz_Attempt' ) ? IAQ_Quiz_Attempt::clean_content( $txt ) : trim( preg_replace( '/\s*\[cite:?\s*[^\]]+\]/i', '', $txt ) );
+			};
+
+			$opt_a = array( 'key' => 'A', 'text' => $clean_fn( $rq->option_a ) );
+			$opt_b = array( 'key' => 'B', 'text' => $clean_fn( $rq->option_b ) );
+			$opt_c = array( 'key' => 'C', 'text' => $clean_fn( $rq->option_c ) );
+			$opt_d = array( 'key' => 'D', 'text' => $clean_fn( $rq->option_d ) );
+			if ( ! empty( $rq->option_a_hi ) ) $opt_a['text_hi'] = $clean_fn( $rq->option_a_hi );
+			if ( ! empty( $rq->option_b_hi ) ) $opt_b['text_hi'] = $clean_fn( $rq->option_b_hi );
+			if ( ! empty( $rq->option_c_hi ) ) $opt_c['text_hi'] = $clean_fn( $rq->option_c_hi );
+			if ( ! empty( $rq->option_d_hi ) ) $opt_d['text_hi'] = $clean_fn( $rq->option_d_hi );
 
 			$opts = array( $opt_a, $opt_b, $opt_c, $opt_d );
 
@@ -72,8 +76,8 @@ if ( class_exists( 'IAQ_Quiz_Builder' ) ) {
 			$q_payload = array(
 				'index'            => $p_idx++,
 				'id'               => (int) $rq->id,
-				'question_text'    => $rq->question_text,
-				'question_text_hi' => ! empty( $rq->question_text_hi ) ? $rq->question_text_hi : '',
+				'question_text'    => $clean_fn( $rq->question_text ),
+				'question_text_hi' => ! empty( $rq->question_text_hi ) ? $clean_fn( $rq->question_text_hi ) : '',
 				'subject_name'     => isset( $rq->subject_name ) ? $rq->subject_name : '',
 				'topic_name'       => isset( $rq->topic_name ) ? $rq->topic_name : '',
 				'marks'            => (float) $rq->marks,

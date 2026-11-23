@@ -17,9 +17,29 @@
 		spinner: '<svg class="iaq-icon iaq-icon-spin" viewBox="0 0 24 24" fill="none" width="14" height="14" aria-hidden="true" style="animation: iaqSpin 1s linear infinite;vertical-align:-2px;margin-right:6px;"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.25"/><path fill="currentColor" d="M12 2a10 10 0 0110 10h-3a7 7 0 00-7-7V2z"/></svg>'
 	};
 
+	function cleanContentText(txt) {
+		if (!txt) return '';
+		txt = String(txt);
+		// Strip [cite: 3], [cite: 1, 2], [cite:3], [cite 3], [cite: ...]
+		txt = txt.replace(/\s*\[cite:?\s*[^\]]+\]/gi, '');
+		// Strip (cite: 3), (cite 3), (cite: ...)
+		txt = txt.replace(/\s*\(cite:?\s*[^\)]+\)/gi, '');
+		// Strip bare cite 3, cite: 3, cite 1
+		txt = txt.replace(/\s*\bcite:?\s*\d+\b/gi, '');
+		// Strip ChatGPT/Copilot citations like 【3†source】 or 【12†source】
+		txt = txt.replace(/\s*【[^】]+】/g, '');
+		// Strip [citation: ...], [ref: ...], [source: ...]
+		txt = txt.replace(/\s*\[(citation|ref|source):?\s*[^\]]+\]/gi, '');
+		// Strip standalone footnote numbers in brackets e.g. [3] or [1] at end/after word
+		txt = txt.replace(/\s*\[\d{1,2}\](?!\s*[\+\-\*\/=])/g, '');
+		// Strip HTML <cite> tags
+		txt = txt.replace(/<\/?cite[^>]*>/gi, '');
+		return txt.trim();
+	}
+
 	function cleanExplanationText(txt) {
 		if (!txt) return '';
-		txt = String(txt).replace(/\s*\[cite:\s*[^\]]+\]/gi, '').trim();
+		txt = cleanContentText(txt);
 		if (txt.indexOf('<p>') === -1 && txt.indexOf('<br') === -1 && txt.indexOf('<div') === -1) {
 			txt = txt.replace(/\n\n+/g, '</p><p>').replace(/\n/g, '<br>');
 			txt = '<p>' + txt + '</p>';
@@ -244,6 +264,15 @@
 			self.incorrectCount = 0;
 
 			$.each(self.questions, function (i, q) {
+				if (q.question_text) q.question_text = cleanContentText(q.question_text);
+				if (q.question_text_hi) q.question_text_hi = cleanContentText(q.question_text_hi);
+				if (q.explanation) q.explanation = cleanExplanationText(q.explanation);
+				if (q.options && Array.isArray(q.options)) {
+					$.each(q.options, function (_, opt) {
+						if (opt.text) opt.text = cleanContentText(opt.text);
+						if (opt.text_hi) opt.text_hi = cleanContentText(opt.text_hi);
+					});
+				}
 				var hasAns = (q.selected != null && String(q.selected).trim() !== '');
 				var isM = (q.is_marked ? 1 : 0);
 				var isV = (i === 0) ? true : (q.visited ? true : (hasAns ? true : (isM ? true : false)));
@@ -672,7 +701,7 @@
 			$('#iaq-q-neg-marks').text(q.negative_marks);
 
 			// Render Question Text.
-			$('#iaq-question-text').html(q.question_text);
+			$('#iaq-question-text').html(cleanContentText(q.question_text));
 
 			// Reset Immediate Feedback Box.
 			var $fbBox = $('#iaq-immediate-feedback-box');
@@ -694,7 +723,7 @@
 
 				var visualLabel = ['A', 'B', 'C', 'D'][oi] || opt.key;
 				var $key = $('<span class="iaq-option-key">' + visualLabel + '</span>');
-				var $lbl = $('<span class="iaq-option-label"></span>').html(opt.text);
+				var $lbl = $('<span class="iaq-option-label"></span>').html(cleanContentText(opt.text));
 
 				$item.append($key).append($lbl);
 
@@ -1590,16 +1619,16 @@
 				$card.append($head);
 
 				// Question text
-				var $qText = $('<div class="iaq-sol-qtext"></div>').html(q.question_text);
+				var $qText = $('<div class="iaq-sol-qtext"></div>').html(cleanContentText(q.question_text));
 				$card.append($qText);
 
 				// 4 Options
 				var $opts = $('<div class="iaq-sol-options-grid"></div>');
 				var optList = [
-					{ key: 'A', text: q.option_a },
-					{ key: 'B', text: q.option_b },
-					{ key: 'C', text: q.option_c },
-					{ key: 'D', text: q.option_d }
+					{ key: 'A', text: cleanContentText(q.option_a) },
+					{ key: 'B', text: cleanContentText(q.option_b) },
+					{ key: 'C', text: cleanContentText(q.option_c) },
+					{ key: 'D', text: cleanContentText(q.option_d) }
 				];
 
 				$.each(optList, function (oi, opt) {

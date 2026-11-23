@@ -467,15 +467,20 @@ class IAQ_Question_Bank {
 		// Validation: Question text is mandatory.
 		// Use wp_kses_post to allow sub/superscripts, math formatting, and rich Unicode/Hindi text.
 		$question_text = isset( $data['question_text'] ) ? wp_kses_post( wp_unslash( $data['question_text'] ) ) : '';
+		$clean_fn = function( $t ) {
+			return class_exists( 'IAQ_Quiz_Attempt' ) ? IAQ_Quiz_Attempt::clean_content( $t ) : trim( preg_replace( '/\s*\[cite:?\s*[^\]]+\]/i', '', $t ) );
+		};
+
+		$question_text = $clean_fn( $question_text );
 		if ( empty( trim( strip_tags( $question_text ) ) ) && empty( trim( $question_text ) ) ) {
 			return new WP_Error( 'empty_question', __( 'Question text is required.', 'indianagri-quiz-engine' ) );
 		}
 
 		// Options validation.
-		$option_a = isset( $data['option_a'] ) ? wp_kses_post( wp_unslash( $data['option_a'] ) ) : '';
-		$option_b = isset( $data['option_b'] ) ? wp_kses_post( wp_unslash( $data['option_b'] ) ) : '';
-		$option_c = isset( $data['option_c'] ) ? wp_kses_post( wp_unslash( $data['option_c'] ) ) : '';
-		$option_d = isset( $data['option_d'] ) ? wp_kses_post( wp_unslash( $data['option_d'] ) ) : '';
+		$option_a = isset( $data['option_a'] ) ? $clean_fn( wp_kses_post( wp_unslash( $data['option_a'] ) ) ) : '';
+		$option_b = isset( $data['option_b'] ) ? $clean_fn( wp_kses_post( wp_unslash( $data['option_b'] ) ) ) : '';
+		$option_c = isset( $data['option_c'] ) ? $clean_fn( wp_kses_post( wp_unslash( $data['option_c'] ) ) ) : '';
+		$option_d = isset( $data['option_d'] ) ? $clean_fn( wp_kses_post( wp_unslash( $data['option_d'] ) ) ) : '';
 
 		if ( '' === trim( $option_a ) || '' === trim( $option_b ) || '' === trim( $option_c ) || '' === trim( $option_d ) ) {
 			return new WP_Error( 'empty_options', __( 'All four answer options (A, B, C, D) are mandatory.', 'indianagri-quiz-engine' ) );
@@ -507,7 +512,7 @@ class IAQ_Question_Bank {
 		$negative_marks = isset( $data['negative_marks'] ) ? max( 0.00, floatval( $data['negative_marks'] ) ) : 0.00;
 
 		// Explanation.
-		$explanation = isset( $data['explanation'] ) ? wp_kses_post( wp_unslash( $data['explanation'] ) ) : '';
+		$explanation = isset( $data['explanation'] ) ? $clean_fn( wp_kses_post( wp_unslash( $data['explanation'] ) ) ) : '';
 
 		// Author.
 		$created_by = isset( $data['created_by'] ) ? absint( $data['created_by'] ) : get_current_user_id();

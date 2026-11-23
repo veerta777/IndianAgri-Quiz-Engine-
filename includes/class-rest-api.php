@@ -1284,17 +1284,17 @@ class IAQ_Rest_Api {
 				$sample_preview[] = array(
 					'index'            => $s_idx++,
 					'id'               => (int) $sq->id,
-					'question_text'    => $sq->question_text,
-					'question_text_hi' => ! empty( $sq->question_text_hi ) ? $sq->question_text_hi : '',
+					'question_text'    => IAQ_Quiz_Attempt::clean_content( $sq->question_text ),
+					'question_text_hi' => ! empty( $sq->question_text_hi ) ? IAQ_Quiz_Attempt::clean_content( $sq->question_text_hi ) : '',
 					'subject_name'     => isset( $sq->subject_name ) ? $sq->subject_name : '',
 					'topic_name'       => isset( $sq->topic_name ) ? $sq->topic_name : '',
 					'marks'            => ! empty( $sq->marks ) ? (float) $sq->marks : 1.0,
 					'negative_marks'   => ! empty( $sq->negative_marks ) ? (float) $sq->negative_marks : 0.25,
 					'options'          => array(
-						array( 'key' => 'A', 'text' => $sq->option_a, 'text_hi' => ! empty( $sq->option_a_hi ) ? $sq->option_a_hi : '' ),
-						array( 'key' => 'B', 'text' => $sq->option_b, 'text_hi' => ! empty( $sq->option_b_hi ) ? $sq->option_b_hi : '' ),
-						array( 'key' => 'C', 'text' => $sq->option_c, 'text_hi' => ! empty( $sq->option_c_hi ) ? $sq->option_c_hi : '' ),
-						array( 'key' => 'D', 'text' => $sq->option_d, 'text_hi' => ! empty( $sq->option_d_hi ) ? $sq->option_d_hi : '' ),
+						array( 'key' => 'A', 'text' => IAQ_Quiz_Attempt::clean_content( $sq->option_a ), 'text_hi' => ! empty( $sq->option_a_hi ) ? IAQ_Quiz_Attempt::clean_content( $sq->option_a_hi ) : '' ),
+						array( 'key' => 'B', 'text' => IAQ_Quiz_Attempt::clean_content( $sq->option_b ), 'text_hi' => ! empty( $sq->option_b_hi ) ? IAQ_Quiz_Attempt::clean_content( $sq->option_b_hi ) : '' ),
+						array( 'key' => 'C', 'text' => IAQ_Quiz_Attempt::clean_content( $sq->option_c ), 'text_hi' => ! empty( $sq->option_c_hi ) ? IAQ_Quiz_Attempt::clean_content( $sq->option_c_hi ) : '' ),
+						array( 'key' => 'D', 'text' => IAQ_Quiz_Attempt::clean_content( $sq->option_d ), 'text_hi' => ! empty( $sq->option_d_hi ) ? IAQ_Quiz_Attempt::clean_content( $sq->option_d_hi ) : '' ),
 					),
 					'demo_answer'      => strtoupper( trim( $sq->correct_option ) ),
 					'demo_explanation' => IAQ_Quiz_Attempt::clean_explanation( $sq->explanation ),
@@ -1378,10 +1378,10 @@ class IAQ_Rest_Api {
 
 		foreach ( $raw_questions as $q ) {
 			$opts = array(
-				array( 'key' => 'A', 'text' => $q->option_a, 'text_hi' => ! empty( $q->option_a_hi ) ? $q->option_a_hi : '' ),
-				array( 'key' => 'B', 'text' => $q->option_b, 'text_hi' => ! empty( $q->option_b_hi ) ? $q->option_b_hi : '' ),
-				array( 'key' => 'C', 'text' => $q->option_c, 'text_hi' => ! empty( $q->option_c_hi ) ? $q->option_c_hi : '' ),
-				array( 'key' => 'D', 'text' => $q->option_d, 'text_hi' => ! empty( $q->option_d_hi ) ? $q->option_d_hi : '' ),
+				array( 'key' => 'A', 'text' => IAQ_Quiz_Attempt::clean_content( $q->option_a ), 'text_hi' => ! empty( $q->option_a_hi ) ? IAQ_Quiz_Attempt::clean_content( $q->option_a_hi ) : '' ),
+				array( 'key' => 'B', 'text' => IAQ_Quiz_Attempt::clean_content( $q->option_b ), 'text_hi' => ! empty( $q->option_b_hi ) ? IAQ_Quiz_Attempt::clean_content( $q->option_b_hi ) : '' ),
+				array( 'key' => 'C', 'text' => IAQ_Quiz_Attempt::clean_content( $q->option_c ), 'text_hi' => ! empty( $q->option_c_hi ) ? IAQ_Quiz_Attempt::clean_content( $q->option_c_hi ) : '' ),
+				array( 'key' => 'D', 'text' => IAQ_Quiz_Attempt::clean_content( $q->option_d ), 'text_hi' => ! empty( $q->option_d_hi ) ? IAQ_Quiz_Attempt::clean_content( $q->option_d_hi ) : '' ),
 			);
 
 			if ( $should_shuffle_options ) {
@@ -1391,8 +1391,8 @@ class IAQ_Rest_Api {
 			$item = array(
 				'index'            => $index++,
 				'id'               => (int) $q->id,
-				'question_text'    => $q->question_text,
-				'question_text_hi' => ! empty( $q->question_text_hi ) ? $q->question_text_hi : '',
+				'question_text'    => IAQ_Quiz_Attempt::clean_content( $q->question_text ),
+				'question_text_hi' => ! empty( $q->question_text_hi ) ? IAQ_Quiz_Attempt::clean_content( $q->question_text_hi ) : '',
 				'subject_name'     => isset( $q->subject_name ) ? $q->subject_name : '',
 				'topic_name'       => isset( $q->topic_name ) ? $q->topic_name : '',
 				'marks'            => ! empty( $q->custom_marks ) ? (float) $q->custom_marks : ( ! empty( $q->marks ) ? (float) $q->marks : 1.0 ),
@@ -1474,17 +1474,17 @@ class IAQ_Rest_Api {
 
 			foreach ( $demo_questions as $q ) {
 				$opts = array(
-					array( 'key' => 'A', 'text' => $q->option_a, 'text_hi' => ! empty( $q->option_a_hi ) ? $q->option_a_hi : '' ),
-					array( 'key' => 'B', 'text' => $q->option_b, 'text_hi' => ! empty( $q->option_b_hi ) ? $q->option_b_hi : '' ),
-					array( 'key' => 'C', 'text' => $q->option_c, 'text_hi' => ! empty( $q->option_c_hi ) ? $q->option_c_hi : '' ),
-					array( 'key' => 'D', 'text' => $q->option_d, 'text_hi' => ! empty( $q->option_d_hi ) ? $q->option_d_hi : '' ),
+					array( 'key' => 'A', 'text' => IAQ_Quiz_Attempt::clean_content( $q->option_a ), 'text_hi' => ! empty( $q->option_a_hi ) ? IAQ_Quiz_Attempt::clean_content( $q->option_a_hi ) : '' ),
+					array( 'key' => 'B', 'text' => IAQ_Quiz_Attempt::clean_content( $q->option_b ), 'text_hi' => ! empty( $q->option_b_hi ) ? IAQ_Quiz_Attempt::clean_content( $q->option_b_hi ) : '' ),
+					array( 'key' => 'C', 'text' => IAQ_Quiz_Attempt::clean_content( $q->option_c ), 'text_hi' => ! empty( $q->option_c_hi ) ? IAQ_Quiz_Attempt::clean_content( $q->option_c_hi ) : '' ),
+					array( 'key' => 'D', 'text' => IAQ_Quiz_Attempt::clean_content( $q->option_d ), 'text_hi' => ! empty( $q->option_d_hi ) ? IAQ_Quiz_Attempt::clean_content( $q->option_d_hi ) : '' ),
 				);
 
 				$safe_questions[] = array(
 					'index'            => $index++,
 					'id'               => (int) $q->id,
-					'question_text'    => $q->question_text,
-					'question_text_hi' => ! empty( $q->question_text_hi ) ? $q->question_text_hi : '',
+					'question_text'    => IAQ_Quiz_Attempt::clean_content( $q->question_text ),
+					'question_text_hi' => ! empty( $q->question_text_hi ) ? IAQ_Quiz_Attempt::clean_content( $q->question_text_hi ) : '',
 					'subject_name'     => isset( $q->subject_name ) ? $q->subject_name : '',
 					'topic_name'       => isset( $q->topic_name ) ? $q->topic_name : '',
 					'marks'            => (float) $q->marks,
