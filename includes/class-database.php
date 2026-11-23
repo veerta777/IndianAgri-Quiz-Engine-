@@ -653,6 +653,18 @@ CREATE TABLE {$table_mock_test_relations} (
 		// 3. Seed Default Subscription Plans if not already existing.
 		$default_plans = array(
 			array(
+				'name'           => '5-Day Trial Pass',
+				'slug'           => '5-day-trial-pass',
+				'description'    => 'Full 5-day trial access to explore premium mock tests, practice sets, and detailed scientific solutions.',
+				'price'          => 9.00,
+				'duration_value' => 5,
+				'duration_unit'  => 'days',
+				'access_type'    => 'all_access',
+				'is_featured'    => 0,
+				'display_order'  => 0,
+				'features'       => "5 Days Unlimited Trial Access\nAccess to All Mock Tests & Practice Sets\nInstant Explanations & Solution Keys\nPerformance Analytics & Diagnostics",
+			),
+			array(
 				'name'           => 'Monthly All Access',
 				'slug'           => 'monthly-all-access',
 				'description'    => 'Full 30-day access to all premium mock examinations, practice sets, and detailed scientific solutions.',
@@ -1033,6 +1045,42 @@ CREATE TABLE {$table_mock_test_relations} (
 					array( '%d', '%s', '%s', '%s', '%d', '%s', '%d', '%s', '%s' )
 				);
 			}
+		}
+	}
+
+	/**
+	 * Ensure the 5-Day Trial Pass exists in the subscription plans table.
+	 */
+	public static function ensure_trial_plan() {
+		global $wpdb;
+		$table_plans = self::get_table_name( 'subscription_plans' );
+		if ( empty( $table_plans ) ) {
+			return;
+		}
+
+		$exists = $wpdb->get_var(
+			$wpdb->prepare( "SELECT id FROM {$table_plans} WHERE slug = %s", '5-day-trial-pass' )
+		);
+		if ( ! $exists ) {
+			$wpdb->insert(
+				$table_plans,
+				array(
+					'name'           => '5-Day Trial Pass',
+					'slug'           => '5-day-trial-pass',
+					'description'    => 'Full 5-day trial access to explore premium mock tests, practice sets, and detailed scientific solutions.',
+					'price'          => 9.00,
+					'currency'       => 'INR',
+					'duration_value' => 5,
+					'duration_unit'  => 'days',
+					'access_type'    => 'all_access',
+					'is_featured'    => 0,
+					'display_order'  => 0,
+					'features'       => "5 Days Unlimited Trial Access\nAccess to All Mock Tests & Practice Sets\nInstant Explanations & Solution Keys\nPerformance Analytics & Diagnostics",
+					'status'         => 'active',
+					'created_at'     => current_time( 'mysql' ),
+				),
+				array( '%s', '%s', '%s', '%f', '%s', '%d', '%s', '%s', '%d', '%d', '%s', '%s', '%s' )
+			);
 		}
 	}
 }

@@ -64,7 +64,14 @@ $active_plan_ids = ! empty( $active_subs ) ? wp_list_pluck( $active_subs, 'plan_
 								&#8377;<?php echo esc_html( number_format( (float) $plan->price, 0 ) ); ?>
 							</span>
 							<span style="font-size: 14px; color: #64748b; font-weight: 500;">
-								/ <?php echo esc_html( $plan->duration_value . ' ' . ucfirst( $plan->duration_unit ) ); ?>
+								<?php
+								$d_val  = (int) $plan->duration_value;
+								$d_unit = ucfirst( $plan->duration_unit );
+								if ( 1 === $d_val && 's' === strtolower( substr( $d_unit, -1 ) ) ) {
+									$d_unit = substr( $d_unit, 0, -1 );
+								}
+								?>
+								/ <?php echo esc_html( $d_val . ' ' . $d_unit ); ?>
 							</span>
 						</div>
 

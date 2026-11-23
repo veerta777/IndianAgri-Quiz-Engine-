@@ -36,6 +36,11 @@ class IAQ_Access_Control {
 
 		// WooCommerce Order Thank You page subscription confirmation banner.
 		add_action( 'woocommerce_thankyou', array( __CLASS__, 'render_order_thankyou_subscription_banner' ), 5 );
+
+		// Self-healing: Ensure 5-Day Trial Plan is present in database.
+		if ( class_exists( 'IAQ_Database' ) ) {
+			IAQ_Database::ensure_trial_plan();
+		}
 	}
 
 	/**

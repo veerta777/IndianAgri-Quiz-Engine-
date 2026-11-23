@@ -11,6 +11,7 @@ class Test_Subscriptions_Monetization {
 		echo "\nRunning Test_Subscriptions_Monetization...\n";
 
 		self::test_plan_creation_and_attributes();
+		self::test_trial_plan_at_rs_9_before_monthly();
 		self::test_calendar_aware_expiry_calculations();
 		self::test_student_subscription_provisioning_and_stacking();
 		self::test_admin_manual_revocation();
@@ -321,5 +322,65 @@ class Test_Subscriptions_Monetization {
 		remove_action( 'iaq_student_subscription_completed_deactivated', $hook_callback, 10 );
 
 		echo "  [PASS] Automatic student deactivation on expiry and instant reactivation on renewal verified.\n";
+	}
+
+	private static function test_trial_plan_at_rs_9_before_monthly() {
+		// Ensure default plans including trial plan are seeded
+		IAQ_Database::seed_default_data();
+		IAQ_Database::ensure_trial_plan();
+
+		$trial_plan = IAQ_Access_Control::get_plan_by_code( '5-day-trial-pass' );
+		if ( ! $trial_plan ) {
+			throw new Exception( 'Could not find 5-day trial pass plan in database.' );
+		}
+
+		if ( (float) $trial_plan->price !== 9.00 ) {
+			throw new Exception( 'Trial plan price must be 9.00, got: ' . $trial_plan->price );
+		}
+
+		if ( (int) $trial_plan->duration_value !== 5 || 'days' !== $trial_plan->duration_unit ) {
+			throw new Exception( 'Trial plan duration must be 5 days, got: ' . $trial_plan->duration_value . ' ' . $trial_plan->duration_unit );
+		}
+
+		if ( 'all_access' !== $trial_plan->access_type ) {
+			throw new Exception( 'Trial plan must provide all_access scope.' );
+		}
+
+		// Verify it appears before Monthly All Access in ordering
+		$plans = IAQ_Access_Control::get_plans( array( 'status' => 'active' ) );
+		$trial_index   = -1;
+		$monthly_index = -1;
+		foreach ( $plans as $idx => $p ) {
+			if ( '5-day-trial-pass' === $p->slug ) {
+				$trial_index = $idx;
+			} elseif ( 'monthly-all-access' === $p->slug ) {
+				$monthly_index = $idx;
+			}
+		}
+
+		if ( $trial_index < 0 || $monthly_index < 0 || $trial_index >= $monthly_index ) {
+			throw new Exception( "Trial plan must appear before Monthly All Access. Trial index: {$trial_index}, Monthly index: {$monthly_index}" );
+		}
+
+		// Verify 5-day expiry calculation
+		$start_time = '2026-05-01 10:00:00';
+		$exp_time   = IAQ_Access_Control::calculate_calendar_expiry( $start_time, $trial_plan->duration_value, $trial_plan->duration_unit );
+		if ( '2026-05-06 10:00:00' !== $exp_time ) {
+			throw new Exception( "5-day trial expiry calculation mismatch: expected 2026-05-06 10:00:00, got {$exp_time}" );
+		}
+
+		// Test provisioning trial subscription to student
+		$user_id = 8888;
+		$sub_id  = IAQ_Access_Control::grant_subscription( $user_id, $trial_plan->id, null, '5-Day Trial Activation Test' );
+		if ( ! $sub_id || is_wp_error( $sub_id ) ) {
+			throw new Exception( 'Failed to grant 5-day trial subscription to student.' );
+		}
+
+		$user_subs = IAQ_Access_Control::get_user_subscriptions( $user_id, 'active' );
+		if ( empty( $user_subs ) || (int) $user_subs[0]->plan_id !== (int) $trial_plan->id ) {
+			throw new Exception( 'Student active subscription for 5-day trial was not found.' );
+		}
+
+		echo "  [PASS] 5-Day Trial Plan at ₹9 positioned before Monthly All Access verified.\n";
 	}
 }
