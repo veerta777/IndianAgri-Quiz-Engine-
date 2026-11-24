@@ -27,6 +27,8 @@ if ( 'manage_subject_quizzes' === $action && $exam_id && $subject_id ) :
 	$all_quizzes       = IAQ_Quiz_Builder::get_quizzes( array( 'per_page' => 200, 'subject_id' => $subject_id, 'orderby' => 'title', 'order' => 'ASC' ) );
 	$assigned_q_ids    = array_map( function( $q ) { return (int) $q->id; }, $assigned_sets );
 	$target_title_id   = isset( $_GET['title_id'] ) ? absint( $_GET['title_id'] ) : 0;
+	$edit_title_id     = isset( $_GET['edit_title_id'] ) ? absint( $_GET['edit_title_id'] ) : 0;
+	$editing_title     = $edit_title_id ? IAQ_Practice_Sets::get_exam_subject_main_title( $edit_title_id ) : null;
 	$next_set_number   = count( $assigned_sets ) + 1;
 	$next_title_order  = count( $main_titles ) + 1;
 	?>
@@ -52,35 +54,51 @@ if ( 'manage_subject_quizzes' === $action && $exam_id && $subject_id ) :
 		<div class="iaq-two-col-layout" style="display:grid;grid-template-columns:380px 1fr;gap:24px;margin-top:20px;">
 			<div class="iaq-form-column">
 
-				<!-- Card 0: Create Main Title -->
-				<div class="iaq-card" style="border: 2px solid #0284c7;margin-bottom:20px;">
-					<div class="iaq-card-header" style="background:#f0f9ff;display:flex;justify-content:space-between;align-items:center;">
-						<h2 style="color:#0369a1;font-size:15px;margin:0;">
-							<span class="dashicons dashicons-category"></span> <?php esc_html_e( '1. Add Main Title', 'indianagri-quiz-engine' ); ?>
+				<!-- Card 0: Create or Edit Main Title -->
+				<div class="iaq-card" style="border: 2px solid <?php echo $editing_title ? '#ea580c' : '#0284c7'; ?>;margin-bottom:20px;">
+					<div class="iaq-card-header" style="background:<?php echo $editing_title ? '#fff7ed' : '#f0f9ff'; ?>;display:flex;justify-content:space-between;align-items:center;">
+						<h2 style="color:<?php echo $editing_title ? '#c2410c' : '#0369a1'; ?>;font-size:15px;margin:0;">
+							<span class="dashicons <?php echo $editing_title ? 'dashicons-edit' : 'dashicons-category'; ?>"></span>
+							<?php echo $editing_title ? esc_html__( '1. Edit / Rename Main Title', 'indianagri-quiz-engine' ) : esc_html__( '1. Add Main Title', 'indianagri-quiz-engine' ); ?>
 						</h2>
-						<span class="iaq-pill" style="background:#0284c7;color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;">Step 1: Title</span>
+						<span class="iaq-pill" style="background:<?php echo $editing_title ? '#ea580c' : '#0284c7'; ?>;color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;">
+							<?php echo $editing_title ? esc_html__( 'Editing Title', 'indianagri-quiz-engine' ) : esc_html__( 'Step 1: Title', 'indianagri-quiz-engine' ); ?>
+						</span>
 					</div>
 					<div class="iaq-card-body">
 						<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=iaq-examinations&action=manage_subject_quizzes&exam_id=' . $exam_id . '&subject_id=' . $subject_id ) ); ?>">
 							<?php wp_nonce_field( 'iaq_save_main_title_nonce' ); ?>
 							<input type="hidden" name="exam_id" value="<?php echo esc_attr( $exam_id ); ?>">
 							<input type="hidden" name="subject_id" value="<?php echo esc_attr( $subject_id ); ?>">
+							<?php if ( $editing_title ) : ?>
+								<input type="hidden" name="id" value="<?php echo esc_attr( $editing_title->id ); ?>">
+							<?php endif; ?>
 
 							<div class="iaq-form-group">
 								<label for="new-main-title"><?php esc_html_e( 'Main Title Name', 'indianagri-quiz-engine' ); ?> <span class="iaq-required">*</span></label>
-								<input type="text" name="title" id="new-main-title" class="iaq-input iaq-full-width" placeholder="<?php esc_attr_e( 'e.g. 1. Principles of Agronomy', 'indianagri-quiz-engine' ); ?>" required>
-								<span class="iaq-card-help"><?php esc_html_e( 'Chapter or unit title under which practice sets will be organized.', 'indianagri-quiz-engine' ); ?></span>
+								<input type="text" name="title" id="new-main-title" class="iaq-input iaq-full-width" placeholder="<?php esc_attr_e( 'e.g. 1. Principles of Agronomy', 'indianagri-quiz-engine' ); ?>" value="<?php echo esc_attr( $editing_title ? $editing_title->title : '' ); ?>" required>
+								<span class="iaq-card-help">
+									<?php echo $editing_title ? esc_html__( 'Renaming this title updates its name across the student portal. All assigned practice sets stay under this title automatically.', 'indianagri-quiz-engine' ) : esc_html__( 'Chapter or unit title under which practice sets will be organized.', 'indianagri-quiz-engine' ); ?>
+								</span>
 							</div>
 
 							<div class="iaq-form-group">
 								<label for="main-title-order"><?php esc_html_e( 'Display Position / Order', 'indianagri-quiz-engine' ); ?></label>
-								<input type="number" min="1" name="display_order" id="main-title-order" class="iaq-input iaq-full-width" value="<?php echo esc_attr( $next_title_order ); ?>">
+								<input type="number" min="1" name="display_order" id="main-title-order" class="iaq-input iaq-full-width" value="<?php echo esc_attr( $editing_title ? $editing_title->display_order : $next_title_order ); ?>">
 							</div>
 
 							<div style="margin-top:14px;">
-								<button type="submit" name="iaq_save_main_title" class="iaq-btn iaq-full-width" style="background:#0284c7;color:#fff;font-weight:700;padding:8px 14px;">
-									<span class="dashicons dashicons-plus-alt"></span> <?php esc_html_e( '+ Create Main Title', 'indianagri-quiz-engine' ); ?>
+								<button type="submit" name="iaq_save_main_title" class="iaq-btn iaq-full-width" style="background:<?php echo $editing_title ? '#ea580c' : '#0284c7'; ?>;color:#fff;font-weight:700;padding:8px 14px;">
+									<span class="dashicons <?php echo $editing_title ? 'dashicons-saved' : 'dashicons-plus-alt'; ?>"></span>
+									<?php echo $editing_title ? esc_html__( 'Save & Update Main Title', 'indianagri-quiz-engine' ) : esc_html__( '+ Create Main Title', 'indianagri-quiz-engine' ); ?>
 								</button>
+								<?php if ( $editing_title ) : ?>
+									<div style="margin-top:8px;text-align:center;">
+										<a href="<?php echo esc_url( admin_url( 'admin.php?page=iaq-examinations&action=manage_subject_quizzes&exam_id=' . $exam_id . '&subject_id=' . $subject_id ) ); ?>" class="iaq-link" style="font-size:12px;color:#64748b;text-decoration:none;">
+											<?php esc_html_e( '← Cancel Editing / Create New Title', 'indianagri-quiz-engine' ); ?>
+										</a>
+									</div>
+								<?php endif; ?>
 							</div>
 						</form>
 					</div>
@@ -208,11 +226,9 @@ if ( 'manage_subject_quizzes' === $action && $exam_id && $subject_id ) :
 								<select name="quiz_id" id="esq-quiz-id" class="iaq-select iaq-full-width" required>
 									<option value=""><?php esc_html_e( '— Select a Practice Set —', 'indianagri-quiz-engine' ); ?></option>
 									<?php foreach ( $all_quizzes as $q ) : ?>
-										<?php if ( ! in_array( (int) $q->id, $assigned_q_ids, true ) ) : ?>
-											<option value="<?php echo esc_attr( $q->id ); ?>">
-												#<?php echo esc_html( $q->id ); ?>: <?php echo esc_html( $q->title ); ?> (<?php echo esc_html( $q->total_questions ); ?> Qs)
-											</option>
-										<?php endif; ?>
+										<option value="<?php echo esc_attr( $q->id ); ?>">
+											#<?php echo esc_html( $q->id ); ?>: <?php echo esc_html( $q->title ); ?> (<?php echo esc_html( $q->total_questions ); ?> Qs)<?php echo in_array( (int) $q->id, $assigned_q_ids, true ) ? ' [' . esc_html__( 'Already Assigned - Reassign', 'indianagri-quiz-engine' ) . ']' : ''; ?>
+										</option>
 									<?php endforeach; ?>
 								</select>
 								<span class="iaq-card-help"><?php esc_html_e( 'Assigns the existing quiz to this examination-subject filter without duplicating questions.', 'indianagri-quiz-engine' ); ?></span>
@@ -289,6 +305,9 @@ if ( 'manage_subject_quizzes' === $action && $exam_id && $subject_id ) :
 										</div>
 										<div style="display:flex;align-items:center;gap:8px;">
 											<?php if ( ! empty( $group['id'] ) ) : ?>
+												<a href="<?php echo esc_url( admin_url( 'admin.php?page=iaq-examinations&action=manage_subject_quizzes&exam_id=' . $exam_id . '&subject_id=' . $subject_id . '&edit_title_id=' . $group['id'] ) ); ?>" class="iaq-table-action" style="color:#0284c7;" title="<?php esc_attr_e( 'Edit / Rename this Main Title', 'indianagri-quiz-engine' ); ?>">
+													<span class="dashicons dashicons-edit"></span>
+												</a>
 												<a href="<?php echo esc_url( admin_url( 'admin.php?page=iaq-examinations&action=manage_subject_quizzes&exam_id=' . $exam_id . '&subject_id=' . $subject_id . '&title_id=' . $group['id'] ) ); ?>" class="iaq-btn iaq-btn-outline" style="padding:3px 8px;font-size:11px;" title="<?php esc_attr_e( 'Preselect this Main Title to add sets', 'indianagri-quiz-engine' ); ?>">
 													<span class="dashicons dashicons-plus-alt" style="font-size:12px;vertical-align:middle;"></span> <?php esc_html_e( '+ Add Set', 'indianagri-quiz-engine' ); ?>
 												</a>
@@ -340,6 +359,9 @@ if ( 'manage_subject_quizzes' === $action && $exam_id && $subject_id ) :
 															</span>
 														</td>
 														<td style="padding:10px 14px;text-align:right;">
+															<button type="button" class="iaq-table-action iaq-btn-trigger-move-modal" data-quiz-id="<?php echo esc_attr( $s_quiz->id ); ?>" data-quiz-title="<?php echo esc_attr( $s_quiz->title ); ?>" data-current-title-id="<?php echo esc_attr( $s_quiz->main_title_id ); ?>" data-sort-order="<?php echo esc_attr( $s_quiz->exam_sort_order ); ?>" title="<?php esc_attr_e( 'Change / Move to Another Main Title', 'indianagri-quiz-engine' ); ?>" style="color:#0284c7;background:none;border:none;cursor:pointer;">
+																<span class="dashicons dashicons-randomize"></span>
+															</button>
 															<button type="button" class="iaq-table-action iaq-btn-trigger-modal" data-quiz-id="<?php echo esc_attr( $s_quiz->id ); ?>" data-quiz-title="<?php echo esc_attr( $s_quiz->title ); ?>" title="<?php esc_attr_e( 'Bulk Import Questions into this Set', 'indianagri-quiz-engine' ); ?>" style="color:#117E3A;background:none;border:none;cursor:pointer;">
 																<span class="dashicons dashicons-upload"></span>
 															</button>
@@ -403,6 +425,55 @@ if ( 'manage_subject_quizzes' === $action && $exam_id && $subject_id ) :
 			</div>
 		</div>
 
+		<!-- Modal: Move Practice Set to Another Main Title -->
+		<div id="iaq-move-set-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.6);z-index:99999;align-items:center;justify-content:center;">
+			<div style="background:#fff;border-radius:8px;max-width:500px;width:90%;box-shadow:0 10px 25px rgba(0,0,0,0.2);overflow:hidden;">
+				<div style="padding:16px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
+					<h3 style="margin:0;font-size:16px;color:#0f172a;display:flex;align-items:center;gap:8px;">
+						<span class="dashicons dashicons-randomize" style="color:#0284c7;"></span>
+						<span><?php esc_html_e( 'Move Practice Set to Another Main Title', 'indianagri-quiz-engine' ); ?></span>
+					</h3>
+					<button type="button" onclick="document.getElementById('iaq-move-set-modal').style.display='none';" style="background:none;border:none;cursor:pointer;color:#64748b;font-size:20px;">&times;</button>
+				</div>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=iaq-examinations&action=manage_subject_quizzes&exam_id=' . $exam_id . '&subject_id=' . $subject_id ) ); ?>" style="padding:20px;">
+					<?php wp_nonce_field( 'iaq_move_practice_set_main_title_nonce' ); ?>
+					<input type="hidden" name="exam_id" value="<?php echo esc_attr( $exam_id ); ?>">
+					<input type="hidden" name="subject_id" value="<?php echo esc_attr( $subject_id ); ?>">
+					<input type="hidden" name="quiz_id" id="iaq-move-quiz-id" value="0">
+
+					<div style="margin-bottom:16px;background:#f0f9ff;padding:12px;border:1px solid #bae6fd;border-radius:6px;">
+						<div style="font-size:11px;color:#0369a1;font-weight:700;text-transform:uppercase;"><?php esc_html_e( 'Selected Practice Set', 'indianagri-quiz-engine' ); ?></div>
+						<div id="iaq-move-quiz-title" style="font-size:14px;font-weight:700;color:#0f172a;margin-top:4px;"></div>
+					</div>
+
+					<div class="iaq-form-group" style="margin-bottom:14px;">
+						<label for="iaq-move-target-title" style="display:block;font-weight:600;margin-bottom:6px;font-size:13px;"><?php esc_html_e( 'Select Target Main Title (Unit)', 'indianagri-quiz-engine' ); ?> <span class="iaq-required">*</span></label>
+						<select name="main_title_id" id="iaq-move-target-title" class="iaq-select iaq-full-width" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
+							<option value="0"><?php esc_html_e( '— General (No Main Title) —', 'indianagri-quiz-engine' ); ?></option>
+							<?php foreach ( $main_titles as $mt ) : ?>
+								<option value="<?php echo esc_attr( $mt->id ); ?>">
+									<?php echo esc_html( $mt->title ); ?> (<?php echo esc_html( $mt->practice_set_count ); ?> Sets)
+								</option>
+							<?php endforeach; ?>
+						</select>
+						<span class="iaq-card-help" style="display:block;font-size:11px;color:#64748b;margin-top:4px;"><?php esc_html_e( 'The practice set and all its questions will be immediately relocated under this Main Title.', 'indianagri-quiz-engine' ); ?></span>
+					</div>
+
+					<div class="iaq-form-group" style="margin-bottom:16px;">
+						<label for="iaq-move-sort-order" style="display:block;font-weight:600;margin-bottom:6px;font-size:13px;"><?php esc_html_e( 'Display Position / Sort Order', 'indianagri-quiz-engine' ); ?></label>
+						<input type="number" min="1" name="sort_order" id="iaq-move-sort-order" class="iaq-input iaq-full-width" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;" value="1">
+					</div>
+
+					<div style="display:flex;justify-content:flex-end;gap:10px;">
+						<button type="button" class="iaq-btn iaq-btn-outline" onclick="document.getElementById('iaq-move-set-modal').style.display='none';"><?php esc_html_e( 'Cancel', 'indianagri-quiz-engine' ); ?></button>
+						<button type="submit" name="iaq_move_practice_set_main_title" class="iaq-btn iaq-btn-primary" style="background:#0284c7;">
+							<span class="dashicons dashicons-randomize"></span> <?php esc_html_e( 'Move Practice Set', 'indianagri-quiz-engine' ); ?>
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+
 		<script>
 		document.addEventListener('DOMContentLoaded', function() {
 			var triggers = document.querySelectorAll('.iaq-btn-trigger-modal');
@@ -417,6 +488,27 @@ if ( 'manage_subject_quizzes' === $action && $exam_id && $subject_id ) :
 					modalQuizId.value = qid;
 					modalTitle.textContent = 'Import Questions to: ' + title;
 					modal.style.display = 'flex';
+				});
+			});
+
+			var moveTriggers      = document.querySelectorAll('.iaq-btn-trigger-move-modal');
+			var moveModal         = document.getElementById('iaq-move-set-modal');
+			var moveQuizIdInput   = document.getElementById('iaq-move-quiz-id');
+			var moveQuizTitleEl   = document.getElementById('iaq-move-quiz-title');
+			var moveTargetSelect  = document.getElementById('iaq-move-target-title');
+			var moveSortOrderInput = document.getElementById('iaq-move-sort-order');
+
+			moveTriggers.forEach(function(btn) {
+				btn.addEventListener('click', function() {
+					var qid        = this.getAttribute('data-quiz-id');
+					var title      = this.getAttribute('data-quiz-title');
+					var curTitleId = this.getAttribute('data-current-title-id');
+					var sortOrder  = this.getAttribute('data-sort-order');
+					if (moveQuizIdInput) moveQuizIdInput.value = qid;
+					if (moveQuizTitleEl) moveQuizTitleEl.textContent = title + ' (Quiz #' + qid + ')';
+					if (moveTargetSelect && curTitleId) moveTargetSelect.value = curTitleId;
+					if (moveSortOrderInput && sortOrder) moveSortOrderInput.value = sortOrder;
+					if (moveModal) moveModal.style.display = 'flex';
 				});
 			});
 		});

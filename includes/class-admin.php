@@ -1168,6 +1168,18 @@ class IAQ_Admin {
 			}
 		}
 
+		// 32d. Move Practice Set to another Main Title.
+		if ( isset( $_POST['iaq_move_practice_set_main_title'] ) ) {
+			check_admin_referer( 'iaq_move_practice_set_main_title_nonce' );
+			$ex_id         = absint( $_POST['exam_id'] );
+			$s_id          = absint( $_POST['subject_id'] );
+			$q_id          = absint( $_POST['quiz_id'] );
+			$main_title_id = isset( $_POST['main_title_id'] ) ? absint( $_POST['main_title_id'] ) : 0;
+			$sort_order    = isset( $_POST['sort_order'] ) ? intval( $_POST['sort_order'] ) : 0;
+			IAQ_Practice_Sets::assign_quiz_to_exam_subject( $ex_id, $s_id, $q_id, $sort_order, $main_title_id );
+			wp_safe_redirect( add_query_arg( array( 'page' => 'iaq-examinations', 'action' => 'manage_subject_quizzes', 'exam_id' => $ex_id, 'subject_id' => $s_id, 'message' => 'practice_set_moved' ), admin_url( 'admin.php' ) ) );
+			exit;
+		}
 
 		// 33. Remove Quiz from Examination-Subject.
 		if ( isset( $_GET['iaq_action'] ) && 'remove_exam_subject_quiz' === $_GET['iaq_action'] && isset( $_GET['exam_id'] ) && isset( $_GET['subject_id'] ) && isset( $_GET['quiz_id'] ) ) {
@@ -1628,6 +1640,7 @@ class IAQ_Admin {
 				'exam_subject_removed'    => array( 'success', __( 'Subject removed from examination.', 'indianagri-quiz-engine' ) ),
 				'main_title_saved'        => array( 'success', __( 'Main Title saved successfully.', 'indianagri-quiz-engine' ) ),
 				'main_title_deleted'      => array( 'success', __( 'Main Title removed successfully. Any attached quizzes were preserved.', 'indianagri-quiz-engine' ) ),
+				'practice_set_moved'      => array( 'success', __( 'Practice Set moved to selected Main Title successfully.', 'indianagri-quiz-engine' ) ),
 				'esq_saved'               => array( 'success', __( 'Practice set assigned to examination subject.', 'indianagri-quiz-engine' ) ),
 				'esq_removed'             => array( 'success', __( 'Practice set removed from examination subject.', 'indianagri-quiz-engine' ) ),
 				'mock_category_saved'     => array( 'success', __( 'Mock test category saved successfully.', 'indianagri-quiz-engine' ) ),

@@ -984,6 +984,57 @@ class Test_Practice_Sets {
 			throw new Exception( 'Quiz q1 was erroneously deleted upon Main Title removal.' );
 		}
 
+		// 8. Verify Renaming Main Title preserves all assigned quizzes under it
+		$renamed_title = '2. Advanced Crop Ecology & Climate Studies';
+		$rename_res = IAQ_Practice_Sets::save_exam_subject_main_title(
+			array(
+				'id'         => $title_2_id,
+				'exam_id'    => $exam_id,
+				'subject_id' => $subj_id,
+				'title'      => $renamed_title,
+			)
+		);
+		if ( (int) $rename_res !== (int) $title_2_id ) {
+			throw new Exception( 'Failed to rename Main Title ID: ' . $title_2_id );
+		}
+
+		$fetched_t2 = IAQ_Practice_Sets::get_exam_subject_main_title( $title_2_id );
+		if ( ! $fetched_t2 || $fetched_t2->title !== $renamed_title ) {
+			throw new Exception( 'Renamed Main Title title mismatch.' );
+		}
+
+		// Verify practice sets q3, q4, q5 are still assigned to the renamed title
+		$t2_quizzes = IAQ_Practice_Sets::get_exam_subject_quizzes( $exam_id, $subj_id, 'published', 0, $title_2_id );
+		if ( count( $t2_quizzes ) !== 3 ) {
+			throw new Exception( 'Renaming Main Title must retain all 3 assigned practice sets.' );
+		}
+
+		// 9. Verify Moving / Reassigning Practice Set to another Main Title
+		$title_3_id = IAQ_Practice_Sets::save_exam_subject_main_title(
+			array(
+				'exam_id'    => $exam_id,
+				'subject_id' => $subj_id,
+				'title'      => '3. Agricultural Meteorology',
+			)
+		);
+
+		// Move q3 from Title 2 to Title 3
+		$move_ok = IAQ_Practice_Sets::assign_quiz_to_exam_subject( $exam_id, $subj_id, $q3, 1, $title_3_id );
+		if ( ! $move_ok ) {
+			throw new Exception( 'Failed to move practice set q3 to Title 3.' );
+		}
+
+		// Verify Title 2 now has 2 practice sets and Title 3 has 1 practice set
+		$t2_quizzes_after = IAQ_Practice_Sets::get_exam_subject_quizzes( $exam_id, $subj_id, 'published', 0, $title_2_id );
+		$t3_quizzes_after = IAQ_Practice_Sets::get_exam_subject_quizzes( $exam_id, $subj_id, 'published', 0, $title_3_id );
+
+		if ( count( $t2_quizzes_after ) !== 2 ) {
+			throw new Exception( 'Title 2 count expected 2 after moving set, got: ' . count( $t2_quizzes_after ) );
+		}
+		if ( count( $t3_quizzes_after ) !== 1 || (int) $t3_quizzes_after[0]->id !== (int) $q3 ) {
+			throw new Exception( 'Title 3 count expected 1 containing q3.' );
+		}
+
 		echo "  [PASS] Examination → Subject → Main Title → Multiple Practice Sets → Questions hierarchy verified.\n";
 	}
 }
