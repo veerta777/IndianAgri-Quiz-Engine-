@@ -93,6 +93,12 @@ if ( empty( $scorecard ) || ! is_array( $scorecard ) ) {
 				<span class="iaq-stat-label"><?php esc_html_e( 'Time Taken', 'indianagri-quiz-engine' ); ?></span>
 				<span class="iaq-stat-big"><?php echo esc_html( $scorecard['time_spent_formatted'] ); ?></span>
 			</div>
+			<?php if ( ! empty( $scorecard['rank'] ) ) : ?>
+			<div class="iaq-stat-tile is-air">
+				<span class="iaq-stat-label"><?php esc_html_e( 'All India Rank', 'indianagri-quiz-engine' ); ?></span>
+				<span class="iaq-stat-big" style="color:#0284c7;"><small style="font-weight:700;">AIR #</small><?php echo esc_html( $scorecard['rank'] ); ?> <small>/ <?php echo esc_html( ! empty( $scorecard['cohort_count'] ) ? $scorecard['cohort_count'] : 1 ); ?></small></span>
+			</div>
+			<?php endif; ?>
 		</div>
 
 		<!-- Accuracy & Negative Marking Breakdown -->
@@ -165,17 +171,140 @@ if ( empty( $scorecard ) || ! is_array( $scorecard ) ) {
 			</div>
 		<?php endif; ?>
 
+		<!-- All India Rank List (AIR Leaderboard) -->
+		<?php
+		$lb_entries = ! empty( $leaderboard['entries'] ) ? $leaderboard['entries'] : ( ! empty( $scorecard['leaderboard']['entries'] ) ? $scorecard['leaderboard']['entries'] : array() );
+		$lb_total   = ! empty( $leaderboard['total'] ) ? (int) $leaderboard['total'] : ( ! empty( $scorecard['leaderboard']['total'] ) ? (int) $scorecard['leaderboard']['total'] : ( ! empty( $scorecard['cohort_count'] ) ? (int) $scorecard['cohort_count'] : 1 ) );
+		$cur_rank   = ! empty( $scorecard['rank'] ) ? (int) $scorecard['rank'] : ( ! empty( $leaderboard['current_user_rank']['rank'] ) ? (int) $leaderboard['current_user_rank']['rank'] : null );
+		if ( ! empty( $lb_entries ) ) :
+			?>
+			<div class="iaq-air-leaderboard-card" style="margin-top: 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+				<div class="iaq-air-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; border-bottom: 2px solid #e0f2fe; padding-bottom: 12px;">
+					<div>
+						<h3 style="margin: 0 0 4px 0; font-size: 18px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+							<span>🏆</span> <?php esc_html_e( 'All India Rank List (AIR Leaderboard)', 'indianagri-quiz-engine' ); ?>
+						</h3>
+						<span style="font-size: 13px; color: #64748b;">
+							<?php printf( esc_html__( 'Live ranking among %d verified candidate attempts across India', 'indianagri-quiz-engine' ), $lb_total ); ?>
+						</span>
+					</div>
+					<?php if ( ! empty( $cur_rank ) ) : ?>
+						<div style="background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 6px; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px;">
+							<span style="font-size: 12px; font-weight: 600; color: #0369a1;"><?php esc_html_e( 'Your Rank:', 'indianagri-quiz-engine' ); ?></span>
+							<strong style="font-size: 15px; color: #0284c7;">AIR #<?php echo esc_html( $cur_rank ); ?></strong>
+						</div>
+					<?php endif; ?>
+				</div>
+
+				<div class="iaq-analytics-table-responsive">
+					<table class="iaq-analytics-table iaq-air-table">
+						<thead>
+							<tr>
+								<th style="width: 90px; text-align: center;"><?php esc_html_e( 'AIR Rank', 'indianagri-quiz-engine' ); ?></th>
+								<th><?php esc_html_e( 'Candidate', 'indianagri-quiz-engine' ); ?></th>
+								<th style="text-align: center;"><?php esc_html_e( 'Score', 'indianagri-quiz-engine' ); ?></th>
+								<th style="text-align: center;"><?php esc_html_e( 'Percentage', 'indianagri-quiz-engine' ); ?></th>
+								<th style="text-align: center;"><?php esc_html_e( 'Time Taken', 'indianagri-quiz-engine' ); ?></th>
+								<th style="text-align: center;"><?php esc_html_e( 'Badge', 'indianagri-quiz-engine' ); ?></th>
+							</tr>
+						</thead>
+						<tbody>
+							<?php
+							$found_current_user = false;
+							foreach ( $lb_entries as $entry ) :
+								if ( ! empty( $entry['is_current_user'] ) ) {
+									$found_current_user = true;
+								}
+								$row_class = ! empty( $entry['is_current_user'] ) ? 'iaq-air-row-self' : '';
+								$rank_num  = (int) $entry['rank'];
+								?>
+								<tr class="<?php echo esc_attr( $row_class ); ?>">
+									<td style="text-align: center;">
+										<?php if ( 1 === $rank_num ) : ?>
+											<span class="iaq-air-badge is-rank-1">🥇 AIR 1</span>
+										<?php elseif ( 2 === $rank_num ) : ?>
+											<span class="iaq-air-badge is-rank-2">🥈 AIR 2</span>
+										<?php elseif ( 3 === $rank_num ) : ?>
+											<span class="iaq-air-badge is-rank-3">🥉 AIR 3</span>
+										<?php else : ?>
+											<span class="iaq-air-badge is-rank-other">#<?php echo esc_html( $rank_num ); ?></span>
+										<?php endif; ?>
+									</td>
+									<td>
+										<strong><?php echo esc_html( $entry['display_name'] ); ?></strong>
+										<?php if ( ! empty( $entry['is_current_user'] ) ) : ?>
+											<span class="iaq-pill iaq-pill-self" style="background:#117E3A; color:#fff; font-size:10.5px; padding:2px 7px; border-radius:10px; margin-left:6px;"><?php esc_html_e( 'You', 'indianagri-quiz-engine' ); ?></span>
+										<?php endif; ?>
+									</td>
+									<td style="text-align: center;">
+										<strong class="iaq-score-pos"><?php echo esc_html( number_format( $entry['score'], 2 ) ); ?></strong>
+									</td>
+									<td style="text-align: center;">
+										<?php echo esc_html( number_format( $entry['percentage'], 1 ) ); ?>%
+									</td>
+									<td style="text-align: center; color: #64748b; font-size: 13px;">
+										<?php echo esc_html( ! empty( $entry['time_spent_formatted'] ) ? $entry['time_spent_formatted'] : ( ! empty( $entry['time_spent_seconds'] ) ? sprintf( '%02dm %02ds', floor( (int) $entry['time_spent_seconds'] / 60 ), (int) $entry['time_spent_seconds'] % 60 ) : '--' ) ); ?>
+									</td>
+									<td style="text-align: center;">
+										<?php if ( $rank_num <= 3 ) : ?>
+											<span style="font-size: 11.5px; font-weight: 700; color: #b45309; background: #fef3c7; padding: 2px 8px; border-radius: 4px;"><?php esc_html_e( 'Top Ranker', 'indianagri-quiz-engine' ); ?></span>
+										<?php elseif ( $entry['percentage'] >= 75 ) : ?>
+											<span style="font-size: 11.5px; font-weight: 700; color: #15803d; background: #dcfce7; padding: 2px 8px; border-radius: 4px;"><?php esc_html_e( 'Distinction', 'indianagri-quiz-engine' ); ?></span>
+										<?php else : ?>
+											<span style="font-size: 11.5px; font-weight: 600; color: #475569; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;"><?php esc_html_e( 'Qualified', 'indianagri-quiz-engine' ); ?></span>
+										<?php endif; ?>
+									</td>
+								</tr>
+							<?php endforeach; ?>
+
+							<?php
+							if ( ! $found_current_user && ! empty( $leaderboard['current_user_rank'] ) ) :
+								$cur = $leaderboard['current_user_rank'];
+								?>
+								<tr class="iaq-air-row-divider">
+									<td colspan="6" style="text-align:center; color:#94a3b8; font-weight:bold; padding:4px 0; background:#f8fafc;">•••</td>
+								</tr>
+								<tr class="iaq-air-row-self" style="background:#f0fdf4; border: 2px solid #86efac;">
+									<td style="text-align: center;">
+										<span class="iaq-air-badge is-rank-other" style="background:#15803d; color:#fff;">#<?php echo esc_html( $cur['rank'] ); ?></span>
+									</td>
+									<td>
+										<strong><?php echo esc_html( $cur['display_name'] ); ?></strong>
+										<span class="iaq-pill iaq-pill-self" style="background:#117E3A; color:#fff; font-size:10.5px; padding:2px 7px; border-radius:10px; margin-left:6px;"><?php esc_html_e( 'You', 'indianagri-quiz-engine' ); ?></span>
+									</td>
+									<td style="text-align: center;">
+										<strong class="iaq-score-pos"><?php echo esc_html( number_format( $cur['score'], 2 ) ); ?></strong>
+									</td>
+									<td style="text-align: center;">
+										<?php echo esc_html( number_format( $cur['percentage'], 1 ) ); ?>%
+									</td>
+									<td style="text-align: center; color: #64748b; font-size: 13px;">
+										<?php echo esc_html( ! empty( $cur['time_spent_formatted'] ) ? $cur['time_spent_formatted'] : ( ! empty( $cur['time_spent_seconds'] ) ? sprintf( '%02dm %02ds', floor( (int) $cur['time_spent_seconds'] / 60 ), (int) $cur['time_spent_seconds'] % 60 ) : '--' ) ); ?>
+									</td>
+									<td style="text-align: center;">
+										<span style="font-size: 11.5px; font-weight: 700; color: #15803d; background: #dcfce7; padding: 2px 8px; border-radius: 4px;"><?php esc_html_e( 'Your AIR Standing', 'indianagri-quiz-engine' ); ?></span>
+									</td>
+								</tr>
+							<?php endif; ?>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		<?php endif; ?>
+
 		<?php
 		$share_quiz_title = ! empty( $scorecard['quiz_title'] ) ? $scorecard['quiz_title'] : __( 'Agricultural Examination', 'indianagri-quiz-engine' );
+		$air_share_str    = ! empty( $scorecard['rank'] ) ? sprintf( "\n🏆 All India Rank: AIR #%s / %s", $scorecard['rank'], ! empty( $scorecard['cohort_count'] ) ? $scorecard['cohort_count'] : 1 ) : '';
 		$share_score_text = sprintf(
-			"🌾 IndianAgriExam CBT Mock Test 🎯\n📝 Exam: %s\n📊 Score: %s / %s (%s%%)\n⭐ Accuracy: %s / %s Correct%s\n\nCan you beat my score? Test your preparation here:\n🔗 %s",
+			"🌾 IndianAgriExam CBT Mock Test 🎯\n📝 Exam: %s%s\n📊 Score: %s / %s (%s%%)\n⭐ Accuracy: %s / %s Correct%s\n\nCan you beat my AIR? Test your preparation here:\n🔗 %s",
 			$share_quiz_title,
+			$air_share_str,
 			$scorecard['score'],
 			$scorecard['total_marks'],
 			$scorecard['percentage'],
 			$scorecard['correct_answers'],
 			$scorecard['total_questions'],
-			( isset( $scorecard['percentile'] ) && null !== $scorecard['percentile'] ) ? "\n🏆 Percentile: " . $scorecard['percentile'] . 'th %ile' : '',
+			( isset( $scorecard['percentile'] ) && null !== $scorecard['percentile'] ) ? "\n🎖️ Percentile: " . $scorecard['percentile'] . 'th %ile' : '',
 			esc_url( ( function_exists( 'get_permalink' ) && get_permalink() ) ? get_permalink() : home_url( '/' ) )
 		);
 		$wa_url          = 'https://api.whatsapp.com/send?text=' . rawurlencode( $share_score_text );

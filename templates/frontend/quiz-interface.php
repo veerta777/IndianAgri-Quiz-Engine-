@@ -292,6 +292,10 @@ $is_practice_mode = class_exists( 'IAQ_Quiz_Builder' ) ? IAQ_Quiz_Builder::is_pr
 				<span class="iaq-stat-label"><?php esc_html_e( 'Time Taken', 'indianagri-quiz-engine' ); ?></span>
 				<span class="iaq-stat-big" id="iaq-res-time">--</span>
 			</div>
+			<div class="iaq-stat-tile is-air" id="iaq-res-air-tile" style="display:none;">
+				<span class="iaq-stat-label"><?php esc_html_e( 'All India Rank', 'indianagri-quiz-engine' ); ?></span>
+				<span class="iaq-stat-big" style="color:#0284c7;"><small style="font-weight:700;">AIR #</small><span id="iaq-res-air-rank">1</span> <small>/ <span id="iaq-res-air-cohort">1</span></small></span>
+			</div>
 		</div>
 
 		<!-- Breakdown Chart / Counters -->
@@ -332,6 +336,42 @@ $is_practice_mode = class_exists( 'IAQ_Quiz_Builder' ) ? IAQ_Quiz_Builder::is_pr
 						</tr>
 					</thead>
 					<tbody id="iaq-subject-tbody">
+						<!-- Injected dynamically via JS -->
+					</tbody>
+				</table>
+			</div>
+		</div>
+
+		<!-- All India Rank List (AIR Leaderboard Table) -->
+		<div class="iaq-air-leaderboard-card" id="iaq-air-leaderboard-section" style="display:none; margin: 24px 0 16px 0; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+			<div class="iaq-air-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; border-bottom: 2px solid #e0f2fe; padding-bottom: 12px;">
+				<div>
+					<h3 style="margin: 0 0 4px 0; font-size: 18px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+						<span>🏆</span> <?php esc_html_e( 'All India Rank List (AIR Leaderboard)', 'indianagri-quiz-engine' ); ?>
+					</h3>
+					<span style="font-size: 13px; color: #64748b;" id="iaq-air-subtitle">
+						<?php esc_html_e( 'Live competitive ranking across India for this examination', 'indianagri-quiz-engine' ); ?>
+					</span>
+				</div>
+				<div style="background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 6px; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px;">
+					<span style="font-size: 12px; font-weight: 600; color: #0369a1;"><?php esc_html_e( 'Your Rank:', 'indianagri-quiz-engine' ); ?></span>
+					<strong style="font-size: 15px; color: #0284c7;" id="iaq-res-air-badge">AIR #1</strong>
+				</div>
+			</div>
+
+			<div class="iaq-analytics-table-responsive">
+				<table class="iaq-analytics-table iaq-air-table" id="iaq-air-table">
+					<thead>
+						<tr>
+							<th style="width: 90px; text-align: center;"><?php esc_html_e( 'AIR Rank', 'indianagri-quiz-engine' ); ?></th>
+							<th><?php esc_html_e( 'Candidate', 'indianagri-quiz-engine' ); ?></th>
+							<th style="text-align: center;"><?php esc_html_e( 'Score', 'indianagri-quiz-engine' ); ?></th>
+							<th style="text-align: center;"><?php esc_html_e( 'Percentage', 'indianagri-quiz-engine' ); ?></th>
+							<th style="text-align: center;"><?php esc_html_e( 'Time Taken', 'indianagri-quiz-engine' ); ?></th>
+							<th style="text-align: center;"><?php esc_html_e( 'Badge', 'indianagri-quiz-engine' ); ?></th>
+						</tr>
+					</thead>
+					<tbody id="iaq-air-tbody">
 						<!-- Injected dynamically via JS -->
 					</tbody>
 				</table>

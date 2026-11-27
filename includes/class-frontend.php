@@ -973,8 +973,13 @@ class IAQ_Frontend {
 			return '<div class="iaq-notice-box iaq-notice-error">' . esc_html( $scorecard->get_error_message() ) . '</div>';
 		}
 
-		$questions = IAQ_Quiz_Attempt::get_attempt_review_questions( $attempt_id, $user_id );
-		$breakdown = IAQ_Quiz_Attempt::get_attempt_subject_breakdown( $attempt_id, $user_id );
+		$questions   = IAQ_Quiz_Attempt::get_attempt_review_questions( $attempt_id, $user_id );
+		$breakdown   = IAQ_Quiz_Attempt::get_attempt_subject_breakdown( $attempt_id, $user_id );
+		$leaderboard = ! empty( $scorecard['leaderboard'] ) ? $scorecard['leaderboard'] : (
+			( ! empty( $scorecard['quiz_id'] ) && class_exists( 'IAQ_Leaderboard' ) ) ?
+			IAQ_Leaderboard::get_leaderboard( array( 'scope' => 'quiz', 'quiz_id' => (int) $scorecard['quiz_id'], 'limit' => 10, 'current_user' => $user_id ) ) :
+			array()
+		);
 
 		ob_start();
 		include IAQ_PLUGIN_DIR . 'templates/frontend/quiz-scorecard.php';

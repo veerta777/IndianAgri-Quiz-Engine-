@@ -1544,7 +1544,9 @@ class IAQ_Quiz_Attempt {
 					'unattempted_questions' => $total_q,
 					'negative_deductions'   => 0.00,
 					'percentile'            => null,
-					'cohort_count'          => 0,
+					'rank'                  => 1,
+					'cohort_count'          => 1,
+					'leaderboard'           => array(),
 					'score'                 => 0.00,
 					'total_marks'           => (float) $quiz->total_marks,
 					'percentage'            => 0.00,
@@ -1615,6 +1617,40 @@ class IAQ_Quiz_Attempt {
 			$percentile = round( ( ( $strictly_lower + ( 0.5 * $same_score ) ) / $cohort_count ) * 100, 1 );
 		}
 
+		// Calculate All India Rank (AIR) among completed attempts for this quiz
+		$rank_better = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$table_attempts}
+				 WHERE quiz_id = %d AND status = 'completed' AND (
+				    score > %f OR
+				    (score = %f AND percentage > %f) OR
+				    (score = %f AND percentage = %f AND time_spent_seconds < %d) OR
+				    (score = %f AND percentage = %f AND time_spent_seconds = %d AND end_time < %s)
+				 )",
+				$attempt->quiz_id,
+				$attempt->score,
+				$attempt->score,
+				$attempt->percentage,
+				$attempt->score,
+				$attempt->percentage,
+				$attempt->time_spent_seconds,
+				$attempt->score,
+				$attempt->percentage,
+				$attempt->time_spent_seconds,
+				$attempt->end_time
+			)
+		);
+		$air_rank = $rank_better + 1;
+
+		$leaderboard = class_exists( 'IAQ_Leaderboard' ) ? IAQ_Leaderboard::get_leaderboard(
+			array(
+				'scope'        => 'quiz',
+				'quiz_id'      => (int) $attempt->quiz_id,
+				'limit'        => 10,
+				'current_user' => (int) $user_id,
+			)
+		) : array();
+
 		return array(
 			'attempt_id'            => (int) $attempt->id,
 			'quiz_id'               => (int) $attempt->quiz_id,
@@ -1633,7 +1669,9 @@ class IAQ_Quiz_Attempt {
 			'unattempted_questions' => (int) $attempt->unattempted_questions,
 			'negative_deductions'   => round( $negative_deductions, 2 ),
 			'percentile'            => $percentile,
-			'cohort_count'          => $cohort_count,
+			'rank'                  => $air_rank,
+			'cohort_count'          => ! empty( $cohort_count ) ? $cohort_count : 1,
+			'leaderboard'           => $leaderboard,
 			'score'                 => (float) $attempt->score,
 			'total_marks'           => (float) $attempt->total_marks,
 			'percentage'            => (float) $attempt->percentage,

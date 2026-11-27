@@ -1535,6 +1535,15 @@
 			$('#iaq-res-total-q').text(totalQ);
 			$('#iaq-res-time').text(timeFormatted);
 
+			if (sc.rank != null) {
+				$('#iaq-res-air-rank').text(sc.rank);
+				$('#iaq-res-air-cohort').text(sc.cohort_count || 1);
+				$('#iaq-res-air-badge').text('AIR #' + sc.rank);
+				$('#iaq-res-air-tile').show();
+			} else {
+				$('#iaq-res-air-tile').hide();
+			}
+
 			$('#iaq-bd-correct').text(correctCount);
 			$('#iaq-bd-incorrect').text(incorrectCount);
 			$('#iaq-bd-unattempted').text(unattempted);
@@ -1551,13 +1560,16 @@
 			var shareQuizTitle = sc.quiz_title || (window.iaqQuizData && window.iaqQuizData.title) || 'Agricultural Examination';
 			var shareTargetUrl = window.location.href.split('#')[0];
 			var shareMsg = '🌾 IndianAgriExam CBT Mock Test 🎯\n' +
-				'📝 Exam: ' + shareQuizTitle + '\n' +
-				'📊 Score: ' + score + ' / ' + totalMarks + ' (' + percent + '%)\n' +
+				'📝 Exam: ' + shareQuizTitle + '\n';
+			if (sc.rank != null) {
+				shareMsg += '🏆 All India Rank: AIR #' + sc.rank + (sc.cohort_count ? ' / ' + sc.cohort_count : '') + '\n';
+			}
+			shareMsg += '📊 Score: ' + score + ' / ' + totalMarks + ' (' + percent + '%)\n' +
 				'⭐ Accuracy: ' + correctCount + ' / ' + totalQ + ' Correct\n';
 			if (sc.percentile != null) {
-				shareMsg += '🏆 Percentile: ' + sc.percentile + 'th %ile\n';
+				shareMsg += '🎖️ Percentile: ' + sc.percentile + 'th %ile\n';
 			}
-			shareMsg += '\nCan you beat my score? Test your preparation here:\n🔗 ' + shareTargetUrl;
+			shareMsg += '\nCan you beat my AIR? Test your preparation here:\n🔗 ' + shareTargetUrl;
 
 			$('#iaq-res-share-whatsapp').attr('href', 'https://api.whatsapp.com/send?text=' + encodeURIComponent(shareMsg));
 			$('#iaq-res-share-telegram').attr('href', 'https://t.me/share/url?url=' + encodeURIComponent(shareTargetUrl) + '&text=' + encodeURIComponent(shareMsg));
@@ -1592,6 +1604,67 @@
 				});
 			} else {
 				$('#iaq-subject-analytics-section').hide();
+			}
+
+			// Render All India Rank List (AIR Leaderboard).
+			var $airSection = $('#iaq-air-leaderboard-section');
+			var $airTbody = $('#iaq-air-tbody');
+			$airTbody.empty();
+
+			var lb = sc.leaderboard;
+			if (lb && lb.entries && lb.entries.length > 0) {
+				if (lb.total) {
+					$('#iaq-air-subtitle').text('Live ranking among ' + lb.total + ' verified candidate attempts across India');
+				}
+				var foundUser = false;
+				$.each(lb.entries, function (idx, entry) {
+					if (entry.is_current_user) {
+						foundUser = true;
+					}
+					var rankNum = parseInt(entry.rank, 10);
+					var rankBadgeHtml = '';
+					if (rankNum === 1) {
+						rankBadgeHtml = '<span class="iaq-air-badge is-rank-1">🥇 AIR 1</span>';
+					} else if (rankNum === 2) {
+						rankBadgeHtml = '<span class="iaq-air-badge is-rank-2">🥈 AIR 2</span>';
+					} else if (rankNum === 3) {
+						rankBadgeHtml = '<span class="iaq-air-badge is-rank-3">🥉 AIR 3</span>';
+					} else {
+						rankBadgeHtml = '<span class="iaq-air-badge is-rank-other">#' + rankNum + '</span>';
+					}
+
+					var userPill = entry.is_current_user ? ' <span class="iaq-pill iaq-pill-self" style="background:#117E3A; color:#fff; font-size:10.5px; padding:2px 7px; border-radius:10px; margin-left:6px;">You</span>' : '';
+					var badgeTxt = (rankNum <= 3) ? '<span style="font-size:11.5px;font-weight:700;color:#b45309;background:#fef3c7;padding:2px 8px;border-radius:4px;">Top Ranker</span>' :
+						(entry.percentage >= 75 ? '<span style="font-size:11.5px;font-weight:700;color:#15803d;background:#dcfce7;padding:2px 8px;border-radius:4px;">Distinction</span>' :
+						'<span style="font-size:11.5px;font-weight:600;color:#475569;background:#f1f5f9;padding:2px 8px;border-radius:4px;">Qualified</span>');
+
+					var rowClass = entry.is_current_user ? ' class="iaq-air-row-self"' : '';
+					var $tr = $('<tr' + rowClass + '>' +
+						'<td style="text-align:center;">' + rankBadgeHtml + '</td>' +
+						'<td><strong>' + cleanContentText(entry.display_name) + '</strong>' + userPill + '</td>' +
+						'<td style="text-align:center;"><strong class="iaq-score-pos">' + (parseFloat(entry.score) || 0).toFixed(2) + '</strong></td>' +
+						'<td style="text-align:center;">' + (parseFloat(entry.percentage) || 0).toFixed(1) + '%</td>' +
+						'<td style="text-align:center;color:#64748b;font-size:13px;">' + (entry.time_spent_formatted || '--') + '</td>' +
+						'<td style="text-align:center;">' + badgeTxt + '</td>' +
+					'</tr>');
+					$airTbody.append($tr);
+				});
+
+				if (!foundUser && lb.current_user_rank) {
+					var cur = lb.current_user_rank;
+					$airTbody.append('<tr class="iaq-air-row-divider"><td colspan="6" style="text-align:center;color:#94a3b8;font-weight:bold;padding:4px 0;background:#f8fafc;">•••</td></tr>');
+					$airTbody.append('<tr class="iaq-air-row-self" style="background:#f0fdf4;border:2px solid #86efac;">' +
+						'<td style="text-align:center;"><span class="iaq-air-badge is-rank-other" style="background:#15803d;color:#fff;">#' + cur.rank + '</span></td>' +
+						'<td><strong>' + cleanContentText(cur.display_name) + '</strong> <span class="iaq-pill iaq-pill-self" style="background:#117E3A;color:#fff;font-size:10.5px;padding:2px 7px;border-radius:10px;margin-left:6px;">You</span></td>' +
+						'<td style="text-align:center;"><strong class="iaq-score-pos">' + (parseFloat(cur.score) || 0).toFixed(2) + '</strong></td>' +
+						'<td style="text-align:center;">' + (parseFloat(cur.percentage) || 0).toFixed(1) + '%</td>' +
+						'<td style="text-align:center;color:#64748b;font-size:13px;">' + (cur.time_spent_formatted || '--') + '</td>' +
+						'<td style="text-align:center;"><span style="font-size:11.5px;font-weight:700;color:#15803d;background:#dcfce7;padding:2px 8px;border-radius:4px;">Your AIR Standing</span></td>' +
+					'</tr>');
+				}
+				$airSection.show();
+			} else {
+				$airSection.hide();
 			}
 
 			$res.fadeIn(300);

@@ -131,14 +131,15 @@ class IAQ_Leaderboard {
 			}
 
 			$entry = array(
-				'rank'               => $rank_counter,
-				'user_id'            => $uid,
-				'display_name'       => self::get_privacy_display_name( $uid ),
-				'score'              => (float) $row->max_score,
-				'percentage'         => (float) $row->max_percentage,
-				'time_spent_seconds' => (int) $row->min_time,
-				'total_attempts'     => (int) $row->total_attempts,
-				'is_current_user'    => ( $uid === (int) $r['current_user'] ),
+				'rank'                 => $rank_counter,
+				'user_id'              => $uid,
+				'display_name'         => self::get_privacy_display_name( $uid ),
+				'score'                => (float) $row->max_score,
+				'percentage'           => (float) $row->max_percentage,
+				'time_spent_seconds'   => (int) $row->min_time,
+				'time_spent_formatted' => sprintf( '%02dm %02ds', floor( (int) $row->min_time / 60 ), (int) $row->min_time % 60 ),
+				'total_attempts'       => (int) $row->total_attempts,
+				'is_current_user'      => ( $uid === (int) $r['current_user'] ),
 			);
 
 			if ( $uid === (int) $r['current_user'] ) {
