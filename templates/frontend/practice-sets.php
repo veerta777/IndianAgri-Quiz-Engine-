@@ -812,10 +812,40 @@ $page_url = function( $subview = '', $params = array() ) {
 				</a>
 			</div>
 		<?php else : ?>
-			<div class="iaq-ps-sets-list">
-				<?php foreach ( $quizzes as $pq ) : ?>
-					<?php include IAQ_PLUGIN_DIR . 'templates/frontend/practice-set-card.php'; ?>
-				<?php endforeach; ?>
+			<?php
+			$completed_count = 0;
+			foreach ( $quizzes as $p_item ) {
+				if ( 'completed' === ( $p_item->attempt_status ?? '' ) ) {
+					$completed_count++;
+				}
+			}
+			$tot_pct = count( $quizzes ) > 0 ? round( ( $completed_count / count( $quizzes ) ) * 100 ) : 0;
+			$folder_title = ! empty( $book->title ) ? $book->title : __( 'Available Practice Sets', 'indianagri-quiz-engine' );
+			?>
+			<div class="iaq-folder-card" style="margin-top:16px;">
+				<div class="iaq-folder-header">
+					<div class="iaq-folder-header-left">
+						<span class="iaq-folder-chevron">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+						</span>
+						<span class="iaq-folder-icon">
+							<svg width="22" height="22" viewBox="0 0 24 24" fill="#15803d" stroke="#15803d" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+						</span>
+						<h3 class="iaq-folder-title">
+							<?php echo esc_html( $folder_title ); ?>
+						</h3>
+					</div>
+					<div class="iaq-folder-header-right">
+						<span class="iaq-folder-pct-pill">
+							<?php echo esc_html( $tot_pct ); ?>% <?php esc_html_e( 'Complete', 'indianagri-quiz-engine' ); ?>
+						</span>
+					</div>
+				</div>
+				<div class="iaq-folder-body">
+					<?php foreach ( $quizzes as $pq ) : ?>
+						<?php include IAQ_PLUGIN_DIR . 'templates/frontend/practice-set-card.php'; ?>
+					<?php endforeach; ?>
+				</div>
 			</div>
 		<?php endif; ?>
 
@@ -964,10 +994,40 @@ $page_url = function( $subview = '', $params = array() ) {
 				</a>
 			</div>
 		<?php else : ?>
-			<div class="iaq-ps-sets-list">
-				<?php foreach ( $quizzes as $pq ) : ?>
-					<?php include IAQ_PLUGIN_DIR . 'templates/frontend/practice-set-card.php'; ?>
-				<?php endforeach; ?>
+			<?php
+			$completed_count = 0;
+			foreach ( $quizzes as $p_item ) {
+				if ( 'completed' === ( $p_item->attempt_status ?? '' ) ) {
+					$completed_count++;
+				}
+			}
+			$tot_pct = count( $quizzes ) > 0 ? round( ( $completed_count / count( $quizzes ) ) * 100 ) : 0;
+			$folder_title = ! empty( $book->title ) ? $book->title : __( 'Available Practice Sets', 'indianagri-quiz-engine' );
+			?>
+			<div class="iaq-folder-card" style="margin-top:16px;">
+				<div class="iaq-folder-header">
+					<div class="iaq-folder-header-left">
+						<span class="iaq-folder-chevron">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+						</span>
+						<span class="iaq-folder-icon">
+							<svg width="22" height="22" viewBox="0 0 24 24" fill="#15803d" stroke="#15803d" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+						</span>
+						<h3 class="iaq-folder-title">
+							<?php echo esc_html( $folder_title ); ?>
+						</h3>
+					</div>
+					<div class="iaq-folder-header-right">
+						<span class="iaq-folder-pct-pill">
+							<?php echo esc_html( $tot_pct ); ?>% <?php esc_html_e( 'Complete', 'indianagri-quiz-engine' ); ?>
+						</span>
+					</div>
+				</div>
+				<div class="iaq-folder-body">
+					<?php foreach ( $quizzes as $pq ) : ?>
+						<?php include IAQ_PLUGIN_DIR . 'templates/frontend/practice-set-card.php'; ?>
+					<?php endforeach; ?>
+				</div>
 			</div>
 		<?php endif; ?>
 
@@ -1186,29 +1246,38 @@ $page_url = function( $subview = '', $params = array() ) {
 				</a>
 			</div>
 		<?php elseif ( $has_main_titles ) : ?>
-			<div class="iaq-ps-hierarchy-container" style="display:flex;flex-direction:column;gap:24px;margin-top:16px;">
+			<div class="iaq-ps-hierarchy-container" style="display:flex;flex-direction:column;gap:18px;margin-top:16px;">
 				<?php foreach ( $grouped_hierarchy as $group ) : ?>
-					<?php if ( empty( $group['practice_sets'] ) ) continue; ?>
-					<div class="iaq-ps-main-title-section" style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
-						<div class="iaq-ps-main-title-header" style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #f1f5f9;padding-bottom:12px;margin-bottom:16px;">
-							<div style="display:flex;align-items:center;gap:10px;">
-								<span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:#e0f2fe;color:#0284c7;border-radius:8px;font-weight:700;font-size:14px;">
-									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+					<?php
+					if ( empty( $group['practice_sets'] ) ) continue;
+					$completed_in_grp = 0;
+					foreach ( $group['practice_sets'] as $p_item ) {
+						if ( 'completed' === ( $p_item->attempt_status ?? '' ) ) {
+							$completed_in_grp++;
+						}
+					}
+					$grp_pct = count( $group['practice_sets'] ) > 0 ? round( ( $completed_in_grp / count( $group['practice_sets'] ) ) * 100 ) : 0;
+					?>
+					<div class="iaq-folder-card iaq-ps-main-title-section">
+						<div class="iaq-folder-header">
+							<div class="iaq-folder-header-left">
+								<span class="iaq-folder-chevron">
+									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
 								</span>
-								<div>
-									<h3 style="margin:0;font-size:16px;font-weight:700;color:#0f172a;">
-										<?php echo esc_html( $group['title'] ); ?>
-									</h3>
-									<?php if ( ! empty( $group['description'] ) ) : ?>
-										<p style="margin:2px 0 0 0;font-size:12px;color:#64748b;"><?php echo esc_html( $group['description'] ); ?></p>
-									<?php endif; ?>
-								</div>
+								<span class="iaq-folder-icon">
+									<svg width="22" height="22" viewBox="0 0 24 24" fill="#15803d" stroke="#15803d" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+								</span>
+								<h3 class="iaq-folder-title">
+									<?php echo esc_html( $group['title'] ); ?>
+								</h3>
 							</div>
-							<span class="iaq-pill" style="background:#f0fdf4;color:#117E3A;font-weight:700;font-size:12px;">
-								<?php printf( esc_html( _n( '%d Practice Set', '%d Practice Sets', count( $group['practice_sets'] ), 'indianagri-quiz-engine' ) ), count( $group['practice_sets'] ) ); ?>
-							</span>
+							<div class="iaq-folder-header-right">
+								<span class="iaq-folder-pct-pill">
+									<?php echo esc_html( $grp_pct ); ?>% <?php esc_html_e( 'Complete', 'indianagri-quiz-engine' ); ?>
+								</span>
+							</div>
 						</div>
-						<div class="iaq-ps-sets-list">
+						<div class="iaq-folder-body">
 							<?php foreach ( $group['practice_sets'] as $pq ) : ?>
 								<?php include IAQ_PLUGIN_DIR . 'templates/frontend/practice-set-card.php'; ?>
 							<?php endforeach; ?>
@@ -1217,10 +1286,40 @@ $page_url = function( $subview = '', $params = array() ) {
 				<?php endforeach; ?>
 			</div>
 		<?php else : ?>
-			<div class="iaq-ps-sets-list">
-				<?php foreach ( $quizzes as $pq ) : ?>
-					<?php include IAQ_PLUGIN_DIR . 'templates/frontend/practice-set-card.php'; ?>
-				<?php endforeach; ?>
+			<?php
+			$completed_count = 0;
+			foreach ( $quizzes as $p_item ) {
+				if ( 'completed' === ( $p_item->attempt_status ?? '' ) ) {
+					$completed_count++;
+				}
+			}
+			$tot_pct = count( $quizzes ) > 0 ? round( ( $completed_count / count( $quizzes ) ) * 100 ) : 0;
+			$folder_title = ! empty( $subject->name ) ? $subject->name : __( 'Practice Sets', 'indianagri-quiz-engine' );
+			?>
+			<div class="iaq-folder-card iaq-ps-main-title-section" style="margin-top:16px;">
+				<div class="iaq-folder-header">
+					<div class="iaq-folder-header-left">
+						<span class="iaq-folder-chevron">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+						</span>
+						<span class="iaq-folder-icon">
+							<svg width="22" height="22" viewBox="0 0 24 24" fill="#15803d" stroke="#15803d" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+						</span>
+						<h3 class="iaq-folder-title">
+							<?php echo esc_html( $folder_title ); ?>
+						</h3>
+					</div>
+					<div class="iaq-folder-header-right">
+						<span class="iaq-folder-pct-pill">
+							<?php echo esc_html( $tot_pct ); ?>% <?php esc_html_e( 'Complete', 'indianagri-quiz-engine' ); ?>
+						</span>
+					</div>
+				</div>
+				<div class="iaq-folder-body">
+					<?php foreach ( $quizzes as $pq ) : ?>
+						<?php include IAQ_PLUGIN_DIR . 'templates/frontend/practice-set-card.php'; ?>
+					<?php endforeach; ?>
+				</div>
 			</div>
 		<?php endif; ?>
 

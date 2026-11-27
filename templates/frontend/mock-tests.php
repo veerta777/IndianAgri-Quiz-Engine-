@@ -284,12 +284,42 @@ $page_url = function( $subview = '', $params = array() ) {
 					<p><?php esc_html_e( 'Select a test below to begin your examination.', 'indianagri-quiz-engine' ); ?></p>
 				</div>
 				<?php if ( ! empty( $quizzes ) ) : ?>
-					<div class="iaq-mt-tests-grid">
-						<?php
-						foreach ( $quizzes as $quiz ) {
-							include IAQ_PLUGIN_DIR . 'templates/frontend/mock-test-card.php';
+					<?php
+					$completed_count = 0;
+					foreach ( $quizzes as $q_item ) {
+						if ( 'completed' === ( $q_item->attempt_status ?? '' ) ) {
+							$completed_count++;
 						}
-						?>
+					}
+					$mt_pct = count( $quizzes ) > 0 ? round( ( $completed_count / count( $quizzes ) ) * 100 ) : 0;
+					$mt_folder_title = ! empty( $category->name ) ? $category->name : __( 'Available Mock Tests', 'indianagri-quiz-engine' );
+					?>
+					<div class="iaq-folder-card" style="margin-top:16px;">
+						<div class="iaq-folder-header">
+							<div class="iaq-folder-header-left">
+								<span class="iaq-folder-chevron">
+									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+								</span>
+								<span class="iaq-folder-icon">
+									<svg width="22" height="22" viewBox="0 0 24 24" fill="#15803d" stroke="#15803d" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+								</span>
+								<h3 class="iaq-folder-title">
+									<?php echo esc_html( $mt_folder_title ); ?>
+								</h3>
+							</div>
+							<div class="iaq-folder-header-right">
+								<span class="iaq-folder-pct-pill">
+									<?php echo esc_html( $mt_pct ); ?>% <?php esc_html_e( 'Complete', 'indianagri-quiz-engine' ); ?>
+								</span>
+							</div>
+						</div>
+						<div class="iaq-folder-body">
+							<?php
+							foreach ( $quizzes as $quiz ) {
+								include IAQ_PLUGIN_DIR . 'templates/frontend/mock-test-card.php';
+							}
+							?>
+						</div>
 					</div>
 				<?php else : ?>
 					<div class="iaq-mt-empty-state">
@@ -399,12 +429,42 @@ $page_url = function( $subview = '', $params = array() ) {
 					<p><?php esc_html_e( 'Full-length mock test papers designed under real timed exam conditions.', 'indianagri-quiz-engine' ); ?></p>
 				</div>
 				<?php if ( ! empty( $quizzes ) ) : ?>
-					<div class="iaq-mt-tests-grid">
-						<?php
-						foreach ( $quizzes as $quiz ) {
-							include IAQ_PLUGIN_DIR . 'templates/frontend/mock-test-card.php';
+					<?php
+					$completed_count = 0;
+					foreach ( $quizzes as $q_item ) {
+						if ( 'completed' === ( $q_item->attempt_status ?? '' ) ) {
+							$completed_count++;
 						}
-						?>
+					}
+					$mt_pct = count( $quizzes ) > 0 ? round( ( $completed_count / count( $quizzes ) ) * 100 ) : 0;
+					$mt_folder_title = ! empty( $category->name ) ? $category->name : __( 'Available Mock Tests', 'indianagri-quiz-engine' );
+					?>
+					<div class="iaq-folder-card" style="margin-top:16px;">
+						<div class="iaq-folder-header">
+							<div class="iaq-folder-header-left">
+								<span class="iaq-folder-chevron">
+									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+								</span>
+								<span class="iaq-folder-icon">
+									<svg width="22" height="22" viewBox="0 0 24 24" fill="#15803d" stroke="#15803d" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+								</span>
+								<h3 class="iaq-folder-title">
+									<?php echo esc_html( $mt_folder_title ); ?>
+								</h3>
+							</div>
+							<div class="iaq-folder-header-right">
+								<span class="iaq-folder-pct-pill">
+									<?php echo esc_html( $mt_pct ); ?>% <?php esc_html_e( 'Complete', 'indianagri-quiz-engine' ); ?>
+								</span>
+							</div>
+						</div>
+						<div class="iaq-folder-body">
+							<?php
+							foreach ( $quizzes as $quiz ) {
+								include IAQ_PLUGIN_DIR . 'templates/frontend/mock-test-card.php';
+							}
+							?>
+						</div>
 					</div>
 				<?php else : ?>
 					<div class="iaq-mt-empty-state">
@@ -427,12 +487,42 @@ $page_url = function( $subview = '', $params = array() ) {
 			</div>
 
 			<?php if ( ! empty( $quizzes ) ) : ?>
-				<div class="iaq-mt-tests-grid">
-					<?php
-					foreach ( $quizzes as $quiz ) {
-						include IAQ_PLUGIN_DIR . 'templates/frontend/mock-test-card.php';
+				<?php
+				$completed_count = 0;
+				foreach ( $quizzes as $q_item ) {
+					if ( 'completed' === ( $q_item->attempt_status ?? '' ) ) {
+						$completed_count++;
 					}
-					?>
+				}
+				$mt_pct = count( $quizzes ) > 0 ? round( ( $completed_count / count( $quizzes ) ) * 100 ) : 0;
+				$mt_folder_title = ! empty( $subject->name ) ? $subject->name : ( ! empty( $exam->name ) ? $exam->name : ( ! empty( $category->name ) ? $category->name : __( 'Available Mock Tests', 'indianagri-quiz-engine' ) ) );
+				?>
+				<div class="iaq-folder-card" style="margin-top:16px;">
+					<div class="iaq-folder-header">
+						<div class="iaq-folder-header-left">
+							<span class="iaq-folder-chevron">
+								<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+							</span>
+							<span class="iaq-folder-icon">
+								<svg width="22" height="22" viewBox="0 0 24 24" fill="#15803d" stroke="#15803d" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+							</span>
+							<h3 class="iaq-folder-title">
+								<?php echo esc_html( $mt_folder_title ); ?>
+							</h3>
+						</div>
+						<div class="iaq-folder-header-right">
+							<span class="iaq-folder-pct-pill">
+								<?php echo esc_html( $mt_pct ); ?>% <?php esc_html_e( 'Complete', 'indianagri-quiz-engine' ); ?>
+							</span>
+						</div>
+					</div>
+					<div class="iaq-folder-body">
+						<?php
+						foreach ( $quizzes as $quiz ) {
+							include IAQ_PLUGIN_DIR . 'templates/frontend/mock-test-card.php';
+						}
+						?>
+					</div>
 				</div>
 			<?php else : ?>
 				<div class="iaq-mt-empty-state">

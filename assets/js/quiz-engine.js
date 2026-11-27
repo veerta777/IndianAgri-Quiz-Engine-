@@ -2248,6 +2248,11 @@
 	$(document).ready(function () {
 		IAQQuizEngine.init();
 		IAQDashboardEngine.init();
+
+		// Accordion folder toggle for Practice Sets, Mock Tests, and PYQs
+		$(document).on('click', '.iaq-folder-header', function (e) {
+			$(this).closest('.iaq-folder-card').toggleClass('is-collapsed');
+		});
 	});
 
 })(jQuery);
