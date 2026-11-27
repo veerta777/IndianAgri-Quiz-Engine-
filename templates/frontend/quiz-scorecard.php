@@ -33,6 +33,7 @@ if ( empty( $scorecard ) || ! is_array( $scorecard ) ) {
 
 			<div class="iaq-scorecard-header-actions" style="margin-top:12px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
 				<?php
+				$mistakes_count     = (int) $scorecard['incorrect_answers'] + (int) $scorecard['unattempted_questions'];
 				$quiz_id_for_retake = ! empty( $scorecard['quiz_id'] ) ? (int) $scorecard['quiz_id'] : ( isset( $_GET['iaq_quiz_id'] ) ? absint( $_GET['iaq_quiz_id'] ) : 0 );
 				if ( $quiz_id_for_retake > 0 ) :
 					$retake_url = add_query_arg(
@@ -42,10 +43,24 @@ if ( empty( $scorecard ) || ! is_array( $scorecard ) ) {
 						),
 						remove_query_arg( array( 'attempt_id' ), ( function_exists( 'get_permalink' ) && get_permalink() ? get_permalink() : '/' ) )
 					);
-					?>
+					if ( $mistakes_count > 0 && ! empty( $scorecard['attempt_id'] ) ) :
+						$retake_mistakes_url = add_query_arg(
+							array(
+								'iaq_quiz_id' => $quiz_id_for_retake,
+								'iaq_action'  => 'retake_mistakes',
+								'attempt_id'  => (int) $scorecard['attempt_id'],
+							),
+							remove_query_arg( array( 'attempt_id' ), ( function_exists( 'get_permalink' ) && get_permalink() ? get_permalink() : '/' ) )
+						);
+						?>
+						<a href="<?php echo esc_url( $retake_mistakes_url ); ?>" class="iaq-btn-retake is-mistakes" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; background:#dc2626; color:#fff; padding:6px 14px; border-radius:6px; font-size:13px; font-weight:600;">
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+							<?php printf( esc_html__( 'Re-attempt Mistakes Only (%d)', 'indianagri-quiz-engine' ), $mistakes_count ); ?>
+						</a>
+					<?php endif; ?>
 					<a href="<?php echo esc_url( $retake_url ); ?>" class="iaq-btn-retake" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; background:#117E3A; color:#fff; padding:6px 14px; border-radius:6px; font-size:13px; font-weight:600;">
 						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-						<?php esc_html_e( 'Retake Test', 'indianagri-quiz-engine' ); ?>
+						<?php esc_html_e( 'Retake Full Test', 'indianagri-quiz-engine' ); ?>
 					</a>
 				<?php endif; ?>
 				<button type="button" class="iaq-btn-print" onclick="window.print();">
@@ -281,6 +296,7 @@ if ( empty( $scorecard ) || ! is_array( $scorecard ) ) {
 		<!-- Actions -->
 		<div class="iaq-results-actions" style="margin-top: 30px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
 			<?php
+			$mistakes_count     = (int) $scorecard['incorrect_answers'] + (int) $scorecard['unattempted_questions'];
 			$quiz_id_for_retake = ! empty( $scorecard['quiz_id'] ) ? (int) $scorecard['quiz_id'] : ( isset( $_GET['iaq_quiz_id'] ) ? absint( $_GET['iaq_quiz_id'] ) : 0 );
 			if ( $quiz_id_for_retake > 0 ) :
 				$retake_url = add_query_arg(
@@ -290,10 +306,24 @@ if ( empty( $scorecard ) || ! is_array( $scorecard ) ) {
 					),
 					remove_query_arg( array( 'attempt_id' ), ( function_exists( 'get_permalink' ) && get_permalink() ? get_permalink() : '/' ) )
 				);
-				?>
+				if ( $mistakes_count > 0 && ! empty( $scorecard['attempt_id'] ) ) :
+					$retake_mistakes_url = add_query_arg(
+						array(
+							'iaq_quiz_id' => $quiz_id_for_retake,
+							'iaq_action'  => 'retake_mistakes',
+							'attempt_id'  => (int) $scorecard['attempt_id'],
+						),
+						remove_query_arg( array( 'attempt_id' ), ( function_exists( 'get_permalink' ) && get_permalink() ? get_permalink() : '/' ) )
+					);
+					?>
+					<a href="<?php echo esc_url( $retake_mistakes_url ); ?>" class="iaq-btn-retake is-mistakes" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; background:#dc2626; color:#fff; padding:10px 20px; border-radius:6px; font-weight:600;">
+						<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+						<?php printf( esc_html__( 'Re-attempt Mistakes Only (%d)', 'indianagri-quiz-engine' ), $mistakes_count ); ?>
+					</a>
+				<?php endif; ?>
 				<a href="<?php echo esc_url( $retake_url ); ?>" class="iaq-btn-retake" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; background:#117E3A; color:#fff; padding:10px 20px; border-radius:6px; font-weight:600;">
 					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-					<?php esc_html_e( 'Retake Test', 'indianagri-quiz-engine' ); ?>
+					<?php esc_html_e( 'Retake Full Test', 'indianagri-quiz-engine' ); ?>
 				</a>
 			<?php endif; ?>
 			<button type="button" class="iaq-btn-print" onclick="window.print();">

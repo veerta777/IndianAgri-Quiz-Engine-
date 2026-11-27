@@ -180,10 +180,29 @@ class IAQ_Frontend {
 		}
 
 		// When student requests to view result or inspect completed attempt
-		if ( 'view_result' === $action || ( isset( $_GET['attempt_id'] ) && absint( $_GET['attempt_id'] ) > 0 ) ) {
+		if ( 'view_result' === $action || ( isset( $_GET['attempt_id'] ) && absint( $_GET['attempt_id'] ) > 0 && 'retake_mistakes' !== $action ) ) {
 			$attempt_id = isset( $_GET['attempt_id'] ) ? absint( $_GET['attempt_id'] ) : ( $completed_attempt ? (int) $completed_attempt->id : 0 );
 			if ( $attempt_id > 0 ) {
 				return $this->render_results_shortcode( array( 'id' => $attempt_id ) );
+			}
+		}
+
+		// When student requests targeted re-attempt of mistake questions
+		$mistake_question_ids = array();
+		if ( 'retake_mistakes' === $action ) {
+			$target_attempt_id = isset( $_GET['attempt_id'] ) ? absint( $_GET['attempt_id'] ) : ( $completed_attempt ? (int) $completed_attempt->id : 0 );
+			if ( $target_attempt_id > 0 ) {
+				global $wpdb;
+				$table_answers = $wpdb->prefix . 'iaq_attempt_answers';
+				$raw_mistakes = $wpdb->get_col(
+					$wpdb->prepare(
+						"SELECT question_id FROM {$table_answers} WHERE attempt_id = %d AND (is_correct = 0 OR is_correct IS NULL OR selected_option IS NULL OR selected_option = '')",
+						$target_attempt_id
+					)
+				);
+				if ( ! empty( $raw_mistakes ) ) {
+					$mistake_question_ids = array_values( array_unique( array_filter( array_map( 'intval', (array) $raw_mistakes ) ) ) );
+				}
 			}
 		}
 

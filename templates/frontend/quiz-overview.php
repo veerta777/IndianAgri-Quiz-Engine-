@@ -37,6 +37,15 @@ if ( class_exists( 'IAQ_Quiz_Builder' ) ) {
 		$t_q = $wpdb->prefix . 'iaq_questions';
 		$raw_assigned = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t_q} WHERE subject_id = %d ORDER BY id ASC LIMIT 50", $quiz->subject_id ) );
 	}
+	if ( ! empty( $raw_assigned ) && ! empty( $mistake_question_ids ) && is_array( $mistake_question_ids ) ) {
+		$raw_assigned = array_filter(
+			$raw_assigned,
+			function( $rq ) use ( $mistake_question_ids ) {
+				return in_array( (int) $rq->id, $mistake_question_ids, true );
+			}
+		);
+		$raw_assigned = array_values( $raw_assigned );
+	}
 	if ( ! empty( $raw_assigned ) ) {
 		// Randomize Question Order (q no) across Practice Sets, Mock Tests, and PYQ Papers
 		$should_shuffle_questions = ! isset( $quiz->shuffle_questions ) || (int) $quiz->shuffle_questions !== 0;
@@ -134,11 +143,11 @@ if ( class_exists( 'IAQ_Quiz_Builder' ) ) {
 	<div class="iaq-param-grid">
 		<div class="iaq-param-box">
 			<span class="iaq-param-label"><?php esc_html_e( 'Total Questions', 'indianagri-quiz-engine' ); ?></span>
-			<span class="iaq-param-val"><?php echo esc_html( $quiz->total_questions ); ?></span>
+			<span class="iaq-param-val"><?php echo ! empty( $mistake_question_ids ) && ! empty( $raw_assigned ) ? count( $raw_assigned ) : esc_html( $quiz->total_questions ); ?></span>
 		</div>
 		<div class="iaq-param-box">
 			<span class="iaq-param-label"><?php esc_html_e( 'Total Marks', 'indianagri-quiz-engine' ); ?></span>
-			<span class="iaq-param-val"><?php echo esc_html( $quiz->total_marks ); ?></span>
+			<span class="iaq-param-val"><?php echo ! empty( $mistake_question_ids ) && ! empty( $raw_assigned ) ? number_format( (float) count( $raw_assigned ) * (float) $quiz->correct_marks, 2 ) : esc_html( $quiz->total_marks ); ?></span>
 		</div>
 		<div class="iaq-param-box">
 			<span class="iaq-param-label"><?php esc_html_e( 'Duration', 'indianagri-quiz-engine' ); ?></span>
@@ -225,6 +234,26 @@ if ( class_exists( 'IAQ_Quiz_Builder' ) ) {
 								<?php esc_html_e( 'Resume Examination Now', 'indianagri-quiz-engine' ); ?> &rarr;
 							</button>
 						</div>
+					<?php elseif ( ! empty( $mistake_question_ids ) && ! empty( $raw_assigned ) ) : ?>
+						<div style="width:100%; margin-bottom:16px; padding:14px 18px; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+							<div>
+								<span style="display:inline-block; background:#fee2e2; color:#991b1b; font-weight:700; font-size:12px; padding:2px 8px; border-radius:4px; margin-right:6px;">
+									<?php esc_html_e( 'MISTAKES DRILL', 'indianagri-quiz-engine' ); ?>
+								</span>
+								<strong style="color:#991b1b; font-size:14px;">
+									<?php printf( esc_html__( 'Targeted Drill: Re-attempting %d weak questions', 'indianagri-quiz-engine' ), count( $raw_assigned ) ); ?>
+								</strong>
+							</div>
+							<div>
+								<a href="<?php echo esc_url( add_query_arg( array( 'iaq_quiz_id' => $quiz->id, 'iaq_action' => 'retake' ) ) ); ?>" class="iaq-btn-outline" style="text-decoration:none; padding:8px 14px; font-size:12px;">
+									<?php esc_html_e( 'Switch to Full Test', 'indianagri-quiz-engine' ); ?>
+								</a>
+							</div>
+						</div>
+						<button type="button" class="iaq-btn-start" id="iaq-start-quiz-btn" data-quiz-id="<?php echo esc_attr( $quiz->id ); ?>" style="background:#dc2626; border-color:#dc2626;">
+							<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+							<?php printf( esc_html__( 'Start Mistakes Drill Now (%d Questions)', 'indianagri-quiz-engine' ), count( $raw_assigned ) ); ?> &rarr;
+						</button>
 					<?php elseif ( ! empty( $completed_attempt ) ) : ?>
 						<div style="width:100%; margin-bottom:16px; padding:14px 18px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
 							<div>

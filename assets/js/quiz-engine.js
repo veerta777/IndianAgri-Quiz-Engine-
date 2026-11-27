@@ -146,6 +146,11 @@
 				window.location.reload();
 			});
 
+			// Re-attempt Mistakes Only button on results view.
+			$(document).on('click', '#iaq-res-retake-mistakes-btn', function () {
+				self.startMistakesDrill();
+			});
+
 			// Review Solutions button on results view.
 			$(document).on('click', '#iaq-res-review-btn', function () {
 				self.loadSolutionsReview();
@@ -1533,6 +1538,14 @@
 			$('#iaq-bd-incorrect').text(incorrectCount);
 			$('#iaq-bd-unattempted').text(unattempted);
 
+			var mistakes = (parseInt(incorrectCount, 10) || 0) + (parseInt(unattempted, 10) || 0);
+			if (mistakes > 0) {
+				$('#iaq-res-mistakes-count').text(mistakes);
+				$('#iaq-res-retake-mistakes-btn').show();
+			} else {
+				$('#iaq-res-retake-mistakes-btn').hide();
+			}
+
 			if (sc.questions && sc.questions.length > 0) {
 				self.reviewQuestions = sc.questions;
 			}
@@ -1869,6 +1882,104 @@
 
 				$list.append($card);
 			});
+		},
+
+		/**
+		 * Start a fast in-memory mistakes drill containing only incorrect and unattempted questions.
+		 */
+		startMistakesDrill: function () {
+			var self = this;
+			if (!self.reviewQuestions || 0 === self.reviewQuestions.length) {
+				self.reviewQuestions = self.buildLocalReviewQuestions();
+			}
+
+			var mistakeMap = {};
+			var mistakeCount = 0;
+			$.each(self.reviewQuestions, function (i, rq) {
+				if (rq.is_correct !== 1) {
+					mistakeMap[rq.id] = true;
+					mistakeCount++;
+				}
+			});
+
+			if (0 === mistakeCount) {
+				alert('No incorrect or unattempted questions to re-attempt! Perfect score.');
+				return;
+			}
+
+			// Filter existing questions to only mistake questions
+			var filteredQuestions = [];
+			var pIdx = 1;
+			if (self.questions && self.questions.length > 0) {
+				$.each(self.questions, function (i, q) {
+					if (mistakeMap[q.id]) {
+						var cloneQ = $.extend({}, q);
+						cloneQ.index = pIdx++;
+						cloneQ.selected = null;
+						cloneQ.is_marked = 0;
+						filteredQuestions.push(cloneQ);
+					}
+				});
+			}
+
+			// Fallback reconstruction from review questions
+			if (0 === filteredQuestions.length && self.reviewQuestions && self.reviewQuestions.length > 0) {
+				var pIdx2 = 1;
+				$.each(self.reviewQuestions, function (i, rq) {
+					if (mistakeMap[rq.id]) {
+						filteredQuestions.push({
+							index: pIdx2++,
+							id: rq.id,
+							question_text: rq.question_text || '',
+							question_text_hi: rq.question_text_hi || '',
+							subject_name: rq.subject_name || '',
+							topic_name: rq.topic_name || '',
+							marks: 1.0,
+							negative_marks: 0.25,
+							option_a: rq.option_a || '',
+							option_b: rq.option_b || '',
+							option_c: rq.option_c || '',
+							option_d: rq.option_d || '',
+							options: rq.options || [],
+							selected: null,
+							is_marked: 0
+						});
+					}
+				});
+			}
+
+			if (0 === filteredQuestions.length) {
+				window.location.reload();
+				return;
+			}
+
+			// Reinitialize examination state with mistake questions
+			self.questions = filteredQuestions;
+			self.totalQuestions = filteredQuestions.length;
+			self.answers = {};
+			self.feedbackData = {};
+			self.currentQIndex = 0;
+			self.isSubmitting = false;
+			self.reviewQuestions = [];
+			self.attemptId = 9999000 + (self.quizId || 1);
+
+			// Update question palette and header badges
+			$('#iaq-total-questions').text(self.totalQuestions);
+			var subjectLabel = 'Targeted Mistakes Practice (' + self.totalQuestions + ' Questions)';
+			$('#iaq-active-subject-name').text(subjectLabel);
+
+			// Hide results/solutions, show examination CBT workspace
+			$('#iaq-results-portal').hide();
+			$('#iaq-solutions-portal').hide();
+			$('#iaq-examination-portal').fadeIn(300);
+
+			self.renderCurrentQuestion();
+			self.renderPalette();
+			self.updateStats();
+
+			$('html, body').animate({
+				scrollTop: $('#iaq-examination-portal').offset().top - 20
+			}, 300);
 		}
 	};
 

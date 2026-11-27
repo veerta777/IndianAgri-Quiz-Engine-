@@ -346,6 +346,9 @@ $is_practice_mode = class_exists( 'IAQ_Quiz_Builder' ) ? IAQ_Quiz_Builder::is_pr
 			<button type="button" class="iaq-btn-print" id="iaq-res-print-btn">
 				<svg class="iaq-icon" viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true" style="vertical-align:-2px;margin-right:6px;"><path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a1 1 0 001 1h8a1 1 0 001-1v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a1 1 0 00-1-1H6a1 1 0 00-1 1zm2 1h6v2H7V5zm8 6a1 1 0 11-2 0 1 1 0 012 0zm-8 2h6v3H7v-3z" clip-rule="evenodd" /></svg> <?php esc_html_e( 'Print Scorecard / Download PDF', 'indianagri-quiz-engine' ); ?>
 			</button>
+			<button type="button" class="iaq-btn-retake is-mistakes-only" id="iaq-res-retake-mistakes-btn" style="display:none; background:#dc2626; border-color:#dc2626; color:#ffffff;">
+				<svg class="iaq-icon" viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true" style="vertical-align:-2px;margin-right:6px;"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v4a1 1 0 001 1h2a1 1 0 100-2h-1V7z" clip-rule="evenodd" /></svg> <?php esc_html_e( 'Re-attempt Mistakes Only', 'indianagri-quiz-engine' ); ?> (<span id="iaq-res-mistakes-count">0</span>)
+			</button>
 			<button type="button" class="iaq-btn-retake" id="iaq-res-retake-btn">
 				<svg class="iaq-icon" viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true" style="vertical-align:-2px;margin-right:6px;"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" /></svg> <?php esc_html_e( 'Retake Test', 'indianagri-quiz-engine' ); ?>
 			</button>
