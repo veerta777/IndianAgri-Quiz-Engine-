@@ -2392,6 +2392,7 @@
 	.iaq-dash-mobile-nav,
 	.iaq-side-nav,
 	.iaq-results-actions,
+	.iaq-share-bar,
 	.iaq-solutions-header-actions,
 	.iaq-solutions-footer,
 	.iaq-filter-tabs-bar,
@@ -9913,6 +9914,57 @@ body.iaq-noscroll-mobile {
 		min-width: 82px !important;
 		padding: 5px 14px !important;
 		font-size: 12px !important;
+	}
+}
+
+/* Social Score Sharing (WhatsApp & Telegram) */
+.iaq-share-bar {
+	transition: box-shadow 0.2s ease;
+}
+.iaq-share-btn {
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	padding: 8px 16px !important;
+	font-size: 13px !important;
+	font-weight: 700 !important;
+	line-height: 1.4 !important;
+	border-radius: 6px !important;
+	text-decoration: none !important;
+	color: #ffffff !important;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+	transition: opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+.iaq-share-btn:hover {
+	opacity: 0.95 !important;
+	transform: translateY(-1px) !important;
+	color: #ffffff !important;
+	box-shadow: 0 3px 6px rgba(0, 0, 0, 0.12) !important;
+}
+.iaq-share-btn.is-whatsapp {
+	background: #25D366 !important;
+}
+.iaq-share-btn.is-whatsapp:hover {
+	background: #20bd5a !important;
+}
+.iaq-share-btn.is-telegram {
+	background: #0088cc !important;
+}
+.iaq-share-btn.is-telegram:hover {
+	background: #0077b5 !important;
+}
+
+@media (max-width: 640px) {
+	.iaq-share-bar {
+		flex-direction: column !important;
+		align-items: stretch !important;
+		text-align: center !important;
+	}
+	.iaq-share-bar > div {
+		justify-content: center !important;
+	}
+	.iaq-share-btn {
+		width: 100% !important;
 	}
 }
 

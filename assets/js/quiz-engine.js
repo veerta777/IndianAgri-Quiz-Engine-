@@ -1546,6 +1546,21 @@
 				$('#iaq-res-retake-mistakes-btn').hide();
 			}
 
+			// Generate WhatsApp & Telegram viral share URLs
+			var shareQuizTitle = sc.quiz_title || (window.iaqQuizData && window.iaqQuizData.title) || 'Agricultural Examination';
+			var shareTargetUrl = window.location.href.split('#')[0];
+			var shareMsg = '🌾 IndianAgriExam CBT Mock Test 🎯\n' +
+				'📝 Exam: ' + shareQuizTitle + '\n' +
+				'📊 Score: ' + score + ' / ' + totalMarks + ' (' + percent + '%)\n' +
+				'⭐ Accuracy: ' + correctCount + ' / ' + totalQ + ' Correct\n';
+			if (sc.percentile != null) {
+				shareMsg += '🏆 Percentile: ' + sc.percentile + 'th %ile\n';
+			}
+			shareMsg += '\nCan you beat my score? Test your preparation here:\n🔗 ' + shareTargetUrl;
+
+			$('#iaq-res-share-whatsapp').attr('href', 'https://api.whatsapp.com/send?text=' + encodeURIComponent(shareMsg));
+			$('#iaq-res-share-telegram').attr('href', 'https://t.me/share/url?url=' + encodeURIComponent(shareTargetUrl) + '&text=' + encodeURIComponent(shareMsg));
+
 			if (sc.questions && sc.questions.length > 0) {
 				self.reviewQuestions = sc.questions;
 			}
