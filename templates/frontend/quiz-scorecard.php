@@ -229,6 +229,10 @@ if ( empty( $scorecard ) || ! is_array( $scorecard ) ) {
 				</div>
 
 				<div class="iaq-solutions-list">
+					<?php
+					$current_uid     = get_current_user_id();
+					$bookmarked_qids = ( $current_uid > 0 && class_exists( 'IAQ_Bookmarks' ) ) ? IAQ_Bookmarks::get_bookmarked_question_ids( $current_uid ) : array();
+					?>
 					<?php foreach ( $questions as $q ) : ?>
 						<?php
 						$status = 'unattempted';
@@ -237,6 +241,7 @@ if ( empty( $scorecard ) || ! is_array( $scorecard ) ) {
 						} elseif ( 0 === $q['is_correct'] ) {
 							$status = 'incorrect';
 						}
+						$is_bookmarked = in_array( (int) $q['id'], $bookmarked_qids, true );
 						?>
 						<div class="iaq-solution-card is-status-<?php echo esc_attr( $status ); ?>">
 							<div class="iaq-sol-card-header">
@@ -246,7 +251,11 @@ if ( empty( $scorecard ) || ! is_array( $scorecard ) ) {
 										<span class="iaq-pill iaq-pill-category"><?php echo esc_html( $q['subject_name'] ); ?></span>
 									<?php endif; ?>
 								</div>
-								<div>
+								<div class="iaq-sol-header-right" style="display: flex; align-items: center; gap: 8px;">
+									<button type="button" class="iaq-sol-bookmark-btn <?php echo $is_bookmarked ? 'is-bookmarked' : ''; ?>" data-question-id="<?php echo (int) $q['id']; ?>" title="<?php echo $is_bookmarked ? esc_attr__( 'Bookmarked - Click to remove', 'indianagri-quiz-engine' ) : esc_attr__( 'Bookmark this question for revision', 'indianagri-quiz-engine' ); ?>">
+										<svg class="iaq-bm-icon" width="13" height="13" viewBox="0 0 24 24" fill="<?php echo $is_bookmarked ? '#f59e0b' : 'none'; ?>" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+										<span class="iaq-bm-text"><?php echo $is_bookmarked ? esc_html__( 'Bookmarked', 'indianagri-quiz-engine' ) : esc_html__( 'Bookmark', 'indianagri-quiz-engine' ); ?></span>
+									</button>
 									<?php if ( 'correct' === $status ) : ?>
 										<span class="iaq-sol-status-badge is-correct">
 											<span class="dashicons dashicons-yes"></span> <?php printf( esc_html__( 'Correct (+%s)', 'indianagri-quiz-engine' ), $q['marks_awarded'] ); ?>

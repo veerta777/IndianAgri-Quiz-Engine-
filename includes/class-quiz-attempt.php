@@ -450,6 +450,8 @@ class IAQ_Quiz_Attempt {
 				);
 			}
 
+			$bookmarked_ids = ( $user_id > 0 && class_exists( 'IAQ_Bookmarks' ) ) ? IAQ_Bookmarks::get_bookmarked_question_ids( $user_id ) : array();
+
 			wp_send_json_success(
 				array(
 					'scorecard'         => array(
@@ -458,6 +460,7 @@ class IAQ_Quiz_Attempt {
 					),
 					'questions'         => $questions,
 					'subject_breakdown' => array(),
+					'bookmarked_ids'    => $bookmarked_ids,
 				)
 			);
 		}
@@ -473,12 +476,14 @@ class IAQ_Quiz_Attempt {
 
 		$questions = self::get_attempt_review_questions( $attempt_id, $user_id );
 		$breakdown = self::get_attempt_subject_breakdown( $attempt_id, $user_id );
+		$bookmarked_ids = ( $user_id > 0 && class_exists( 'IAQ_Bookmarks' ) ) ? IAQ_Bookmarks::get_bookmarked_question_ids( $user_id ) : array();
 
 		wp_send_json_success(
 			array(
 				'scorecard'         => $scorecard,
 				'questions'         => $questions,
 				'subject_breakdown' => $breakdown,
+				'bookmarked_ids'    => $bookmarked_ids,
 			)
 		);
 	}

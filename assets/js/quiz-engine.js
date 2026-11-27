@@ -60,6 +60,7 @@
 		timerInterval: null,
 		timeSpentSeconds: 0,
 		isSubmitting: false,
+		bookmarkedQuestionIds: (window.iaqQuizData && window.iaqQuizData.bookmarkedIds) ? window.iaqQuizData.bookmarkedIds : [],
 
 		init: function () {
 			var self = this;
@@ -1747,6 +1748,9 @@
 						$btn.prop('disabled', false);
 						if (res && res.success && res.data && res.data.questions && res.data.questions.length > 0) {
 							self.reviewQuestions = res.data.questions;
+							if (res.data.bookmarked_ids && Array.isArray(res.data.bookmarked_ids)) {
+								self.bookmarkedQuestionIds = res.data.bookmarked_ids;
+							}
 							if (res.data.scorecard && res.data.scorecard.quiz_title) {
 								if (!self.lastScorecard) self.lastScorecard = {};
 								self.lastScorecard.quiz_title = res.data.scorecard.quiz_title;
@@ -1821,7 +1825,26 @@
 					$statusBadge.html(IAQ_ICONS.minus + ' Not Attempted (0.00)');
 				}
 
-				$head.append($badges).append($statusBadge);
+				var $headRight = $('<div class="iaq-sol-header-right" style="display:flex;align-items:center;gap:8px;"></div>');
+				var qid = parseInt(q.id || q.question_id, 10);
+				var isBookmarked = false;
+				if (self.bookmarkedQuestionIds && Array.isArray(self.bookmarkedQuestionIds)) {
+					isBookmarked = (self.bookmarkedQuestionIds.indexOf(qid) !== -1);
+				} else if (window.iaqQuizData && window.iaqQuizData.bookmarkedIds && Array.isArray(window.iaqQuizData.bookmarkedIds)) {
+					isBookmarked = (window.iaqQuizData.bookmarkedIds.indexOf(qid) !== -1);
+				}
+
+				if (qid > 0) {
+					var bmTitle = isBookmarked ? 'Bookmarked - Click to remove' : 'Bookmark this question for revision';
+					var bmText = isBookmarked ? 'Bookmarked' : 'Bookmark';
+					var bmFill = isBookmarked ? '#f59e0b' : 'none';
+					var $bmBtn = $('<button type="button" class="iaq-sol-bookmark-btn' + (isBookmarked ? ' is-bookmarked' : '') + '" data-question-id="' + qid + '" title="' + bmTitle + '"></button>');
+					$bmBtn.html('<svg class="iaq-bm-icon" width="13" height="13" viewBox="0 0 24 24" fill="' + bmFill + '" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> <span class="iaq-bm-text">' + bmText + '</span>');
+					$headRight.append($bmBtn);
+				}
+
+				$headRight.append($statusBadge);
+				$head.append($badges).append($headRight);
 				$card.append($head);
 
 				// Question text (English and Hindi)
@@ -2400,6 +2423,82 @@
 		// Accordion folder toggle for Practice Sets, Mock Tests, and PYQs
 		$(document).on('click', '.iaq-folder-header', function (e) {
 			$(this).closest('.iaq-folder-card').toggleClass('is-collapsed');
+		});
+
+		// 1-Click Bookmark Question Toggle in Solutions & Scorecards
+		$(document).on('click', '.iaq-sol-bookmark-btn', function (e) {
+			e.preventDefault();
+			var $btn = $(this);
+			var qid = parseInt($btn.data('question-id'), 10);
+			if (!qid || $btn.prop('disabled')) {
+				return;
+			}
+
+			if (window.iaqQuizData && window.iaqQuizData.isLoggedIn === false) {
+				alert('Please log in to your student account to save questions to your revision bookmarks.');
+				return;
+			}
+
+			var ajaxUrl = (window.iaqQuizData && window.iaqQuizData.ajaxUrl) ? window.iaqQuizData.ajaxUrl : '/wp-admin/admin-ajax.php';
+			var nonce = (window.iaqQuizData && window.iaqQuizData.nonce) ? window.iaqQuizData.nonce : '';
+
+			$btn.prop('disabled', true);
+
+			$.ajax({
+				url: ajaxUrl,
+				type: 'POST',
+				data: {
+					action: 'iaq_toggle_bookmark',
+					question_id: qid,
+					nonce: nonce
+				},
+				dataType: 'json',
+				success: function (res) {
+					$btn.prop('disabled', false);
+					if (res && res.success && res.data) {
+						var isNowBookmarked = !!res.data.bookmarked;
+						var bmFill = isNowBookmarked ? '#f59e0b' : 'none';
+						var bmText = isNowBookmarked ? 'Bookmarked' : 'Bookmark';
+						var bmTitle = isNowBookmarked ? 'Bookmarked - Click to remove' : 'Bookmark this question for revision';
+
+						// Update all buttons for this question on the page
+						var $allTargetBtns = $('.iaq-sol-bookmark-btn[data-question-id="' + qid + '"]');
+						if (isNowBookmarked) {
+							$allTargetBtns.addClass('is-bookmarked');
+						} else {
+							$allTargetBtns.removeClass('is-bookmarked');
+						}
+						$allTargetBtns.attr('title', bmTitle).html(
+							'<svg class="iaq-bm-icon" width="13" height="13" viewBox="0 0 24 24" fill="' + bmFill + '" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> <span class="iaq-bm-text">' + bmText + '</span>'
+						);
+
+						// Keep IAQQuizEngine.bookmarkedQuestionIds synced
+						if (IAQQuizEngine.bookmarkedQuestionIds && Array.isArray(IAQQuizEngine.bookmarkedQuestionIds)) {
+							var idx = IAQQuizEngine.bookmarkedQuestionIds.indexOf(qid);
+							if (isNowBookmarked && idx === -1) {
+								IAQQuizEngine.bookmarkedQuestionIds.push(qid);
+							} else if (!isNowBookmarked && idx !== -1) {
+								IAQQuizEngine.bookmarkedQuestionIds.splice(idx, 1);
+							}
+						}
+
+						// Update dashboard bookmarks counter if visible
+						var $bmBadge = $('#iaq-badge-bookmarks');
+						if ($bmBadge.length) {
+							var curCount = parseInt($bmBadge.text(), 10) || 0;
+							var newCount = isNowBookmarked ? (curCount + 1) : Math.max(0, curCount - 1);
+							$bmBadge.text(newCount);
+						}
+					} else {
+						var msg = (res && res.data && res.data.message) ? res.data.message : 'Could not update bookmark.';
+						alert(msg);
+					}
+				},
+				error: function () {
+					$btn.prop('disabled', false);
+					alert('Network error. Could not update bookmark.');
+				}
+			});
 		});
 	});
 

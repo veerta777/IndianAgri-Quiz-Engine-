@@ -105,6 +105,8 @@ class IAQ_Frontend {
 				'restStartUrl'     => esc_url_raw( rest_url( 'iaq/v1/quiz/{id}/start' ) ),
 				'restQuestionsUrl' => esc_url_raw( rest_url( 'iaq/v1/quiz/{id}/questions' ) ),
 				'nonce'            => wp_create_nonce( 'iaq_quiz_nonce' ),
+				'isLoggedIn'       => is_user_logged_in(),
+				'bookmarkedIds'    => ( is_user_logged_in() && class_exists( 'IAQ_Bookmarks' ) ) ? IAQ_Bookmarks::get_bookmarked_question_ids( get_current_user_id() ) : array(),
 				'i18n'             => array(
 					'starting'      => __( 'Initializing examination session...', 'indianagri-quiz-engine' ),
 					'saving'        => __( 'Saving...', 'indianagri-quiz-engine' ),
