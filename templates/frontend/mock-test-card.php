@@ -36,12 +36,22 @@ if ( isset( $_GET['page'] ) && strpos( sanitize_key( $_GET['page'] ), 'iaq-previ
 	);
 }
 
+$result_args = array(
+	'iaq_quiz_id' => $quiz->id,
+	'iaq_action'  => 'view_result',
+);
+if ( ! empty( $quiz->latest_attempt_id ) ) {
+	$result_args['attempt_id'] = (int) $quiz->latest_attempt_id;
+}
+$result_url = add_query_arg( $result_args, $attempt_url );
+
 $sub_plans_url = add_query_arg(
 	array( 'page' => 'iaq-preview-subscription-plans' ),
 	function_exists( 'get_permalink' ) ? get_permalink() : '/'
 );
 
 $display_title = ! empty( $quiz->formatted_title ) ? $quiz->formatted_title : ( ! empty( $quiz->title ) ? $quiz->title : sprintf( __( 'Mock Test %d', 'indianagri-quiz-engine' ), $test_num ) );
+$action_url    = ( 'completed' === $attempt_st ) ? $result_url : $attempt_url;
 ?>
 
 <div class="iaq-item-row iaq-mock-card <?php echo $is_paid ? 'is-paid' : 'is-free'; ?> <?php echo ! $is_accessible ? 'is-locked' : ''; ?>" id="mock-test-card-<?php echo esc_attr( $quiz->id ); ?>">
@@ -56,7 +66,7 @@ $display_title = ! empty( $quiz->formatted_title ) ? $quiz->formatted_title : ( 
 		</div>
 		<div class="iaq-item-title-wrap">
 			<h4 class="iaq-item-title">
-				<a href="<?php echo esc_url( $attempt_url ); ?>" title="<?php echo esc_attr( $display_title ); ?>">
+				<a href="<?php echo esc_url( $action_url ); ?>" title="<?php echo esc_attr( $display_title ); ?>">
 					<?php echo esc_html( $display_title ); ?>
 				</a>
 			</h4>
@@ -86,9 +96,9 @@ $display_title = ! empty( $quiz->formatted_title ) ? $quiz->formatted_title : ( 
 				<span><?php esc_html_e( 'Unlock', 'indianagri-quiz-engine' ); ?></span>
 			</a>
 		<?php elseif ( 'completed' === $attempt_st ) : ?>
-			<a href="<?php echo esc_url( $attempt_url ); ?>" class="iaq-item-btn is-view">
+			<a href="<?php echo esc_url( $result_url ); ?>" class="iaq-item-btn is-view" title="<?php esc_attr_e( 'View Result & Explanations', 'indianagri-quiz-engine' ); ?>">
 				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-				<span><?php esc_html_e( 'View', 'indianagri-quiz-engine' ); ?></span>
+				<span><?php esc_html_e( 'View Result', 'indianagri-quiz-engine' ); ?></span>
 			</a>
 		<?php elseif ( 'in_progress' === $attempt_st ) : ?>
 			<a href="<?php echo esc_url( $attempt_url ); ?>" class="iaq-item-btn is-continue">

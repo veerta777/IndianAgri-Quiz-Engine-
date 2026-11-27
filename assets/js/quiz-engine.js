@@ -166,12 +166,34 @@
 				}, 300);
 			});
 
-			// Filter Tabs on solutions portal.
-			$(document).on('click', '.iaq-filter-tab', function () {
+			// Filter Tabs on solutions portal & standalone scorecard.
+			$(document).on('click', '.iaq-filter-tab, .iaq-filter-trigger', function () {
 				var filter = $(this).data('filter');
+				if (!filter) return;
+
 				$('.iaq-filter-tab').removeClass('is-active');
-				$(this).addClass('is-active');
-				self.renderSolutionsList(filter);
+				$('.iaq-filter-tab[data-filter="' + filter + '"]').addClass('is-active');
+
+				var $staticCards = $('.iaq-solutions-section .iaq-solution-card');
+				if ($staticCards.length > 0) {
+					if (filter === 'all') {
+						$staticCards.fadeIn(150);
+					} else {
+						$staticCards.hide();
+						$staticCards.filter('.is-status-' + filter).fadeIn(150);
+					}
+					// If triggered from top breakdown tiles, scroll down smoothly to solutions
+					if ($(this).hasClass('iaq-filter-trigger')) {
+						var $solSec = $('.iaq-solutions-section');
+						if ($solSec.length > 0) {
+							$('html, body').animate({
+								scrollTop: $solSec.offset().top - 20
+							}, 300);
+						}
+					}
+				} else if (self && typeof self.renderSolutionsList === 'function') {
+					self.renderSolutionsList(filter);
+				}
 			});
 
 			// Return to Dashboard from Active Examination

@@ -153,9 +153,12 @@ class IAQ_Frontend {
 			return '<div class="iaq-notice-box iaq-notice-error">' . esc_html__( 'The requested quiz was not found or is currently unpublished.', 'indianagri-quiz-engine' ) . '</div>';
 		}
 
-		// Check for active in-progress attempt.
-		$active_attempt = null;
-		$user_id = get_current_user_id();
+		// Check for active in-progress attempt or completed attempt.
+		$active_attempt    = null;
+		$completed_attempt = null;
+		$user_id           = get_current_user_id();
+		$action            = isset( $_GET['iaq_action'] ) ? sanitize_key( $_GET['iaq_action'] ) : '';
+
 		if ( $user_id > 0 ) {
 			global $wpdb;
 			$table_attempts = $wpdb->prefix . 'iaq_quiz_attempts';
@@ -166,6 +169,22 @@ class IAQ_Frontend {
 					$user_id
 				)
 			);
+
+			$completed_attempt = $wpdb->get_row(
+				$wpdb->prepare(
+					"SELECT * FROM {$table_attempts} WHERE quiz_id = %d AND user_id = %d AND status = 'completed' ORDER BY id DESC LIMIT 1",
+					$quiz_id,
+					$user_id
+				)
+			);
+		}
+
+		// When student requests to view result or inspect completed attempt
+		if ( 'view_result' === $action || ( isset( $_GET['attempt_id'] ) && absint( $_GET['attempt_id'] ) > 0 ) ) {
+			$attempt_id = isset( $_GET['attempt_id'] ) ? absint( $_GET['attempt_id'] ) : ( $completed_attempt ? (int) $completed_attempt->id : 0 );
+			if ( $attempt_id > 0 ) {
+				return $this->render_results_shortcode( array( 'id' => $attempt_id ) );
+			}
 		}
 
 		ob_start();
@@ -361,7 +380,7 @@ class IAQ_Frontend {
 		// If a quiz attempt was initiated, render the examination overview/screen
 		if ( isset( $_GET['iaq_quiz_id'] ) && absint( $_GET['iaq_quiz_id'] ) > 0 ) {
 			$q_id      = absint( $_GET['iaq_quiz_id'] );
-			$back_url  = remove_query_arg( 'iaq_quiz_id' );
+			$back_url  = remove_query_arg( array( 'iaq_quiz_id', 'iaq_action', 'attempt_id' ) );
 			$quiz_html = $this->render_quiz_shortcode( array( 'id' => $q_id ) );
 			return '<div class="iaq-mock-attempt-wrapper"><div style="margin-bottom:16px;"><a href="' . esc_url( $back_url ) . '" class="iaq-btn iaq-btn-outline"><span class="dashicons dashicons-arrow-left-alt"></span> ' . esc_html__( 'Back to Mock Tests', 'indianagri-quiz-engine' ) . '</a></div>' . $quiz_html . '</div>';
 		}
@@ -544,7 +563,7 @@ class IAQ_Frontend {
 		// If a quiz attempt was initiated, render the examination overview/screen
 		if ( isset( $_GET['iaq_quiz_id'] ) && absint( $_GET['iaq_quiz_id'] ) > 0 ) {
 			$q_id      = absint( $_GET['iaq_quiz_id'] );
-			$back_url  = remove_query_arg( 'iaq_quiz_id' );
+			$back_url  = remove_query_arg( array( 'iaq_quiz_id', 'iaq_action', 'attempt_id' ) );
 			$quiz_html = $this->render_quiz_shortcode( array( 'id' => $q_id ) );
 			return '<div class="iaq-mock-attempt-wrapper"><div style="margin-bottom:16px;"><a href="' . esc_url( $back_url ) . '" class="iaq-btn iaq-btn-outline"><span class="dashicons dashicons-arrow-left-alt"></span> ' . esc_html__( 'Back to Previous Year Papers', 'indianagri-quiz-engine' ) . '</a></div>' . $quiz_html . '</div>';
 		}
@@ -902,12 +921,26 @@ class IAQ_Frontend {
 		if ( ! $attempt_id && $user_id > 0 ) {
 			global $wpdb;
 			$table_attempts = $wpdb->prefix . 'iaq_quiz_attempts';
-			$attempt_id = (int) $wpdb->get_var(
-				$wpdb->prepare(
-					"SELECT id FROM {$table_attempts} WHERE user_id = %d AND status = 'completed' ORDER BY id DESC LIMIT 1",
-					$user_id
-				)
-			);
+
+			if ( isset( $_GET['iaq_quiz_id'] ) && absint( $_GET['iaq_quiz_id'] ) > 0 ) {
+				$q_id       = absint( $_GET['iaq_quiz_id'] );
+				$attempt_id = (int) $wpdb->get_var(
+					$wpdb->prepare(
+						"SELECT id FROM {$table_attempts} WHERE quiz_id = %d AND user_id = %d AND status = 'completed' ORDER BY id DESC LIMIT 1",
+						$q_id,
+						$user_id
+					)
+				);
+			}
+
+			if ( ! $attempt_id ) {
+				$attempt_id = (int) $wpdb->get_var(
+					$wpdb->prepare(
+						"SELECT id FROM {$table_attempts} WHERE user_id = %d AND status = 'completed' ORDER BY id DESC LIMIT 1",
+						$user_id
+					)
+				);
+			}
 		}
 
 		if ( ! $attempt_id ) {

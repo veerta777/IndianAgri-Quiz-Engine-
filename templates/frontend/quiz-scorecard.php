@@ -31,7 +31,23 @@ if ( empty( $scorecard ) || ! is_array( $scorecard ) ) {
 				<span><?php esc_html_e( 'Completed on', 'indianagri-quiz-engine' ); ?>: <?php echo esc_html( $scorecard['end_time'] ); ?></span>
 			</div>
 
-			<div class="iaq-scorecard-header-actions" style="margin-top:12px;">
+			<div class="iaq-scorecard-header-actions" style="margin-top:12px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+				<?php
+				$quiz_id_for_retake = ! empty( $scorecard['quiz_id'] ) ? (int) $scorecard['quiz_id'] : ( isset( $_GET['iaq_quiz_id'] ) ? absint( $_GET['iaq_quiz_id'] ) : 0 );
+				if ( $quiz_id_for_retake > 0 ) :
+					$retake_url = add_query_arg(
+						array(
+							'iaq_quiz_id' => $quiz_id_for_retake,
+							'iaq_action'  => 'retake',
+						),
+						remove_query_arg( array( 'attempt_id' ), ( function_exists( 'get_permalink' ) && get_permalink() ? get_permalink() : '/' ) )
+					);
+					?>
+					<a href="<?php echo esc_url( $retake_url ); ?>" class="iaq-btn-retake" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; background:#117E3A; color:#fff; padding:6px 14px; border-radius:6px; font-size:13px; font-weight:600;">
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+						<?php esc_html_e( 'Retake Test', 'indianagri-quiz-engine' ); ?>
+					</a>
+				<?php endif; ?>
 				<button type="button" class="iaq-btn-print" onclick="window.print();">
 					<span class="dashicons dashicons-printer"></span> <?php esc_html_e( 'Print Scorecard / Download PDF', 'indianagri-quiz-engine' ); ?>
 				</button>
@@ -66,15 +82,15 @@ if ( empty( $scorecard ) || ! is_array( $scorecard ) ) {
 
 		<!-- Accuracy & Negative Marking Breakdown -->
 		<div class="iaq-breakdown-row">
-			<div class="iaq-breakdown-item is-correct">
+			<div class="iaq-breakdown-item is-correct iaq-filter-trigger" data-filter="correct" role="button" tabindex="0" style="cursor:pointer;" title="<?php esc_attr_e( 'Click to filter correct questions', 'indianagri-quiz-engine' ); ?>">
 				<span class="iaq-bd-count"><?php echo esc_html( $scorecard['correct_answers'] ); ?></span>
 				<span class="iaq-bd-label"><?php esc_html_e( 'Correct Answers', 'indianagri-quiz-engine' ); ?></span>
 			</div>
-			<div class="iaq-breakdown-item is-incorrect">
+			<div class="iaq-breakdown-item is-incorrect iaq-filter-trigger" data-filter="incorrect" role="button" tabindex="0" style="cursor:pointer;" title="<?php esc_attr_e( 'Click to filter incorrect questions', 'indianagri-quiz-engine' ); ?>">
 				<span class="iaq-bd-count"><?php echo esc_html( $scorecard['incorrect_answers'] ); ?></span>
 				<span class="iaq-bd-label"><?php esc_html_e( 'Incorrect Answers', 'indianagri-quiz-engine' ); ?></span>
 			</div>
-			<div class="iaq-breakdown-item is-unattempted">
+			<div class="iaq-breakdown-item is-unattempted iaq-filter-trigger" data-filter="unattempted" role="button" tabindex="0" style="cursor:pointer;" title="<?php esc_attr_e( 'Click to filter unattempted questions', 'indianagri-quiz-engine' ); ?>">
 				<span class="iaq-bd-count"><?php echo esc_html( $scorecard['unattempted_questions'] ); ?></span>
 				<span class="iaq-bd-label"><?php esc_html_e( 'Unattempted', 'indianagri-quiz-engine' ); ?></span>
 			</div>
@@ -137,13 +153,29 @@ if ( empty( $scorecard ) || ! is_array( $scorecard ) ) {
 		<!-- Detailed Solutions & Question-by-Question Analysis -->
 		<?php if ( ! empty( $questions ) && 'never' !== $scorecard['show_answers_mode'] ) : ?>
 			<div class="iaq-solutions-section" style="margin-top: 36px;">
-				<div style="border-bottom: 2px solid #e2e8f0; padding-bottom: 14px; margin-bottom: 24px;">
+				<div style="border-bottom: 2px solid #e2e8f0; padding-bottom: 14px; margin-bottom: 20px;">
 					<h3 style="margin: 0 0 6px 0; font-size: 20px; font-weight: 800; color: #0f172a;">
 						<?php esc_html_e( 'Question-by-Question Solutions & Explanations', 'indianagri-quiz-engine' ); ?>
 					</h3>
 					<span style="font-size: 13px; color: #64748b;">
 						<?php esc_html_e( 'Review your responses alongside verified answer keys and detailed agricultural notes.', 'indianagri-quiz-engine' ); ?>
 					</span>
+				</div>
+
+				<!-- Interactive Filter Tabs: All, Correct, Incorrect, Unattempted -->
+				<div class="iaq-filter-tabs-bar" style="margin-bottom: 24px; display: flex; gap: 8px; flex-wrap: wrap;">
+					<button type="button" class="iaq-filter-tab is-active" data-filter="all">
+						<?php esc_html_e( 'All Questions', 'indianagri-quiz-engine' ); ?> (<?php echo count( $questions ); ?>)
+					</button>
+					<button type="button" class="iaq-filter-tab is-correct-tab" data-filter="correct">
+						<span class="iaq-tab-dot is-correct-dot"></span> <?php esc_html_e( 'Correct', 'indianagri-quiz-engine' ); ?> (<?php echo (int) $scorecard['correct_answers']; ?>)
+					</button>
+					<button type="button" class="iaq-filter-tab is-incorrect-tab" data-filter="incorrect">
+						<span class="iaq-tab-dot is-incorrect-dot"></span> <?php esc_html_e( 'Incorrect (Wrong)', 'indianagri-quiz-engine' ); ?> (<?php echo (int) $scorecard['incorrect_answers']; ?>)
+					</button>
+					<button type="button" class="iaq-filter-tab is-unattempted-tab" data-filter="unattempted">
+						<span class="iaq-tab-dot is-unattempted-dot"></span> <?php esc_html_e( 'Unattempted', 'indianagri-quiz-engine' ); ?> (<?php echo (int) $scorecard['unattempted_questions']; ?>)
+					</button>
 				</div>
 
 				<div class="iaq-solutions-list">
@@ -183,6 +215,11 @@ if ( empty( $scorecard ) || ! is_array( $scorecard ) ) {
 
 							<div class="iaq-sol-qtext">
 								<?php echo wp_kses_post( class_exists( 'IAQ_Quiz_Attempt' ) ? IAQ_Quiz_Attempt::clean_content( $q['question_text'] ) : $q['question_text'] ); ?>
+								<?php if ( ! empty( $q['question_text_hi'] ) && $q['question_text_hi'] !== $q['question_text'] ) : ?>
+									<div class="iaq-qtext-hi" style="margin-top:6px; color:#334155; font-weight:500;">
+										<?php echo wp_kses_post( class_exists( 'IAQ_Quiz_Attempt' ) ? IAQ_Quiz_Attempt::clean_content( $q['question_text_hi'] ) : $q['question_text_hi'] ); ?>
+									</div>
+								<?php endif; ?>
 							</div>
 
 							<!-- Options -->
@@ -203,10 +240,16 @@ if ( empty( $scorecard ) || ! is_array( $scorecard ) ) {
 									} elseif ( $is_selected_opt ) {
 										$opt_cls = 'is-user-wrong';
 									}
+									$opt_hi = ! empty( $q[ 'option_' . strtolower( $k ) . '_hi' ] ) ? ( class_exists( 'IAQ_Quiz_Attempt' ) ? IAQ_Quiz_Attempt::clean_content( $q[ 'option_' . strtolower( $k ) . '_hi' ] ) : $q[ 'option_' . strtolower( $k ) . '_hi' ] ) : '';
 									?>
 									<div class="iaq-sol-option-item <?php echo esc_attr( $opt_cls ); ?>">
 										<span class="iaq-sol-opt-key"><?php echo esc_html( $k ); ?></span>
-										<span class="iaq-sol-opt-label"><?php echo wp_kses_post( $opt_text ); ?></span>
+										<span class="iaq-sol-opt-label">
+											<?php echo wp_kses_post( $opt_text ); ?>
+											<?php if ( ! empty( $opt_hi ) && $opt_hi !== $opt_text ) : ?>
+												<span class="iaq-opt-hi" style="color:#64748b;font-weight:normal;">(<?php echo wp_kses_post( $opt_hi ); ?>)</span>
+											<?php endif; ?>
+										</span>
 										<?php if ( $is_correct_opt && $is_selected_opt ) : ?>
 											<span class="iaq-sol-opt-tag"><?php esc_html_e( '✓ Your Correct Choice', 'indianagri-quiz-engine' ); ?></span>
 										<?php elseif ( $is_correct_opt ) : ?>
@@ -237,11 +280,27 @@ if ( empty( $scorecard ) || ! is_array( $scorecard ) ) {
 
 		<!-- Actions -->
 		<div class="iaq-results-actions" style="margin-top: 30px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+			<?php
+			$quiz_id_for_retake = ! empty( $scorecard['quiz_id'] ) ? (int) $scorecard['quiz_id'] : ( isset( $_GET['iaq_quiz_id'] ) ? absint( $_GET['iaq_quiz_id'] ) : 0 );
+			if ( $quiz_id_for_retake > 0 ) :
+				$retake_url = add_query_arg(
+					array(
+						'iaq_quiz_id' => $quiz_id_for_retake,
+						'iaq_action'  => 'retake',
+					),
+					remove_query_arg( array( 'attempt_id' ), ( function_exists( 'get_permalink' ) && get_permalink() ? get_permalink() : '/' ) )
+				);
+				?>
+				<a href="<?php echo esc_url( $retake_url ); ?>" class="iaq-btn-retake" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; background:#117E3A; color:#fff; padding:10px 20px; border-radius:6px; font-weight:600;">
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+					<?php esc_html_e( 'Retake Test', 'indianagri-quiz-engine' ); ?>
+				</a>
+			<?php endif; ?>
 			<button type="button" class="iaq-btn-print" onclick="window.print();">
 				<span class="dashicons dashicons-printer"></span> <?php esc_html_e( 'Print Scorecard / Download PDF', 'indianagri-quiz-engine' ); ?>
 			</button>
 			<a href="<?php echo esc_url( remove_query_arg( array( 'iaq_quiz_id', 'iaq_action', 'attempt_id' ), ( function_exists( 'get_permalink' ) && get_permalink() ? get_permalink() : '/' ) ) ); ?>" class="iaq-btn-action-primary" style="text-decoration:none;">
-				&larr; <?php esc_html_e( 'Back to Student Dashboard', 'indianagri-quiz-engine' ); ?>
+				&larr; <?php esc_html_e( 'Back to Quiz List', 'indianagri-quiz-engine' ); ?>
 			</a>
 		</div>
 

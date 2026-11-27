@@ -1500,13 +1500,14 @@ class IAQ_Practice_Sets {
 
 		$row->practice_set_number = $counter;
 		$row->attempt_status      = 'not_attempted';
+		$row->latest_attempt_id   = null;
 		$row->latest_percentage   = null;
 		$row->latest_passed       = null;
 
 		if ( $user_id > 0 ) {
 			$latest_attempt = $wpdb->get_row(
 				$wpdb->prepare(
-					"SELECT status, score, percentage, passed FROM {$table_attempts}
+					"SELECT id, status, score, percentage, passed FROM {$table_attempts}
 					 WHERE quiz_id = %d AND user_id = %d
 					 ORDER BY id DESC LIMIT 1",
 					$row->id,
@@ -1515,6 +1516,7 @@ class IAQ_Practice_Sets {
 			);
 
 			if ( $latest_attempt ) {
+				$row->latest_attempt_id = (int) $latest_attempt->id;
 				$row->attempt_status    = $latest_attempt->status; // 'in_progress' or 'completed'
 				$row->latest_percentage = $latest_attempt->percentage;
 				$row->latest_passed     = (bool) $latest_attempt->passed;

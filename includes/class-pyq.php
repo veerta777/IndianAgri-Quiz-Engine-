@@ -192,13 +192,14 @@ class IAQ_PYQ {
 		foreach ( $unique as &$pq ) {
 			$pq->attempt_status    = 'not_attempted';
 			$pq->latest_percentage = null;
+			$pq->latest_attempt_id = null;
 			$pq->latest_score      = null;
 			$pq->latest_passed     = null;
 
 			if ( $user_id > 0 ) {
 				$latest_attempt = $wpdb->get_row(
 					$wpdb->prepare(
-						"SELECT status, score, percentage, passed, total_marks 
+						"SELECT id, status, score, percentage, passed, total_marks 
 						 FROM {$table_attempts} 
 						 WHERE quiz_id = %d AND user_id = %d 
 						 ORDER BY id DESC LIMIT 1",
@@ -208,6 +209,7 @@ class IAQ_PYQ {
 				);
 
 				if ( $latest_attempt ) {
+					$pq->latest_attempt_id = (int) $latest_attempt->id;
 					$pq->attempt_status    = $latest_attempt->status;
 					$pq->latest_percentage = $latest_attempt->percentage ? round( floatval( $latest_attempt->percentage ), 1 ) : 0;
 					$pq->latest_score      = $latest_attempt->score ? round( floatval( $latest_attempt->score ), 2 ) : 0;

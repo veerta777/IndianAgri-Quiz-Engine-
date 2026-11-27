@@ -880,10 +880,11 @@ class IAQ_Mock_Tests {
 			$quiz->is_accessible = IAQ_Access_Control::can_attempt_quiz( $user_id, $quiz );
 
 			// Check attempt status
-			$quiz->attempt_status   = 'not_attempted';
-			$quiz->latest_score     = null;
-			$quiz->latest_percentage= null;
-			$quiz->latest_passed    = null;
+			$quiz->attempt_status    = 'not_attempted';
+			$quiz->latest_attempt_id = null;
+			$quiz->latest_score      = null;
+			$quiz->latest_percentage = null;
+			$quiz->latest_passed     = null;
 
 			if ( $user_id > 0 ) {
 				$attempt = $wpdb->get_row(
@@ -894,6 +895,7 @@ class IAQ_Mock_Tests {
 					)
 				);
 				if ( $attempt ) {
+					$quiz->latest_attempt_id = (int) $attempt->id;
 					$quiz->attempt_status    = $attempt->status;
 					$quiz->latest_score      = $attempt->score;
 					$quiz->latest_percentage = $attempt->percentage;

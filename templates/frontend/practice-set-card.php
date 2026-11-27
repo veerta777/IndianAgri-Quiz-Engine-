@@ -22,9 +22,18 @@ $set_num   = isset( $pq->practice_set_number ) ? (int) $pq->practice_set_number 
 
 // Target URL for attempting test
 $attempt_url = add_query_arg( array( 'iaq_quiz_id' => (int) $pq->id, 'iaq_mode' => 'practice' ), get_permalink() );
+$result_args = array(
+	'iaq_quiz_id' => (int) $pq->id,
+	'iaq_action'  => 'view_result',
+);
+if ( ! empty( $pq->latest_attempt_id ) ) {
+	$result_args['attempt_id'] = (int) $pq->latest_attempt_id;
+}
+$result_url = add_query_arg( $result_args, get_permalink() );
 
 // Clean title
 $display_title = ! empty( $pq->title ) ? $pq->title : sprintf( __( 'Practice Set %d', 'indianagri-quiz-engine' ), $set_num );
+$action_url    = ( 'completed' === $attempt_status ) ? $result_url : $attempt_url;
 ?>
 
 <div class="iaq-item-row iaq-ps-set-card" id="practice-set-card-<?php echo esc_attr( $pq->id ); ?>">
@@ -39,7 +48,7 @@ $display_title = ! empty( $pq->title ) ? $pq->title : sprintf( __( 'Practice Set
 		</div>
 		<div class="iaq-item-title-wrap">
 			<h4 class="iaq-item-title">
-				<a href="<?php echo esc_url( $attempt_url ); ?>" title="<?php echo esc_attr( $display_title ); ?>">
+				<a href="<?php echo esc_url( $action_url ); ?>" title="<?php echo esc_attr( $display_title ); ?>">
 					<?php echo esc_html( $display_title ); ?>
 				</a>
 			</h4>
@@ -69,9 +78,9 @@ $display_title = ! empty( $pq->title ) ? $pq->title : sprintf( __( 'Practice Set
 				<span><?php esc_html_e( 'Unlock', 'indianagri-quiz-engine' ); ?></span>
 			</a>
 		<?php elseif ( 'completed' === $attempt_status ) : ?>
-			<a href="<?php echo esc_url( $attempt_url ); ?>" class="iaq-item-btn is-view">
+			<a href="<?php echo esc_url( $result_url ); ?>" class="iaq-item-btn is-view" title="<?php esc_attr_e( 'View Result & Explanations', 'indianagri-quiz-engine' ); ?>">
 				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-				<span><?php esc_html_e( 'View', 'indianagri-quiz-engine' ); ?></span>
+				<span><?php esc_html_e( 'View Result', 'indianagri-quiz-engine' ); ?></span>
 			</a>
 		<?php elseif ( 'in_progress' === $attempt_status ) : ?>
 			<a href="<?php echo esc_url( $attempt_url ); ?>" class="iaq-item-btn is-continue">

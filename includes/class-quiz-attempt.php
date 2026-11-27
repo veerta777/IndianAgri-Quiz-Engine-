@@ -1700,7 +1700,8 @@ class IAQ_Quiz_Attempt {
 
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT ans.*, q.question_text, q.option_a, q.option_b, q.option_c, q.option_d, q.correct_option, q.explanation,
+				"SELECT ans.*, q.question_text, q.question_text_hi, q.option_a, q.option_b, q.option_c, q.option_d,
+				        q.option_a_hi, q.option_b_hi, q.option_c_hi, q.option_d_hi, q.correct_option, q.explanation,
 				        s.name AS subject_name, t.name AS topic_name
 				 FROM {$table_answers} ans
 				 JOIN {$table_questions} q ON ans.question_id = q.id
@@ -1716,20 +1717,25 @@ class IAQ_Quiz_Attempt {
 		$index = 1;
 		foreach ( $rows as $r ) {
 			$questions[] = array(
-				'index'           => $index++,
-				'id'              => (int) $r->question_id,
-				'question_text'   => self::clean_content( $r->question_text ),
-				'subject_name'    => isset( $r->subject_name ) ? $r->subject_name : '',
-				'topic_name'      => isset( $r->topic_name ) ? $r->topic_name : '',
-				'option_a'        => self::clean_content( $r->option_a ),
-				'option_b'        => self::clean_content( $r->option_b ),
-				'option_c'        => self::clean_content( $r->option_c ),
-				'option_d'        => self::clean_content( $r->option_d ),
-				'selected_option' => $r->selected_option,
-				'correct_option'  => $r->correct_option,
-				'is_correct'      => ! is_null( $r->is_correct ) ? (int) $r->is_correct : null,
-				'marks_awarded'   => (float) $r->marks_awarded,
-				'explanation'     => self::clean_explanation( $r->explanation ),
+				'index'            => $index++,
+				'id'               => (int) $r->question_id,
+				'question_text'    => self::clean_content( $r->question_text ),
+				'question_text_hi' => ! empty( $r->question_text_hi ) ? self::clean_content( $r->question_text_hi ) : '',
+				'subject_name'     => isset( $r->subject_name ) ? $r->subject_name : '',
+				'topic_name'       => isset( $r->topic_name ) ? $r->topic_name : '',
+				'option_a'         => self::clean_content( $r->option_a ),
+				'option_b'         => self::clean_content( $r->option_b ),
+				'option_c'         => self::clean_content( $r->option_c ),
+				'option_d'         => self::clean_content( $r->option_d ),
+				'option_a_hi'      => ! empty( $r->option_a_hi ) ? self::clean_content( $r->option_a_hi ) : '',
+				'option_b_hi'      => ! empty( $r->option_b_hi ) ? self::clean_content( $r->option_b_hi ) : '',
+				'option_c_hi'      => ! empty( $r->option_c_hi ) ? self::clean_content( $r->option_c_hi ) : '',
+				'option_d_hi'      => ! empty( $r->option_d_hi ) ? self::clean_content( $r->option_d_hi ) : '',
+				'selected_option'  => $r->selected_option,
+				'correct_option'   => $r->correct_option,
+				'is_correct'       => ! is_null( $r->is_correct ) ? (int) $r->is_correct : null,
+				'marks_awarded'    => (float) $r->marks_awarded,
+				'explanation'      => self::clean_explanation( $r->explanation ),
 			);
 		}
 

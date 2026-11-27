@@ -225,6 +225,27 @@ if ( class_exists( 'IAQ_Quiz_Builder' ) ) {
 								<?php esc_html_e( 'Resume Examination Now', 'indianagri-quiz-engine' ); ?> &rarr;
 							</button>
 						</div>
+					<?php elseif ( ! empty( $completed_attempt ) ) : ?>
+						<div style="width:100%; margin-bottom:16px; padding:14px 18px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+							<div>
+								<span style="display:inline-block; background:#dcfce7; color:#166534; font-weight:700; font-size:12px; padding:2px 8px; border-radius:4px; margin-right:6px;">
+									<?php echo ( ! empty( $completed_attempt->passed ) ) ? esc_html__( 'PASSED', 'indianagri-quiz-engine' ) : esc_html__( 'COMPLETED', 'indianagri-quiz-engine' ); ?>
+								</span>
+								<strong style="color:#0f172a; font-size:14px;">
+									<?php printf( esc_html__( 'Previous Score: %s / %s (%s%%)', 'indianagri-quiz-engine' ), esc_html( $completed_attempt->score ), esc_html( $completed_attempt->total_marks ), esc_html( $completed_attempt->percentage ) ); ?>
+								</strong>
+							</div>
+							<div>
+								<a href="<?php echo esc_url( add_query_arg( array( 'iaq_quiz_id' => $quiz->id, 'iaq_action' => 'view_result', 'attempt_id' => $completed_attempt->id ) ) ); ?>" class="iaq-btn-start" style="text-decoration:none; padding:8px 16px; font-size:13px; background:#16a34a; color:#fff; display:inline-flex; align-items:center; gap:6px;">
+									<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+									<?php esc_html_e( 'View Result & Solutions', 'indianagri-quiz-engine' ); ?>
+								</a>
+							</div>
+						</div>
+						<button type="button" class="iaq-btn-start" id="iaq-start-quiz-btn" data-quiz-id="<?php echo esc_attr( $quiz->id ); ?>">
+							<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px;"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+							<?php esc_html_e( 'Retake Examination', 'indianagri-quiz-engine' ); ?> &rarr;
+						</button>
 					<?php else : ?>
 						<button type="button" class="iaq-btn-start" id="iaq-start-quiz-btn" data-quiz-id="<?php echo esc_attr( $quiz->id ); ?>">
 							<?php esc_html_e( 'Start Examination Now', 'indianagri-quiz-engine' ); ?> &rarr;
