@@ -298,17 +298,17 @@ $is_practice_mode = class_exists( 'IAQ_Quiz_Builder' ) ? IAQ_Quiz_Builder::is_pr
 			</div>
 		</div>
 
-		<!-- Breakdown Chart / Counters -->
+		<!-- Breakdown Chart / Counters (Clickable Interactive Filters) -->
 		<div class="iaq-breakdown-row">
-			<div class="iaq-breakdown-item is-correct">
+			<div class="iaq-breakdown-item is-correct iaq-filter-trigger" data-filter="correct" role="button" tabindex="0" style="cursor:pointer;" title="<?php esc_attr_e( 'Click to view & filter correct answers', 'indianagri-quiz-engine' ); ?>">
 				<span class="iaq-bd-count" id="iaq-bd-correct">0</span>
 				<span class="iaq-bd-label"><?php esc_html_e( 'Correct Answers', 'indianagri-quiz-engine' ); ?></span>
 			</div>
-			<div class="iaq-breakdown-item is-incorrect">
+			<div class="iaq-breakdown-item is-incorrect iaq-filter-trigger" data-filter="incorrect" role="button" tabindex="0" style="cursor:pointer;" title="<?php esc_attr_e( 'Click to view & filter incorrect answers', 'indianagri-quiz-engine' ); ?>">
 				<span class="iaq-bd-count" id="iaq-bd-incorrect">0</span>
 				<span class="iaq-bd-label"><?php esc_html_e( 'Incorrect Answers', 'indianagri-quiz-engine' ); ?></span>
 			</div>
-			<div class="iaq-breakdown-item is-unattempted">
+			<div class="iaq-breakdown-item is-unattempted iaq-filter-trigger" data-filter="unattempted" role="button" tabindex="0" style="cursor:pointer;" title="<?php esc_attr_e( 'Click to view & filter unattempted questions', 'indianagri-quiz-engine' ); ?>">
 				<span class="iaq-bd-count" id="iaq-bd-unattempted">0</span>
 				<span class="iaq-bd-label"><?php esc_html_e( 'Unattempted', 'indianagri-quiz-engine' ); ?></span>
 			</div>

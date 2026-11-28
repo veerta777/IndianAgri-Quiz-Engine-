@@ -172,13 +172,21 @@
 				}, 300);
 			});
 
-			// Filter Tabs on solutions portal & standalone scorecard.
-			$(document).on('click', '.iaq-filter-tab, .iaq-filter-trigger', function () {
+			// Filter Tabs on solutions portal & standalone scorecard / Clickable Breakdown Counters.
+			$(document).on('click', '.iaq-filter-tab, .iaq-filter-trigger', function (e) {
+				e.preventDefault();
 				var filter = $(this).data('filter');
 				if (!filter) return;
 
 				$('.iaq-filter-tab').removeClass('is-active');
 				$('.iaq-filter-tab[data-filter="' + filter + '"]').addClass('is-active');
+
+				$('.iaq-filter-trigger').removeClass('is-selected-filter');
+				if ($(this).hasClass('iaq-filter-trigger')) {
+					$(this).addClass('is-selected-filter');
+				} else {
+					$('.iaq-filter-trigger[data-filter="' + filter + '"]').addClass('is-selected-filter');
+				}
 
 				var $staticCards = $('.iaq-solutions-section .iaq-solution-card');
 				if ($staticCards.length > 0) {
@@ -197,8 +205,23 @@
 							}, 300);
 						}
 					}
-				} else if (self && typeof self.renderSolutionsList === 'function') {
-					self.renderSolutionsList(filter);
+				} else if (self && typeof self.loadSolutionsReview === 'function') {
+					if ($('#iaq-solutions-portal').is(':visible')) {
+						self.renderSolutionsList(filter);
+						$('html, body').animate({
+							scrollTop: $('#iaq-solutions-portal').offset().top - 20
+						}, 300);
+					} else {
+						self.loadSolutionsReview(filter);
+					}
+				}
+			});
+
+			// Accessible keyboard triggering (Enter / Space) for counters
+			$(document).on('keydown', '.iaq-filter-trigger', function (e) {
+				if (e.key === 'Enter' || e.key === ' ' || e.keyCode === 13 || e.keyCode === 32) {
+					e.preventDefault();
+					$(this).trigger('click');
 				}
 			});
 
@@ -1747,8 +1770,9 @@
 		/**
 		 * Display detailed question solutions portal.
 		 */
-		displaySolutionsPortal: function () {
+		displaySolutionsPortal: function (initialFilter) {
 			var self = this;
+			var filter = initialFilter || 'all';
 			if (!self.reviewQuestions || 0 === self.reviewQuestions.length) {
 				self.reviewQuestions = self.buildLocalReviewQuestions();
 			}
@@ -1779,9 +1803,9 @@
 			$('#iaq-tab-count-unattempted').text(unattempted);
 
 			$('.iaq-filter-tab').removeClass('is-active');
-			$('.iaq-filter-tab[data-filter="all"]').addClass('is-active');
+			$('.iaq-filter-tab[data-filter="' + filter + '"]').addClass('is-active');
 
-			self.renderSolutionsList('all');
+			self.renderSolutionsList(filter);
 
 			$('#iaq-results-portal').slideUp(200);
 			$('#iaq-solutions-portal').fadeIn(300);
@@ -1794,13 +1818,14 @@
 		/**
 		 * Fetch and display question-by-question solutions and explanations.
 		 */
-		loadSolutionsReview: function () {
+		loadSolutionsReview: function (initialFilter) {
 			var self = this;
+			var filter = initialFilter || 'all';
 			var $btn = $('#iaq-res-review-btn');
 
 			// If we already have review questions, display immediately without network latency
 			if (self.reviewQuestions && self.reviewQuestions.length > 0) {
-				self.displaySolutionsPortal();
+				self.displaySolutionsPortal(filter);
 				return;
 			}
 
@@ -1828,18 +1853,18 @@
 								if (!self.lastScorecard) self.lastScorecard = {};
 								self.lastScorecard.quiz_title = res.data.scorecard.quiz_title;
 							}
-							self.displaySolutionsPortal();
+							self.displaySolutionsPortal(filter);
 						} else {
 							// Resilient fallback to local evaluation
 							self.reviewQuestions = self.buildLocalReviewQuestions();
-							self.displaySolutionsPortal();
+							self.displaySolutionsPortal(filter);
 						}
 					},
 					error: function () {
 						$btn.prop('disabled', false);
 						// Resilient fallback to local evaluation
 						self.reviewQuestions = self.buildLocalReviewQuestions();
-						self.displaySolutionsPortal();
+						self.displaySolutionsPortal(filter);
 					}
 				});
 				return;
@@ -1847,7 +1872,7 @@
 
 			// In-memory or immediate practice set: build locally and show immediately
 			self.reviewQuestions = self.buildLocalReviewQuestions();
-			self.displaySolutionsPortal();
+			self.displaySolutionsPortal(filter);
 		},
 
 		/**
